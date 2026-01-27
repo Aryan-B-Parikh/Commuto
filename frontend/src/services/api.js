@@ -39,29 +39,39 @@ api.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-    register: (data) => api.post('/auth/register', data),
+    registerRider: (data) => api.post('/auth/register-rider', data),
+    registerDriver: (data) => api.post('/auth/register-driver', data),
     login: (data) => api.post('/auth/login', data),
-    getMe: () => api.get('/auth/me')
+    getMe: () => api.get('/auth/me'),
+    updateDriverStatus: (isOnline) => api.patch('/auth/driver-status', { isOnline }),
+    getOnlineDrivers: () => api.get('/auth/drivers/online')
 }
 
 // Rides API
 export const ridesAPI = {
-    getAll: (params) => api.get('/rides', { params }),
-    getOne: (id) => api.get(`/rides/${id}`),
-    create: (data) => api.post('/rides', data),
-    join: (id) => api.post(`/rides/${id}/join`),
-    leave: (id) => api.post(`/rides/${id}/leave`),
-    verifyOTP: (id, otp) => api.post(`/rides/${id}/verify-otp`, { otp }),
-    updateLocation: (id, lat, lng) => api.patch(`/rides/${id}/location`, { lat, lng }),
-    complete: (id, distance) => api.patch(`/rides/${id}/complete`, { distance }),
-    cancel: (id) => api.patch(`/rides/${id}/cancel`),
-    getMyRides: () => api.get('/rides/my-rides')
+    // Rider actions
+    createRequest: (data) => api.post('/rides/request', data),
+    getMyRides: () => api.get('/rides/my-rides'),
+    getRide: (id) => api.get(`/rides/${id}`),
+    counterBid: (rideId, bidId, counterFare) => api.post(`/rides/${rideId}/counter`, { bidId, counterFare }),
+    acceptBid: (rideId, bidId) => api.post(`/rides/${rideId}/accept-bid`, { bidId }),
+    rejectBid: (rideId, bidId) => api.post(`/rides/${rideId}/reject-bid`, { bidId }),
+
+    // Driver actions
+    getAvailable: () => api.get('/rides/available'),
+    submitBid: (rideId, offeredFare) => api.post(`/rides/${rideId}/bid`, { offeredFare }),
+    startRide: (rideId, otp) => api.post(`/rides/${rideId}/start`, { otp }),
+    updateLocation: (rideId, lat, lng) => api.patch(`/rides/${rideId}/location`, { lat, lng }),
+    completeRide: (rideId, distance) => api.post(`/rides/${rideId}/complete`, { distance }),
+
+    // Shared
+    cancelRide: (rideId) => api.post(`/rides/${rideId}/cancel`)
 }
 
 // Bills API
 export const billsAPI = {
-    getAll: () => api.get('/bills'),
-    getOne: (rideId) => api.get(`/bills/${rideId}`)
+    getHistory: () => api.get('/bills/history'),
+    getBill: (rideId) => api.get(`/bills/${rideId}`)
 }
 
 export default api

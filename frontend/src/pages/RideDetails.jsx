@@ -1,488 +1,329 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ridesAPI } from '../services/api'
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useSocket } from '../context/SocketContext'
+import { ridesAPI } from '../services/api'
 import MapView from '../components/MapView'
-import OTPInput from '../components/OTPInput'
-import Loading from '../components/Loading'
-import {
-    MapPin,
-    Clock,
-    Users,
-    IndianRupee,
-    ArrowLeft,
-    Navigation,
-    Phone,
-    Mail,
-    Lock,
-    Play,
-    CheckCircle,
-    XCircle,
-    LogOut,
-    User,
-    AlertCircle
-} from 'lucide-react'
-import toast from 'react-hot-toast'
 
 const RideDetails = () => {
     const { id } = useParams()
+    const { user, isDriver } = useAuth()
+    const {
+        joinRideRoom,
+        leaveRideRoom,
+        sendLocationUpdate,
+        onLocationUpdate,
+        onRideStarted,
+        onRideCompleted
+    } = useSocket()
     const navigate = useNavigate()
-    const { user } = useAuth()
-    const { joinRideRoom, leaveRideRoom, onRideUpdate, onLocationUpdate, sendLocationUpdate, triggerRideUpdate } = useSocket()
 
     const [ride, setRide] = useState(null)
     const [loading, setLoading] = useState(true)
-    const [actionLoading, setActionLoading] = useState(false)
-    const [vehicleLocation, setVehicleLocation] = useState(null)
-    const [showOTPInput, setShowOTPInput] = useState(false)
-    const [watchId, setWatchId] = useState(null)
-
-    const isCreator = ride?.creator?._id === user?._id
-    const isPassenger = ride?.passengers?.some(p => p._id === user?._id)
-    const isInRide = isCreator || isPassenger
-
-    const fetchRide = useCallback(async () => {
-        try {
-            const response = await ridesAPI.getOne(id)
-            setRide(response.data.data)
-
-            if (response.data.data.vehicleLocation?.lat) {
-                setVehicleLocation(response.data.data.vehicleLocation)
-            }
-        } catch (error) {
-            toast.error('Failed to load ride details')
-            navigate('/')
-        } finally {
-            setLoading(false)
-        }
-    }, [id, navigate])
+    const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
+    const [otp, setOtp] = useState('')
+    const [driverLocation, setDriverLocation] = useState(null)
 
     useEffect(() => {
-        fetchRide()
+        loadRide()
         joinRideRoom(id)
 
-        return () => {
-            leaveRideRoom(id)
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId)
-            }
-        }
-    }, [id, fetchRide, joinRideRoom, leaveRideRoom])
-
-    // Subscribe to ride updates
-    useEffect(() => {
-        const unsubscribe = onRideUpdate((updatedRide) => {
-            if (updatedRide._id === id) {
-                setRide(updatedRide)
-            }
-        })
-        return unsubscribe
-    }, [id, onRideUpdate])
+        return () => leaveRideRoom(id)
+    }, [id])
 
     // Subscribe to location updates
     useEffect(() => {
-        const unsubscribe = onLocationUpdate((data) => {
-            if (data.rideId === id) {
-                setVehicleLocation({ lat: data.lat, lng: data.lng })
-            }
+        const unsubLocation = onLocationUpdate(({ lat, lng }) => {
+            setDriverLocation({ lat, lng })
         })
-        return unsubscribe
-    }, [id, onLocationUpdate])
 
-    // Start location tracking for creator when ride is ongoing
-    useEffect(() => {
-        if (isCreator && ride?.status === 'ongoing' && !watchId) {
-            startLocationTracking()
+        const unsubStarted = onRideStarted(() => {
+            loadRide()
+            setSuccess('Ride has started!')
+        })
+
+        const unsubCompleted = onRideCompleted(({ bill }) => {
+            loadRide()
+            setSuccess('Ride completed!')
+        })
+
+        return () => {
+            unsubLocation()
+            unsubStarted()
+            unsubCompleted()
         }
-    }, [isCreator, ride?.status])
+    }, [onLocationUpdate, onRideStarted, onRideCompleted])
 
-    const startLocationTracking = () => {
-        if (!navigator.geolocation) {
-            toast.error('Geolocation not supported')
+    // Driver location tracking
+    useEffect(() => {
+        if (isDriver && ride?.status === 'ONGOING') {
+            const watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords
+                    sendLocationUpdate(id, latitude, longitude)
+                    setDriverLocation({ lat: latitude, lng: longitude })
+                },
+                (error) => console.error('Geolocation error:', error),
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            )
+
+            return () => navigator.geolocation.clearWatch(watchId)
+        }
+    }, [isDriver, ride?.status, id, sendLocationUpdate])
+
+    const loadRide = async () => {
+        try {
+            const response = await ridesAPI.getRide(id)
+            setRide(response.data.data)
+            if (response.data.data.vehicleLat && response.data.data.vehicleLng) {
+                setDriverLocation({
+                    lat: response.data.data.vehicleLat,
+                    lng: response.data.data.vehicleLng
+                })
+            }
+        } catch (err) {
+            setError('Failed to load ride details')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleStartRide = async () => {
+        if (!otp || otp.length !== 6) {
+            setError('Please enter a valid 6-digit OTP')
             return
         }
 
-        const wId = navigator.geolocation.watchPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords
-                sendLocationUpdate(id, latitude, longitude)
-                setVehicleLocation({ lat: latitude, lng: longitude })
-            },
-            (error) => {
-                console.error('Location error:', error)
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 5000
-            }
-        )
-        setWatchId(wId)
-    }
-
-    const handleJoin = async () => {
-        setActionLoading(true)
         try {
-            await ridesAPI.join(id)
-            toast.success('Successfully joined the ride!')
-            triggerRideUpdate(id)
-            fetchRide()
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to join ride')
-        } finally {
-            setActionLoading(false)
+            await ridesAPI.startRide(id, otp)
+            setSuccess('Ride started!')
+            loadRide()
+        } catch (err) {
+            setError(err.response?.data?.message || 'Invalid OTP')
         }
     }
 
-    const handleLeave = async () => {
-        setActionLoading(true)
+    const handleCompleteRide = async () => {
         try {
-            await ridesAPI.leave(id)
-            toast.success('Left the ride')
-            triggerRideUpdate(id)
-            fetchRide()
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to leave ride')
-        } finally {
-            setActionLoading(false)
+            // Calculate distance (simplified - in production use actual GPS data)
+            const distance = 5.5 // Mock distance
+            await ridesAPI.completeRide(id, distance)
+            setSuccess('Ride completed!')
+            loadRide()
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to complete ride')
         }
     }
 
-    const handleVerifyOTP = async (otp) => {
-        setActionLoading(true)
+    const handleCancelRide = async () => {
         try {
-            await ridesAPI.verifyOTP(id, otp)
-            toast.success('Ride started!')
-            setShowOTPInput(false)
-            triggerRideUpdate(id)
-            fetchRide()
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Invalid OTP')
-        } finally {
-            setActionLoading(false)
-        }
-    }
-
-    const handleComplete = async () => {
-        const distance = prompt('Enter distance traveled (km):', '10')
-        if (!distance) return
-
-        setActionLoading(true)
-        try {
-            await ridesAPI.complete(id, parseFloat(distance))
-            toast.success('Ride completed!')
-            triggerRideUpdate(id)
-            navigate(`/bill/${id}`)
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to complete ride')
-        } finally {
-            setActionLoading(false)
-        }
-    }
-
-    const handleCancel = async () => {
-        if (!confirm('Are you sure you want to cancel this ride?')) return
-
-        setActionLoading(true)
-        try {
-            await ridesAPI.cancel(id)
-            toast.success('Ride cancelled')
-            triggerRideUpdate(id)
-            navigate('/')
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to cancel ride')
-        } finally {
-            setActionLoading(false)
-        }
-    }
-
-    const formatTime = (dateString) => {
-        return new Date(dateString).toLocaleString('en-IN', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })
-    }
-
-    const getStatusClass = (status) => {
-        switch (status) {
-            case 'open': return 'status-open'
-            case 'full': return 'status-full'
-            case 'ongoing': return 'status-ongoing'
-            case 'completed': return 'status-completed'
-            case 'cancelled': return 'status-cancelled'
-            default: return 'status-open'
+            await ridesAPI.cancelRide(id)
+            setSuccess('Ride cancelled')
+            navigate(isDriver ? '/driver/dashboard' : '/rider/dashboard')
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to cancel ride')
         }
     }
 
     if (loading) {
-        return <Loading text="Loading ride details..." />
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
+        )
     }
 
     if (!ride) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-white mb-2">Ride not found</h2>
-                    <Link to="/" className="btn-primary">Go to Dashboard</Link>
-                </div>
+                <p className="text-gray-400">Ride not found</p>
             </div>
         )
     }
 
-    return (
-        <div className="min-h-screen px-4 py-8">
-            <div className="max-w-4xl mx-auto">
-                {/* Back button */}
-                <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-6 transition-colors">
-                    <ArrowLeft className="w-5 h-5" />
-                    <span>Back to Dashboard</span>
-                </Link>
+    const isRider = ride.riderId === user?.id
+    const isAssignedDriver = ride.assignedDriverId === user?.id
+    const acceptedBid = ride.bids?.find(b => b.status === 'ACCEPTED')
 
+    return (
+        <div className="min-h-screen p-6">
+            <div className="max-w-4xl mx-auto space-y-6">
                 {/* Header */}
-                <div className="flex items-start justify-between mb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Ride Details</h1>
-                        <span className={`status-badge ${getStatusClass(ride.status)}`}>
+                <div className="glass-card p-6">
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-bold text-white">Ride Details</h1>
+                        <span className={`px-4 py-2 rounded-full text-sm font-medium ${ride.status === 'CONFIRMED' ? 'bg-green-500/20 text-green-400' :
+                                ride.status === 'ONGOING' ? 'bg-purple-500/20 text-purple-400' :
+                                    ride.status === 'COMPLETED' ? 'bg-blue-500/20 text-blue-400' :
+                                        'bg-gray-500/20 text-gray-400'
+                            }`}>
                             {ride.status}
                         </span>
                     </div>
-                    {isCreator && ride.otp && ride.status === 'open' && (
-                        <div className="text-right">
-                            <p className="text-white/50 text-sm mb-1">Your OTP</p>
-                            <p className="text-3xl font-mono font-bold text-gradient">{ride.otp}</p>
-                            <p className="text-white/40 text-xs mt-1">Share when starting ride</p>
-                        </div>
-                    )}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Route Card */}
-                        <div className="card">
-                            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                <Navigation className="w-5 h-5 text-primary-400" />
-                                Route Details
-                            </h3>
-                            <div className="flex items-start gap-4 p-4 rounded-xl bg-white/5">
-                                <div className="flex flex-col items-center gap-1">
-                                    <div className="w-4 h-4 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></div>
-                                    <div className="w-0.5 h-12 bg-gradient-to-b from-emerald-500 to-red-500"></div>
-                                    <div className="w-4 h-4 rounded-full bg-red-500 shadow-lg shadow-red-500/50"></div>
-                                </div>
-                                <div className="flex-1 space-y-6">
-                                    <div>
-                                        <p className="text-white/50 text-sm">Pickup Location</p>
-                                        <p className="text-white font-medium text-lg">{ride.pickupLocation}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-white/50 text-sm">Destination</p>
-                                        <p className="text-white font-medium text-lg">{ride.destination}</p>
-                                    </div>
-                                </div>
-                            </div>
+                {/* Messages */}
+                {error && (
+                    <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
+                        {error}
+                    </div>
+                )}
+                {success && (
+                    <div className="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg">
+                        {success}
+                    </div>
+                )}
+
+                {/* Route Info */}
+                <div className="glass-card p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-gray-800/50 rounded-lg">
+                            <p className="text-sm text-gray-400 mb-1">📍 Pickup</p>
+                            <p className="text-white font-medium">{ride.originAddress}</p>
                         </div>
+                        <div className="p-4 bg-gray-800/50 rounded-lg">
+                            <p className="text-sm text-gray-400 mb-1">🎯 Drop</p>
+                            <p className="text-white font-medium">{ride.destAddress}</p>
+                        </div>
+                    </div>
+                </div>
 
-                        {/* Map View (for ongoing rides) */}
-                        {(ride.status === 'ongoing' || vehicleLocation) && (
-                            <div className="card">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                    <MapPin className="w-5 h-5 text-primary-400" />
-                                    Live Tracking
-                                </h3>
-                                <MapView
-                                    vehicleLocation={vehicleLocation}
-                                    isTracking={ride.status === 'ongoing'}
-                                />
-                            </div>
-                        )}
+                {/* Fare & Driver/Rider Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="glass-card p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">Fare</h3>
+                        <p className="text-3xl font-bold text-emerald-400">
+                            ₹{ride.finalFare || acceptedBid?.offeredFare || 'Pending'}
+                        </p>
+                    </div>
 
-                        {/* OTP Input Modal */}
-                        {showOTPInput && isCreator && (
-                            <div className="card">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                    <Lock className="w-5 h-5 text-primary-400" />
-                                    Enter OTP to Start Ride
-                                </h3>
-                                <p className="text-white/60 text-center mb-6">
-                                    Enter the 6-digit OTP displayed above to verify and start the ride
+                    <div className="glass-card p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">
+                            {isRider ? 'Driver' : 'Rider'}
+                        </h3>
+                        {isRider && acceptedBid ? (
+                            <div>
+                                <p className="text-white font-medium">{acceptedBid.driver.name}</p>
+                                <p className="text-gray-400 text-sm">
+                                    {acceptedBid.driver.vehicleModel} • {acceptedBid.driver.vehicleColor}
                                 </p>
-                                <OTPInput
-                                    onComplete={handleVerifyOTP}
-                                    disabled={actionLoading}
-                                />
-                                <button
-                                    onClick={() => setShowOTPInput(false)}
-                                    className="btn-secondary w-full mt-4"
-                                >
-                                    Cancel
-                                </button>
+                                <p className="text-blue-400 text-sm font-mono mt-1">
+                                    {acceptedBid.driver.vehiclePlateNumber}
+                                </p>
+                            </div>
+                        ) : (
+                            <div>
+                                <p className="text-white font-medium">{ride.rider?.name}</p>
+                                <p className="text-gray-400 text-sm">{ride.rider?.contactNumber}</p>
                             </div>
                         )}
-
-                        {/* Passengers */}
-                        <div className="card">
-                            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                <Users className="w-5 h-5 text-primary-400" />
-                                Passengers ({ride.passengers?.length || 0}/{ride.maxSeats})
-                            </h3>
-
-                            {/* Creator */}
-                            <div className="p-4 rounded-xl bg-gradient-to-r from-primary-500/10 to-accent-500/10 border border-primary-500/20 mb-3">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-                                        <span className="text-lg font-bold text-white">
-                                            {ride.creator?.name?.charAt(0).toUpperCase()}
-                                        </span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-white font-medium">{ride.creator?.name}</p>
-                                        <p className="text-white/50 text-sm">Ride Creator</p>
-                                    </div>
-                                    {ride.creator?.phone && (
-                                        <a href={`tel:${ride.creator.phone}`} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-                                            <Phone className="w-5 h-5 text-white" />
-                                        </a>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Passengers List */}
-                            {ride.passengers?.map((passenger) => (
-                                <div key={passenger._id} className="p-4 rounded-xl bg-white/5 mb-3 last:mb-0">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                                            <span className="text-lg font-bold text-white">
-                                                {passenger.name?.charAt(0).toUpperCase()}
-                                            </span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-white font-medium">{passenger.name}</p>
-                                            <p className="text-white/50 text-sm">{passenger.email}</p>
-                                        </div>
-                                        {passenger.phone && (
-                                            <a href={`tel:${passenger.phone}`} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-                                                <Phone className="w-5 h-5 text-white" />
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-
-                            {ride.passengers?.length === 0 && (
-                                <p className="text-white/40 text-center py-4">No passengers yet</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Fare Card */}
-                        <div className="card">
-                            <h3 className="text-lg font-semibold text-white mb-4">Fare Details</h3>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                                    <span className="text-white/60">Total Fare</span>
-                                    <span className="text-white font-semibold">₹{ride.totalFare}</span>
-                                </div>
-                                <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
-                                    <span className="text-white/60">Per Person</span>
-                                    <span className="text-2xl font-bold text-emerald-400">₹{ride.farePerPerson}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Departure Card */}
-                        <div className="card">
-                            <div className="flex items-center gap-3 mb-2">
-                                <Clock className="w-5 h-5 text-primary-400" />
-                                <span className="text-white/60">Departure</span>
-                            </div>
-                            <p className="text-white font-medium">{formatTime(ride.departureTime)}</p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="card space-y-3">
-                            {/* Join Ride */}
-                            {!isInRide && ride.status === 'open' && (
-                                <button
-                                    onClick={handleJoin}
-                                    disabled={actionLoading}
-                                    className="btn-primary w-full flex items-center justify-center gap-2"
-                                >
-                                    <Users className="w-5 h-5" />
-                                    <span>Join Ride</span>
-                                </button>
-                            )}
-
-                            {/* Leave Ride (for passengers) */}
-                            {isPassenger && (ride.status === 'open' || ride.status === 'full') && (
-                                <button
-                                    onClick={handleLeave}
-                                    disabled={actionLoading}
-                                    className="btn-secondary w-full flex items-center justify-center gap-2"
-                                >
-                                    <LogOut className="w-5 h-5" />
-                                    <span>Leave Ride</span>
-                                </button>
-                            )}
-
-                            {/* Creator Actions */}
-                            {isCreator && (
-                                <>
-                                    {(ride.status === 'open' || ride.status === 'full') && !ride.otpVerified && (
-                                        <button
-                                            onClick={() => setShowOTPInput(true)}
-                                            disabled={actionLoading}
-                                            className="btn-primary w-full flex items-center justify-center gap-2"
-                                        >
-                                            <Play className="w-5 h-5" />
-                                            <span>Start Ride</span>
-                                        </button>
-                                    )}
-
-                                    {ride.status === 'ongoing' && (
-                                        <button
-                                            onClick={handleComplete}
-                                            disabled={actionLoading}
-                                            className="btn-primary w-full flex items-center justify-center gap-2"
-                                        >
-                                            <CheckCircle className="w-5 h-5" />
-                                            <span>Complete Ride</span>
-                                        </button>
-                                    )}
-
-                                    {(ride.status === 'open' || ride.status === 'full') && (
-                                        <button
-                                            onClick={handleCancel}
-                                            disabled={actionLoading}
-                                            className="btn-danger w-full flex items-center justify-center gap-2"
-                                        >
-                                            <XCircle className="w-5 h-5" />
-                                            <span>Cancel Ride</span>
-                                        </button>
-                                    )}
-                                </>
-                            )}
-
-                            {/* View Bill (for completed rides) */}
-                            {ride.status === 'completed' && (
-                                <Link
-                                    to={`/bill/${ride._id}`}
-                                    className="btn-primary w-full flex items-center justify-center gap-2"
-                                >
-                                    <IndianRupee className="w-5 h-5" />
-                                    <span>View Bill</span>
-                                </Link>
-                            )}
-                        </div>
                     </div>
                 </div>
+
+                {/* OTP Section - For Rider (show OTP) */}
+                {isRider && ride.status === 'CONFIRMED' && (
+                    <div className="glass-card p-6 text-center border-2 border-yellow-500/30">
+                        <h3 className="text-lg font-semibold text-white mb-2">🔐 Your OTP</h3>
+                        <p className="text-gray-400 text-sm mb-4">Share this with your driver to start the ride</p>
+                        <p className="text-4xl font-bold tracking-widest text-yellow-400">
+                            {ride.otp || '------'}
+                        </p>
+                    </div>
+                )}
+
+                {/* OTP Section - For Driver (enter OTP) */}
+                {isAssignedDriver && ride.status === 'CONFIRMED' && (
+                    <div className="glass-card p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">🔐 Enter OTP to Start</h3>
+                        <div className="flex gap-4">
+                            <input
+                                type="text"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="Enter 6-digit OTP"
+                                className="input-field flex-1 text-center text-2xl tracking-widest"
+                                maxLength={6}
+                            />
+                            <button
+                                onClick={handleStartRide}
+                                className="btn-primary px-8"
+                            >
+                                Start Ride
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Live Map */}
+                {ride.status === 'ONGOING' && (
+                    <div className="glass-card p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">📍 Live Tracking</h3>
+                        <div className="h-80 rounded-xl overflow-hidden">
+                            <MapView
+                                origin={{ lat: ride.originLat, lng: ride.originLng }}
+                                destination={{ lat: ride.destLat, lng: ride.destLng }}
+                                driverLocation={driverLocation}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* Complete Ride Button - For Driver */}
+                {isAssignedDriver && ride.status === 'ONGOING' && (
+                    <button
+                        onClick={handleCompleteRide}
+                        className="w-full btn-primary py-4 text-lg"
+                    >
+                        ✓ Complete Ride
+                    </button>
+                )}
+
+                {/* View Bill - After Completion */}
+                {ride.status === 'COMPLETED' && ride.bill && (
+                    <div className="glass-card p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">🧾 Bill Summary</h3>
+                        <div className="space-y-3">
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">Fare</span>
+                                <span className="text-white">₹{ride.bill.fare}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">Distance</span>
+                                <span className="text-white">{ride.bill.distance} km</span>
+                            </div>
+                            {ride.bill.duration && (
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Duration</span>
+                                    <span className="text-white">{ride.bill.duration} mins</span>
+                                </div>
+                            )}
+                            <hr className="border-gray-700" />
+                            <div className="flex justify-between text-lg font-bold">
+                                <span className="text-white">Total</span>
+                                <span className="text-emerald-400">₹{ride.bill.fare}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Cancel Button */}
+                {!['COMPLETED', 'CANCELLED'].includes(ride.status) && (
+                    <button
+                        onClick={handleCancelRide}
+                        className="w-full py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl transition-colors"
+                    >
+                        Cancel Ride
+                    </button>
+                )}
+
+                {/* Back Button */}
+                <button
+                    onClick={() => navigate(isDriver ? '/driver/dashboard' : '/rider/dashboard')}
+                    className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors"
+                >
+                    ← Back to Dashboard
+                </button>
             </div>
         </div>
     )

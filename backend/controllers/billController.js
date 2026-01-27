@@ -1,14 +1,29 @@
-const Bill = require('../models/Bill');
+const prisma = require('../utils/prisma');
 
-/**
- * @desc    Get bill for a ride
- * @route   GET /api/bills/:rideId
- * @access  Private
- */
-const getBill = async (req, res) => {
+// @desc    Get bill by ride ID
+// @route   GET /api/bills/:rideId
+// @access  Private
+exports.getBillByRideId = async (req, res) => {
     try {
-        const bill = await Bill.findOne({ ride: req.params.rideId })
-            .populate('ride');
+        const { rideId } = req.params;
+
+        const bill = await prisma.bill.findUnique({
+            where: { rideRequestId: rideId },
+            include: {
+                rideRequest: {
+                    include: {
+                        rider: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                contactNumber: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
         if (!bill) {
             return res.status(404).json({
@@ -17,49 +32,100 @@ const getBill = async (req, res) => {
             });
         }
 
+        // Verify access
+        const ride = bill.rideRequest;
+        if (ride.riderId !== req.user.id && ride.assignedDriverId !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied'
+            });
+        }
+
+        // Get driver info
+        let driverInfo = null;
+        if (ride.assignedDriverId) {
+            driverInfo = await prisma.user.findUnique({
+                where: { id: ride.assignedDriverId },
+                select: {
+                    id: true,
+                    name: true,
+                    vehicleModel: true,
+                    vehicleColor: true,
+                    vehiclePlateNumber: true
+                }
+            });
+        }
+
         res.json({
             success: true,
-            data: bill
+            data: {
+                bill,
+                rider: ride.rider,
+                driver: driverInfo,
+                ride: {
+                    id: ride.id,
+                    originAddress: ride.originAddress,
+                    destAddress: ride.destAddress,
+                    createdAt: ride.createdAt
+                }
+            }
         });
     } catch (error) {
-        console.error('Get bill error:', error);
+        console.error('Get Bill Error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error fetching bill'
+            message: 'Error fetching bill'
         });
     }
 };
 
-/**
- * @desc    Get user's bills
- * @route   GET /api/bills
- * @access  Private
- */
-const getMyBills = async (req, res) => {
+// @desc    Get user's bill history
+// @route   GET /api/bills/history
+// @access  Private
+exports.getBillHistory = async (req, res) => {
     try {
-        // Find bills where user is creator or passenger
-        const bills = await Bill.find({
-            $or: [
-                { 'creator.user': req.user._id },
-                { 'passengers.user': req.user._id }
-            ]
-        }).sort({ completedAt: -1 });
+        const whereClause = req.user.role === 'RIDER'
+            ? { rideRequest: { riderId: req.user.id } }
+            : { rideRequest: { assignedDriverId: req.user.id } };
+
+        const bills = await prisma.bill.findMany({
+            where: whereClause,
+            include: {
+                rideRequest: {
+                    select: {
+                        id: true,
+                        originAddress: true,
+                        destAddress: true,
+                        status: true,
+                        createdAt: true,
+                        rider: {
+                            select: { id: true, name: true }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        // Calculate totals
+        const totalEarnings = bills.reduce((sum, bill) => sum + bill.fare, 0);
+        const totalDistance = bills.reduce((sum, bill) => sum + (bill.distance || 0), 0);
 
         res.json({
             success: true,
             count: bills.length,
+            summary: {
+                totalFare: totalEarnings,
+                totalDistance,
+                totalRides: bills.length
+            },
             data: bills
         });
     } catch (error) {
-        console.error('Get my bills error:', error);
+        console.error('Get Bill History Error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error fetching bills'
+            message: 'Error fetching bill history'
         });
     }
-};
-
-module.exports = {
-    getBill,
-    getMyBills
 };

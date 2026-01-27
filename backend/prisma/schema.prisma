@@ -1,0 +1,163 @@
+// Commuto Ride-Hailing Platform - Prisma Schema
+// PostgreSQL database with User, RideRequest, RideBid, and Bill models
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Role enum for user types
+enum Role {
+  RIDER
+  DRIVER
+}
+
+// Status of a ride request
+enum RideStatus {
+  PENDING
+  NEGOTIATING
+  CONFIRMED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+// Status of a bid
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COUNTERED
+}
+
+// User model - supports both Riders and Drivers
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  contactNumber String?
+  password      String
+  role          Role
+
+  // Driver-specific fields (null for riders)
+  driverLicenseNumber String?
+  licenseExpiryDate   DateTime?
+  vehicleModel        String?
+  vehicleColor        String?
+  vehiclePlateNumber  String?
+  isOnline            Boolean   @default(false)
+
+  // Relations
+  rideRequestsAsRider  RideRequest[] @relation("RiderRides")
+  rideRequestsAsDriver RideRequest[] @relation("DriverRides")
+  bids                 RideBid[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([isOnline])
+  @@map("users")
+}
+
+// Ride Request - created by rider
+model RideRequest {
+  id               String     @id @default(uuid())
+  
+  // Rider who created the request
+  rider            User       @relation("RiderRides", fields: [riderId], references: [id])
+  riderId          String
+  
+  // Specific driver for direct booking (null for open market)
+  specificDriver   User?      @relation("DriverRides", fields: [specificDriverId], references: [id])
+  specificDriverId String?
+  
+  // Assigned driver after bid accepted
+  assignedDriverId String?
+
+  // Location data
+  originAddress    String
+  originLat        Float
+  originLng        Float
+  destAddress      String
+  destLat          Float
+  destLng          Float
+
+  // Ride status and fare
+  status           RideStatus @default(PENDING)
+  finalFare        Float?
+  distance         Float?
+
+  // OTP for ride start verification
+  otp              String?
+  otpVerified      Boolean    @default(false)
+
+  // Live vehicle location during ride
+  vehicleLat       Float?
+  vehicleLng       Float?
+
+  // Relations
+  bids             RideBid[]
+  bill             Bill?
+
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([riderId])
+  @@index([specificDriverId])
+  @@index([status])
+  @@map("ride_requests")
+}
+
+// Bid from driver on a ride request
+model RideBid {
+  id            String      @id @default(uuid())
+  
+  // The ride request this bid is for
+  rideRequest   RideRequest @relation(fields: [rideRequestId], references: [id], onDelete: Cascade)
+  rideRequestId String
+  
+  // Driver who made the bid
+  driver        User        @relation(fields: [driverId], references: [id])
+  driverId      String
+
+  // Bid details
+  offeredFare   Float
+  status        BidStatus   @default(PENDING)
+  
+  // Counter offer from rider (if any)
+  counterFare   Float?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([rideRequestId, driverId])
+  @@index([rideRequestId])
+  @@index([driverId])
+  @@map("ride_bids")
+}
+
+// Bill generated after ride completion
+model Bill {
+  id            String      @id @default(uuid())
+  
+  rideRequest   RideRequest @relation(fields: [rideRequestId], references: [id])
+  rideRequestId String      @unique
+
+  // Bill details
+  fare          Float
+  distance      Float
+  duration      Int?        // Duration in minutes
+  
+  // Payment info
+  paymentMethod String?
+  isPaid        Boolean     @default(false)
+
+  createdAt     DateTime    @default(now())
+
+  @@map("bills")
+}

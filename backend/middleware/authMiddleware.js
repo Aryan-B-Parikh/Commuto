@@ -1,58 +1,59 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const prisma = require('../utils/prisma');
 
-/**
- * Protect routes - verify JWT token
- */
-const protect = async (req, res, next) => {
-    let token;
+// Protect routes - verify JWT token
+exports.protect = async (req, res, next) => {
+    try {
+        let token;
 
-    if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith('Bearer')
-    ) {
-        try {
-            // Get token from header
+        // Check for token in Authorization header
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
             token = req.headers.authorization.split(' ')[1];
+        }
 
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authorized, no token provided'
+            });
+        }
+
+        try {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             // Get user from token
-            req.user = await User.findById(decoded.id).select('-password');
+            const user = await prisma.user.findUnique({
+                where: { id: decoded.id },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    isOnline: true
+                }
+            });
 
-            if (!req.user) {
+            if (!user) {
                 return res.status(401).json({
                     success: false,
                     message: 'User not found'
                 });
             }
 
+            req.user = user;
             next();
         } catch (error) {
-            console.error('Auth error:', error);
             return res.status(401).json({
                 success: false,
                 message: 'Not authorized, token invalid'
             });
         }
-    }
-
-    if (!token) {
-        return res.status(401).json({
+    } catch (error) {
+        console.error('Auth Middleware Error:', error);
+        res.status(500).json({
             success: false,
-            message: 'Not authorized, no token'
+            message: 'Server error in authentication'
         });
     }
 };
-
-/**
- * Generate JWT token
- */
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d'
-    });
-};
-
-module.exports = { protect, generateToken };
