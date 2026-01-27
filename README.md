@@ -1,27 +1,28 @@
-# Commuto - Real-Time Ride Sharing Platform
+# Commuto - Real-Time Ride-Hailing Platform
 
 <div align="center">
-  <h3>🚗 Share rides, split fares, travel together</h3>
-  <p>A production-ready MERN stack ride-sharing platform with real-time updates, live tracking, and OTP verification.</p>
+  <h3>🚗 Request rides, negotiate fares, track in real-time</h3>
+  <p>A production-ready ride-hailing platform with bidding system, live tracking, and OTP verification.</p>
 </div>
 
 ## ✨ Features
 
-- **User Authentication** - Secure JWT-based auth with password hashing
-- **Create & Join Rides** - Easily create rides or join existing ones
-- **Real-Time Updates** - Live seat count and fare updates via Socket.io
+- **Role-Based Users** - Separate Rider and Driver registration
+- **Ride Requests** - Riders create requests, drivers bid on them
+- **Bidding System** - Drivers submit bids, riders can counter-offer or accept
+- **Direct Booking** - Option to book a specific online driver
 - **OTP Verification** - Secure ride start with 6-digit OTP
 - **Live Tracking** - Real-time vehicle location on Google Maps
-- **Auto Fare Split** - Automatic fare calculation per passenger
-- **Bill Generation** - Detailed billing after ride completion
+- **Bill Generation** - Automatic billing after ride completion
+- **Real-Time Updates** - Live notifications via Socket.io
 - **Responsive UI** - Beautiful glassmorphism design with Tailwind CSS
 
 ## 🛠️ Tech Stack
 
 | Frontend | Backend | Database | Real-Time |
 |----------|---------|----------|-----------|
-| React.js | Node.js | MongoDB | Socket.io |
-| Tailwind CSS | Express.js | Mongoose | WebSocket |
+| React.js | Node.js | PostgreSQL | Socket.io |
+| Tailwind CSS | Express.js | Prisma ORM | WebSocket |
 | Vite | JWT Auth | | |
 
 ## 📁 Project Structure
@@ -29,13 +30,12 @@
 ```
 Commuto/
 ├── backend/
-│   ├── config/          # Database configuration
 │   ├── controllers/     # Route handlers
-│   ├── middleware/      # Auth & validation
-│   ├── models/          # MongoDB schemas
+│   ├── middleware/      # Auth & role middleware
+│   ├── prisma/          # Prisma schema & migrations
 │   ├── routes/          # API routes
 │   ├── sockets/         # Socket.io handlers
-│   ├── utils/           # OTP & fare utilities
+│   ├── utils/           # OTP, fare, Prisma utilities
 │   ├── server.js        # Entry point
 │   └── .env             # Environment variables
 │
@@ -54,7 +54,7 @@ Commuto/
 ### Prerequisites
 
 - Node.js >= 18.x
-- MongoDB (local or Atlas)
+- PostgreSQL (local or cloud like Supabase/Neon)
 - Google Maps API Key (optional, for live tracking)
 
 ### 1. Clone the Repository
@@ -74,10 +74,16 @@ npm install
 Create `.env` file:
 ```env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/commuto
+DATABASE_URL=postgresql://postgres:password@localhost:5432/commuto?schema=public
 JWT_SECRET=your-super-secret-jwt-key
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+```
+
+Initialize database:
+```bash
+npx prisma db push
+npx prisma generate
 ```
 
 Start backend:
@@ -114,36 +120,59 @@ npm run dev
 ### Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/register-rider` | Register as rider |
+| POST | `/api/auth/register-driver` | Register as driver |
 | POST | `/api/auth/login` | Login user |
 | GET | `/api/auth/me` | Get current user |
+| PATCH | `/api/auth/driver-status` | Toggle driver online/offline |
+| GET | `/api/auth/drivers/online` | Get online drivers |
 
 ### Rides
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/rides` | Get all available rides |
-| POST | `/api/rides` | Create new ride |
+| POST | `/api/rides/request` | Create ride request (Rider) |
+| GET | `/api/rides/available` | Get available requests (Driver) |
 | GET | `/api/rides/:id` | Get ride details |
-| POST | `/api/rides/:id/join` | Join a ride |
-| POST | `/api/rides/:id/leave` | Leave a ride |
-| POST | `/api/rides/:id/verify-otp` | Verify OTP & start |
-| PATCH | `/api/rides/:id/location` | Update location |
-| PATCH | `/api/rides/:id/complete` | Complete ride |
+| GET | `/api/rides/my-rides` | Get user's ride history |
+| POST | `/api/rides/:id/bid` | Submit bid (Driver) |
+| POST | `/api/rides/:id/counter` | Counter-offer (Rider) |
+| POST | `/api/rides/:id/accept-bid` | Accept bid (Rider) |
+| POST | `/api/rides/:id/reject-bid` | Reject bid (Rider) |
+| POST | `/api/rides/:id/start` | Start ride with OTP (Driver) |
+| PATCH | `/api/rides/:id/location` | Update location (Driver) |
+| POST | `/api/rides/:id/complete` | Complete ride (Driver) |
+| POST | `/api/rides/:id/cancel` | Cancel ride |
 
 ### Bills
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/bills` | Get user's bills |
+| GET | `/api/bills/history` | Get user's bills |
 | GET | `/api/bills/:rideId` | Get bill for ride |
 
 ## 🔌 Socket.io Events
 
 | Event | Direction | Description |
 |-------|-----------|-------------|
-| `join-ride-room` | Client → Server | Join ride room |
-| `ride-updated` | Server → Client | Ride data update |
+| `driver-online` | Client → Server | Driver goes online |
+| `driver-offline` | Client → Server | Driver goes offline |
+| `new-ride-request` | Server → Driver | New ride available |
+| `direct-ride-request` | Server → Driver | Direct booking request |
+| `submit-bid` | Client → Server | Driver submits bid |
+| `receive-bid` | Server → Rider | Rider receives bid |
+| `bid-accepted` | Server → Driver | Bid was accepted |
 | `location-update` | Client → Server | Send location |
 | `location-broadcast` | Server → Client | Receive location |
+
+## 🔄 Ride Flow
+
+1. **Rider** logs in and creates a ride request
+2. **Drivers** (online) receive notification of new request
+3. **Driver** submits a bid with offered fare
+4. **Rider** sees incoming bids, can counter-offer or accept
+5. **Rider** accepts bid → OTP generated and shown to Rider
+6. **Driver** enters OTP to start the ride
+7. **Driver** location is tracked in real-time
+8. **Driver** completes ride → Bill generated for both
 
 ## 🚢 Deployment
 
@@ -159,17 +188,18 @@ npm run dev
 
 1. Push to GitHub
 2. Create project on [Railway](https://railway.app)
-3. Connect repository
-4. Set root directory: `backend`
-5. Add environment variables
-6. Deploy!
+3. Add PostgreSQL database
+4. Connect repository
+5. Set root directory: `backend`
+6. Add environment variables
+7. Deploy!
 
 ## 📝 Environment Variables
 
 ### Backend Production
 ```env
 PORT=5000
-MONGODB_URI=mongodb+srv://...
+DATABASE_URL=postgresql://...
 JWT_SECRET=your-production-secret
 NODE_ENV=production
 FRONTEND_URL=https://your-app.vercel.app
@@ -186,10 +216,9 @@ VITE_GOOGLE_MAPS_API_KEY=your-api-key
 
 The application features a modern dark theme with glassmorphism effects:
 
-- **Dashboard** - Browse and search available rides
-- **Create Ride** - Form to create new rides
-- **Ride Details** - View ride info, join/leave, OTP verification
-- **Live Tracking** - Real-time vehicle location on map
+- **Rider Dashboard** - Create ride requests, view incoming bids
+- **Driver Dashboard** - Go online, see requests, submit bids
+- **Ride Details** - OTP verification, live tracking
 - **Bill Summary** - Detailed fare breakdown after ride
 
 ## 🤝 Contributing
@@ -207,5 +236,5 @@ MIT License - feel free to use this project!
 ---
 
 <div align="center">
-  <p>Built with ❤️ using MERN Stack</p>
+  <p>Built with ❤️ using Node.js, React, PostgreSQL & Socket.io</p>
 </div>
