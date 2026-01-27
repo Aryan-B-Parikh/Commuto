@@ -2,9 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const connectDB = require('./config/db');
+const prisma = require('./utils/prisma');
 const authRoutes = require('./routes/authRoutes');
 const rideRoutes = require('./routes/rideRoutes');
 const billRoutes = require('./routes/billRoutes');
@@ -18,12 +19,20 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
         origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-        methods: ['GET', 'POST', 'PATCH', 'DELETE']
+        methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+        credentials: true
     }
 });
 
-// Connect to Database
-connectDB();
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: {
+        success: false,
+        message: 'Too many requests, please try again later'
+    }
+});
 
 // Middleware
 app.use(cors({
@@ -31,17 +40,30 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+app.use(limiter);
 
 // Make io accessible to routes
 app.set('io', io);
 
 // Health check route
-app.get('/api/health', (req, res) => {
-    res.json({
-        success: true,
-        message: 'Commuto API is running',
-        timestamp: new Date().toISOString()
-    });
+app.get('/api/health', async (req, res) => {
+    try {
+        // Test database connection
+        await prisma.$queryRaw`SELECT 1`;
+        res.json({
+            success: true,
+            message: 'Commuto API is running',
+            database: 'connected',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Commuto API is running',
+            database: 'disconnected',
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
 // API Routes
@@ -70,17 +92,31 @@ app.use((err, req, res, next) => {
 // Initialize Socket.io handlers
 socketHandler(io);
 
+// Graceful shutdown
+process.on('SIGINT', async () => {
+    console.log('\n🛑 Shutting down gracefully...');
+    await prisma.$disconnect();
+    process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+    console.log('\n🛑 Shutting down gracefully...');
+    await prisma.$disconnect();
+    process.exit(0);
+});
+
 // Start Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`
-  ╔═══════════════════════════════════════════╗
-  ║                                           ║
-  ║   🚗 Commuto Backend Server Running 🚗    ║
-  ║                                           ║
-  ║   Port: ${PORT}                              ║
-  ║   Mode: ${process.env.NODE_ENV || 'development'}                     ║
-  ║                                           ║
-  ╚═══════════════════════════════════════════╝
+  ╔═══════════════════════════════════════════════════╗
+  ║                                                   ║
+  ║   🚗 Commuto Ride-Hailing Backend Running 🚗     ║
+  ║                                                   ║
+  ║   Port: ${PORT}                                      ║
+  ║   Mode: ${(process.env.NODE_ENV || 'development').padEnd(12)}                   ║
+  ║   Database: PostgreSQL (Prisma)                   ║
+  ║                                                   ║
+  ╚═══════════════════════════════════════════════════╝
   `);
 });

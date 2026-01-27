@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         const response = await authAPI.login({ email, password })
-        const { token, ...userData } = response.data.data
+        const { token, user: userData } = response.data.data
 
         localStorage.setItem('commuto_token', token)
         localStorage.setItem('commuto_user', JSON.stringify(userData))
@@ -40,9 +40,20 @@ export const AuthProvider = ({ children }) => {
         return response.data
     }
 
-    const register = async (name, email, password, phone) => {
-        const response = await authAPI.register({ name, email, password, phone })
-        const { token, ...userData } = response.data.data
+    const registerRider = async (data) => {
+        const response = await authAPI.registerRider(data)
+        const { token, user: userData } = response.data.data
+
+        localStorage.setItem('commuto_token', token)
+        localStorage.setItem('commuto_user', JSON.stringify(userData))
+        setUser(userData)
+
+        return response.data
+    }
+
+    const registerDriver = async (data) => {
+        const response = await authAPI.registerDriver(data)
+        const { token, user: userData } = response.data.data
 
         localStorage.setItem('commuto_token', token)
         localStorage.setItem('commuto_user', JSON.stringify(userData))
@@ -63,12 +74,18 @@ export const AuthProvider = ({ children }) => {
         setUser(newUser)
     }
 
+    const isRider = user?.role === 'RIDER'
+    const isDriver = user?.role === 'DRIVER'
+
     return (
         <AuthContext.Provider value={{
             user,
             loading,
+            isRider,
+            isDriver,
             login,
-            register,
+            registerRider,
+            registerDriver,
             logout,
             updateUser,
             checkAuth

@@ -45,12 +45,17 @@ const darkMapStyle = [
 ]
 
 const MapView = ({
+    origin = null,
+    destination = null,
+    driverLocation = null,
     vehicleLocation = null,
     pickupLocation = null,
-    destination = null,
     showRoute = false,
     isTracking = false
 }) => {
+    // Support both prop naming conventions
+    const activeVehicleLocation = driverLocation || vehicleLocation
+    const activePickup = origin || pickupLocation
     const [map, setMap] = useState(null)
     const [directions, setDirections] = useState(null)
     const [center, setCenter] = useState(defaultCenter)
@@ -65,13 +70,18 @@ const MapView = ({
 
     // Update center when vehicle location changes
     useEffect(() => {
-        if (vehicleLocation?.lat && vehicleLocation?.lng) {
+        if (activeVehicleLocation?.lat && activeVehicleLocation?.lng) {
             setCenter({
-                lat: vehicleLocation.lat,
-                lng: vehicleLocation.lng
+                lat: activeVehicleLocation.lat,
+                lng: activeVehicleLocation.lng
+            })
+        } else if (activePickup?.lat && activePickup?.lng) {
+            setCenter({
+                lat: activePickup.lat,
+                lng: activePickup.lng
             })
         }
-    }, [vehicleLocation])
+    }, [activeVehicleLocation, activePickup])
 
     // If no API key, show placeholder
     if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'your-google-maps-api-key') {

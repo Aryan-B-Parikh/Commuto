@@ -1,13 +1,12 @@
 const express = require('express');
-const { getBill, getMyBills } = require('../controllers/billController');
+const router = express.Router();
+const { getBillByRideId, getBillHistory } = require('../controllers/billController');
 const { protect } = require('../middleware/authMiddleware');
 
-const router = express.Router();
-
-// All routes are protected
+// All routes require authentication
 router.use(protect);
 
-router.get('/', getMyBills);
-router.get('/:rideId', getBill);
+router.get('/history', getBillHistory);
+router.get('/:rideId', getBillByRideId);
 
 module.exports = router;

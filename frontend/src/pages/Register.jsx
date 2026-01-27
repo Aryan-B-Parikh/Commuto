@@ -1,204 +1,274 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, User, Phone, ArrowRight, Car, Eye, EyeOff } from 'lucide-react'
-import toast from 'react-hot-toast'
 
 const Register = () => {
-    const [name, setName] = useState('')
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [confirmPassword, setConfirmPassword] = useState('')
-    const [phone, setPhone] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
+    const [role, setRole] = useState('RIDER')
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        contactNumber: '',
+        // Driver fields
+        driverLicenseNumber: '',
+        licenseExpiryDate: '',
+        vehicleModel: '',
+        vehicleColor: '',
+        vehiclePlateNumber: ''
+    })
+    const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
-    const { register } = useAuth()
+
+    const { registerRider, registerDriver } = useAuth()
     const navigate = useNavigate()
+
+    const handleChange = (e) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value
+        })
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        setError('')
 
-        if (!name || !email || !password) {
-            toast.error('Please fill in all required fields')
+        if (formData.password !== formData.confirmPassword) {
+            setError('Passwords do not match')
             return
         }
 
-        if (password !== confirmPassword) {
-            toast.error('Passwords do not match')
-            return
-        }
-
-        if (password.length < 6) {
-            toast.error('Password must be at least 6 characters')
+        if (formData.password.length < 6) {
+            setError('Password must be at least 6 characters')
             return
         }
 
         setLoading(true)
+
         try {
-            await register(name, email, password, phone)
-            toast.success('Account created successfully!')
-            navigate('/')
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Registration failed')
+            if (role === 'RIDER') {
+                await registerRider({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                    contactNumber: formData.contactNumber
+                })
+                navigate('/rider/dashboard')
+            } else {
+                if (!formData.driverLicenseNumber || !formData.vehicleModel || !formData.vehiclePlateNumber) {
+                    setError('Please fill in all driver details')
+                    setLoading(false)
+                    return
+                }
+                await registerDriver({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                    contactNumber: formData.contactNumber,
+                    driverLicenseNumber: formData.driverLicenseNumber,
+                    licenseExpiryDate: formData.licenseExpiryDate,
+                    vehicleModel: formData.vehicleModel,
+                    vehicleColor: formData.vehicleColor,
+                    vehiclePlateNumber: formData.vehiclePlateNumber
+                })
+                navigate('/driver/dashboard')
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Registration failed')
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 py-12">
-            {/* Background decorations */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full bg-accent-500/20 blur-3xl"></div>
-                <div className="absolute -bottom-40 -right-40 w-80 h-80 rounded-full bg-primary-500/20 blur-3xl"></div>
-            </div>
-
-            <div className="relative w-full max-w-md">
-                {/* Logo */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 shadow-xl shadow-primary-500/30 mb-4">
-                        <Car className="w-8 h-8 text-white" />
-                    </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Join Commuto</h1>
-                    <p className="text-white/60">Create an account to start sharing rides</p>
+        <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div className="glass-card w-full max-w-md p-8 space-y-6">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold gradient-text">Join Commuto</h1>
+                    <p className="mt-2 text-gray-400">Create your account</p>
                 </div>
 
-                {/* Form */}
-                <div className="card">
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Name */}
+                {/* Role Selection */}
+                <div className="flex gap-4">
+                    <button
+                        type="button"
+                        onClick={() => setRole('RIDER')}
+                        className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${role === 'RIDER'
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30'
+                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                    >
+                        🚶 Rider
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setRole('DRIVER')}
+                        className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${role === 'DRIVER'
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30'
+                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                    >
+                        🚗 Driver
+                    </button>
+                </div>
+
+                {error && (
+                    <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Basic Fields */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            className="input-field"
+                            placeholder="John Doe"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            className="input-field"
+                            placeholder="you@example.com"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Phone Number</label>
+                        <input
+                            type="tel"
+                            name="contactNumber"
+                            value={formData.contactNumber}
+                            onChange={handleChange}
+                            className="input-field"
+                            placeholder="+1 234 567 8900"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-white/70 text-sm font-medium mb-2">
-                                Full Name <span className="text-red-400">*</span>
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                            <input
+                                type="password"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                required
+                                className="input-field"
+                                placeholder="••••••••"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Confirm Password</label>
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                required
+                                className="input-field"
+                                placeholder="••••••••"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Driver-specific Fields */}
+                    {role === 'DRIVER' && (
+                        <div className="space-y-4 pt-4 border-t border-gray-700">
+                            <h3 className="text-lg font-semibold text-gray-200">Driver Details</h3>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">License Number</label>
+                                    <input
+                                        type="text"
+                                        name="driverLicenseNumber"
+                                        value={formData.driverLicenseNumber}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        placeholder="DL123456"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">License Expiry</label>
+                                    <input
+                                        type="date"
+                                        name="licenseExpiryDate"
+                                        value={formData.licenseExpiryDate}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Model</label>
                                 <input
                                     type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="Enter your full name"
-                                    className="input-field pl-12"
-                                    disabled={loading}
+                                    name="vehicleModel"
+                                    value={formData.vehicleModel}
+                                    onChange={handleChange}
+                                    className="input-field"
+                                    placeholder="Toyota Camry"
                                 />
                             </div>
-                        </div>
 
-                        {/* Email */}
-                        <div>
-                            <label className="block text-white/70 text-sm font-medium mb-2">
-                                Email Address <span className="text-red-400">*</span>
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="Enter your email"
-                                    className="input-field pl-12"
-                                    disabled={loading}
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Vehicle Color</label>
+                                    <input
+                                        type="text"
+                                        name="vehicleColor"
+                                        value={formData.vehicleColor}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        placeholder="White"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Plate Number</label>
+                                    <input
+                                        type="text"
+                                        name="vehiclePlateNumber"
+                                        value={formData.vehiclePlateNumber}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        placeholder="ABC 1234"
+                                    />
+                                </div>
                             </div>
                         </div>
+                    )}
 
-                        {/* Phone */}
-                        <div>
-                            <label className="block text-white/70 text-sm font-medium mb-2">
-                                Phone Number <span className="text-white/40">(Optional)</span>
-                            </label>
-                            <div className="relative">
-                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    placeholder="Enter your phone number"
-                                    className="input-field pl-12"
-                                    disabled={loading}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Password */}
-                        <div>
-                            <label className="block text-white/70 text-sm font-medium mb-2">
-                                Password <span className="text-red-400">*</span>
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Create a password"
-                                    className="input-field pl-12 pr-12"
-                                    disabled={loading}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
-                                >
-                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
-                            </div>
-                            <p className="text-white/40 text-xs mt-1">Minimum 6 characters</p>
-                        </div>
-
-                        {/* Confirm Password */}
-                        <div>
-                            <label className="block text-white/70 text-sm font-medium mb-2">
-                                Confirm Password <span className="text-red-400">*</span>
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder="Confirm your password"
-                                    className="input-field pl-12"
-                                    disabled={loading}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Submit */}
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="btn-primary w-full flex items-center justify-center gap-2"
-                        >
-                            {loading ? (
-                                <>
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    <span>Creating Account...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span>Create Account</span>
-                                    <ArrowRight className="w-5 h-5" />
-                                </>
-                            )}
-                        </button>
-                    </form>
-
-                    {/* Divider */}
-                    <div className="flex items-center gap-4 my-6">
-                        <div className="flex-1 h-px bg-white/10"></div>
-                        <span className="text-white/40 text-sm">Already have an account?</span>
-                        <div className="flex-1 h-px bg-white/10"></div>
-                    </div>
-
-                    {/* Login Link */}
-                    <Link
-                        to="/login"
-                        className="btn-secondary w-full flex items-center justify-center gap-2"
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className={`w-full btn-primary py-3 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
+                        {loading ? 'Creating Account...' : `Register as ${role === 'RIDER' ? 'Rider' : 'Driver'}`}
+                    </button>
+                </form>
+
+                <p className="text-center text-gray-400">
+                    Already have an account?{' '}
+                    <Link to="/login" className="text-blue-400 hover:text-blue-300 font-medium">
                         Sign In
                     </Link>
-                </div>
+                </p>
             </div>
         </div>
     )

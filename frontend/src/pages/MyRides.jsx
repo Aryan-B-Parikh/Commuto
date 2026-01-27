@@ -1,101 +1,182 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { ridesAPI } from '../services/api'
-import RideCard from '../components/RideCard'
-import Loading from '../components/Loading'
-import { Car, Users, ArrowRight, PlusCircle } from 'lucide-react'
-import toast from 'react-hot-toast'
 
 const MyRides = () => {
-    const [rides, setRides] = useState({ created: [], joined: [] })
+    const { user, isDriver } = useAuth()
+    const navigate = useNavigate()
+
+    const [rides, setRides] = useState([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('created')
+    const [filter, setFilter] = useState('all')
 
     useEffect(() => {
-        fetchMyRides()
+        loadRides()
     }, [])
 
-    const fetchMyRides = async () => {
+    const loadRides = async () => {
         try {
             const response = await ridesAPI.getMyRides()
             setRides(response.data.data)
-        } catch (error) {
-            toast.error('Failed to fetch your rides')
+        } catch (err) {
+            console.error('Error loading rides:', err)
         } finally {
             setLoading(false)
         }
     }
 
-    if (loading) return <Loading text="Loading your rides..." />
+    const filteredRides = rides.filter(ride => {
+        if (filter === 'all') return true
+        return ride.status === filter
+    })
 
-    const currentRides = activeTab === 'created' ? rides.created : rides.joined
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'PENDING': return 'bg-yellow-500/20 text-yellow-400'
+            case 'NEGOTIATING': return 'bg-blue-500/20 text-blue-400'
+            case 'CONFIRMED': return 'bg-green-500/20 text-green-400'
+            case 'ONGOING': return 'bg-purple-500/20 text-purple-400'
+            case 'COMPLETED': return 'bg-emerald-500/20 text-emerald-400'
+            case 'CANCELLED': return 'bg-red-500/20 text-red-400'
+            default: return 'bg-gray-500/20 text-gray-400'
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
+        )
+    }
 
     return (
-        <div className="min-h-screen px-4 py-8">
-            <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-white mb-2">My Rides</h1>
-                        <p className="text-white/60">View rides you've created or joined</p>
-                    </div>
-                    <Link to="/create" className="btn-primary flex items-center gap-2 w-fit">
-                        <PlusCircle className="w-5 h-5" />
-                        <span>Create Ride</span>
-                    </Link>
+        <div className="min-h-screen p-6">
+            <div className="max-w-4xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="glass-card p-6">
+                    <h1 className="text-2xl font-bold text-white">
+                        📋 {isDriver ? 'My Trips' : 'My Rides'}
+                    </h1>
+                    <p className="text-gray-400 mt-1">
+                        {isDriver ? 'View all rides you have completed' : 'View your ride history'}
+                    </p>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 mb-8">
-                    <button
-                        onClick={() => setActiveTab('created')}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${activeTab === 'created'
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-white/5 text-white/60 hover:bg-white/10'
-                            }`}
-                    >
-                        <Car className="w-5 h-5" />
-                        <span>Created ({rides.created.length})</span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('joined')}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${activeTab === 'joined'
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-white/5 text-white/60 hover:bg-white/10'
-                            }`}
-                    >
-                        <Users className="w-5 h-5" />
-                        <span>Joined ({rides.joined.length})</span>
-                    </button>
+                {/* Filters */}
+                <div className="flex gap-2 flex-wrap">
+                    {['all', 'PENDING', 'NEGOTIATING', 'CONFIRMED', 'ONGOING', 'COMPLETED', 'CANCELLED'].map(status => (
+                        <button
+                            key={status}
+                            onClick={() => setFilter(status)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === status
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                }`}
+                        >
+                            {status === 'all' ? 'All' : status}
+                        </button>
+                    ))}
                 </div>
 
-                {/* Rides Grid */}
-                {currentRides.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {currentRides.map((ride) => (
-                            <RideCard key={ride._id} ride={ride} />
-                        ))}
+                {/* Rides List */}
+                {filteredRides.length === 0 ? (
+                    <div className="glass-card p-8 text-center">
+                        <p className="text-4xl mb-4">🚗</p>
+                        <p className="text-gray-400">No rides found</p>
                     </div>
                 ) : (
-                    <div className="text-center py-16">
-                        <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                            {activeTab === 'created' ? (
-                                <Car className="w-10 h-10 text-white/30" />
-                            ) : (
-                                <Users className="w-10 h-10 text-white/30" />
-                            )}
+                    <div className="space-y-4">
+                        {filteredRides.map(ride => (
+                            <div
+                                key={ride.id}
+                                className="glass-card p-4 hover:bg-gray-800/30 transition-colors cursor-pointer"
+                                onClick={() => navigate(`/ride/${ride.id}`)}
+                            >
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <p className="text-sm text-gray-400">
+                                            {new Date(ride.createdAt).toLocaleDateString('en-IN', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </p>
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(ride.status)}`}>
+                                        {ride.status}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-green-400">📍</span>
+                                        <div>
+                                            <p className="text-xs text-gray-500">From</p>
+                                            <p className="text-gray-300 text-sm">{ride.originAddress}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-red-400">🎯</span>
+                                        <div>
+                                            <p className="text-xs text-gray-500">To</p>
+                                            <p className="text-gray-300 text-sm">{ride.destAddress}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between items-center pt-3 border-t border-gray-700">
+                                    <div>
+                                        {isDriver ? (
+                                            <p className="text-sm text-gray-400">
+                                                Rider: <span className="text-white">{ride.rider?.name}</span>
+                                            </p>
+                                        ) : ride.bids?.find(b => b.status === 'ACCEPTED') && (
+                                            <p className="text-sm text-gray-400">
+                                                Driver: <span className="text-white">
+                                                    {ride.bids.find(b => b.status === 'ACCEPTED')?.driver?.name}
+                                                </span>
+                                            </p>
+                                        )}
+                                    </div>
+                                    <p className="text-xl font-bold text-emerald-400">
+                                        {ride.finalFare ? `₹${ride.finalFare}` : '—'}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Summary */}
+                {rides.length > 0 && (
+                    <div className="glass-card p-6">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <p className="text-2xl font-bold text-white">{rides.length}</p>
+                                <p className="text-sm text-gray-400">Total Rides</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-green-400">
+                                    {rides.filter(r => r.status === 'COMPLETED').length}
+                                </p>
+                                <p className="text-sm text-gray-400">Completed</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-emerald-400">
+                                    ₹{rides
+                                        .filter(r => r.status === 'COMPLETED' && r.finalFare)
+                                        .reduce((sum, r) => sum + r.finalFare, 0)
+                                    }
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                    {isDriver ? 'Total Earned' : 'Total Spent'}
+                                </p>
+                            </div>
                         </div>
-                        <h3 className="text-xl font-semibold text-white mb-2">
-                            No rides {activeTab === 'created' ? 'created' : 'joined'} yet
-                        </h3>
-                        <p className="text-white/50 mb-6">
-                            {activeTab === 'created'
-                                ? 'Create your first ride to share with others'
-                                : 'Browse available rides and join one'}
-                        </p>
-                        <Link to={activeTab === 'created' ? '/create' : '/'} className="btn-primary inline-flex items-center gap-2">
-                            {activeTab === 'created' ? 'Create Ride' : 'Browse Rides'}
-                            <ArrowRight className="w-5 h-5" />
-                        </Link>
                     </div>
                 )}
             </div>
