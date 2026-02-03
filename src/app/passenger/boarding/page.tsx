@@ -23,6 +23,18 @@ export default function BoardingPage() {
 
     const trip = mockTrips[0]; // Mock current trip
 
+    if (!trip) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-gray-900 mb-2">No Active Trip</h3>
+                    <p className="text-gray-500 mb-6">You don't have an active trip to board.</p>
+                    <Link href="/passenger/dashboard" className="text-blue-600 hover:underline">Go to Dashboard</Link>
+                </Card>
+            </div>
+        );
+    }
+
     useEffect(() => {
         start(300); // 5 minute countdown
     }, [start]);

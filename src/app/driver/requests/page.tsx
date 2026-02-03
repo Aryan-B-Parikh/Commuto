@@ -12,17 +12,13 @@ import { mockUsers } from '@/data/users';
 
 interface PassengerRequest {
     id: string;
-    passenger: typeof mockUsers[0];
+    passenger: import('@/types').User;
     trip: { from: string; to: string; date: string };
     seats: number;
     status: 'pending' | 'approved' | 'rejected';
 }
 
-const mockRequests: PassengerRequest[] = [
-    { id: '1', passenger: mockUsers[1], trip: { from: 'Downtown', to: 'Airport', date: 'Today, 2:00 PM' }, seats: 1, status: 'pending' },
-    { id: '2', passenger: mockUsers[2], trip: { from: 'Downtown', to: 'Airport', date: 'Today, 2:00 PM' }, seats: 2, status: 'pending' },
-    { id: '3', passenger: mockUsers[3], trip: { from: 'Office Park', to: 'Central Station', date: 'Tomorrow, 8:00 AM' }, seats: 1, status: 'pending' },
-];
+const mockRequests: PassengerRequest[] = [];
 
 export default function DriverRequestsPage() {
     const { showToast } = useToast();

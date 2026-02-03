@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 interface CardProps {
     children: React.ReactNode;
     className?: string;
-    variant?: 'default' | 'glass' | 'elevated';
+    variant?: 'default' | 'glass' | 'elevated' | 'outline';
     padding?: 'none' | 'sm' | 'md' | 'lg';
     hoverable?: boolean;
     onClick?: () => void;
@@ -26,6 +26,7 @@ export const Card: React.FC<CardProps> = ({
         default: 'bg-white border border-gray-100 shadow-sm',
         glass: 'bg-white/80 backdrop-blur-lg border border-white/20 shadow-lg',
         elevated: 'bg-white shadow-xl shadow-gray-200/50',
+        outline: 'bg-white border border-gray-200',
     };
 
     const paddingStyles = {

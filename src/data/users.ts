@@ -1,61 +1,15 @@
 import { User } from '@/types';
 
-export const mockUsers: User[] = [
-    {
-        id: 'user-1',
-        name: 'Alex Johnson',
-        email: 'alex@example.com',
-        phone: '+1 234 567 8901',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-        rating: 4.9,
-        totalTrips: 156,
-        verified: true,
-        joinedDate: '2023-01-15',
-    },
-    {
-        id: 'user-2',
-        name: 'Sarah Williams',
-        email: 'sarah@example.com',
-        phone: '+1 234 567 8902',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-        rating: 4.8,
-        totalTrips: 89,
-        verified: true,
-        joinedDate: '2023-03-22',
-    },
-    {
-        id: 'user-3',
-        name: 'Michael Chen',
-        email: 'michael@example.com',
-        phone: '+1 234 567 8903',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael',
-        rating: 4.7,
-        totalTrips: 234,
-        verified: true,
-        joinedDate: '2022-11-08',
-    },
-    {
-        id: 'user-4',
-        name: 'Emily Davis',
-        email: 'emily@example.com',
-        phone: '+1 234 567 8904',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
-        rating: 4.9,
-        totalTrips: 67,
-        verified: true,
-        joinedDate: '2023-06-14',
-    },
-    {
-        id: 'user-5',
-        name: 'James Wilson',
-        email: 'james@example.com',
-        phone: '+1 234 567 8905',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=James',
-        rating: 4.6,
-        totalTrips: 45,
-        verified: false,
-        joinedDate: '2023-09-01',
-    },
-];
+export const mockUsers: User[] = [];
 
-export const currentUser: User = mockUsers[0];
+export const currentUser: User = {
+    id: '',
+    name: '',
+    email: '',
+    phone: '',
+    avatar: '',
+    rating: 0,
+    totalTrips: 0,
+    verified: false,
+    joinedDate: '',
+};

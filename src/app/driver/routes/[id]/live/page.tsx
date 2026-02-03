@@ -64,7 +64,33 @@ export default function LiveRoutePage() {
         router.push('/driver/routes');
     };
 
-    if (!initialRoute) return <div className="p-10 text-center">Route not found</div>;
+    if (!initialRoute) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-gray-900 mb-2">Route Not Found</h3>
+                    <p className="text-gray-500 mb-6">The requested route could not be found.</p>
+                    <Link href="/driver/routes">
+                        <Button variant="outline">Back to Routes</Button>
+                    </Link>
+                </Card>
+            </div>
+        );
+    }
+
+    if (!activeStop) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-gray-900 mb-2">No Active Stops</h3>
+                    <p className="text-gray-500 mb-6">This route has no stops configured.</p>
+                    <Link href="/driver/routes">
+                        <Button variant="outline">Back to Routes</Button>
+                    </Link>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -105,7 +131,7 @@ export default function LiveRoutePage() {
                     <ProgressBar progress={progress} size="lg" className="bg-blue-50" />
                     <div className="flex justify-between mt-2">
                         <p className="text-xs text-gray-500">{completedCount} of {stops.length} stops completed</p>
-                        <p className="text-xs font-semibold text-green-600">Earnings: ${initialRoute.estimatedEarnings.toFixed(2)}</p>
+                        <p className="text-xs font-semibold text-green-600">Earnings: ${(initialRoute?.estimatedEarnings || 0).toFixed(2)}</p>
                     </div>
                 </div>
 

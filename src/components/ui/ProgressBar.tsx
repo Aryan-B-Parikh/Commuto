@@ -9,6 +9,7 @@ interface ProgressBarProps {
     variant?: 'default' | 'success' | 'warning' | 'danger';
     showLabel?: boolean;
     animated?: boolean;
+    className?: string;
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -17,6 +18,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     variant = 'default',
     showLabel = false,
     animated = true,
+    className = '',
 }) => {
     const clampedProgress = Math.min(Math.max(progress, 0), 100);
 
@@ -34,7 +36,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     };
 
     return (
-        <div className="w-full">
+        <div className={`w-full ${className}`}>
             {showLabel && (
                 <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium text-gray-700">Progress</span>

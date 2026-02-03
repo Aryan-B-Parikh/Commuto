@@ -20,6 +20,18 @@ export default function DriverLivePage() {
 
     const trip = mockTrips[0];
 
+    if (!trip) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-gray-900 mb-2">No Active Trip</h3>
+                    <p className="text-gray-500 mb-6">You don't have an active trip.</p>
+                    <Button onClick={() => router.push('/driver/dashboard')}>Go to Dashboard</Button>
+                </Card>
+            </div>
+        );
+    }
+
     useEffect(() => {
         const interval = setInterval(() => {
             setProgress(prev => prev >= 100 ? 100 : prev + 2);
