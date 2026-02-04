@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { MapContainer } from '@/components/trip/MapContainer';
@@ -8,11 +8,47 @@ import { TripCard } from '@/components/trip/TripCard';
 import { PassengerBottomNav } from '@/components/layout/PassengerBottomNav';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { mockTrips } from '@/data/trips';
-import { currentUser } from '@/data/users';
+import { useAuth } from '@/hooks/useAuth';
+import { tripsAPI } from '@/services/api';
+import { transformTripResponses } from '@/utils/tripTransformers';
+import type { Trip } from '@/types';
 
 export default function PassengerDashboardPage() {
-    const upcomingTrips = mockTrips.filter(t => t.status === 'upcoming').slice(0, 2);
+    const { user, isLoading: isAuthLoading } = useAuth();
+    const [trips, setTrips] = useState<Trip[]>([]);
+    const [isLoadingTrips, setIsLoadingTrips] = useState(true);
+
+    useEffect(() => {
+        if (user) {
+            fetchMyTrips();
+        }
+    }, [user]);
+
+    const fetchMyTrips = async () => {
+        try {
+            setIsLoadingTrips(true);
+            const data = await tripsAPI.getMyTrips();
+            setTrips(transformTripResponses(data));
+        } catch (error) {
+            console.error('Failed to fetch my trips:', error);
+        } finally {
+            setIsLoadingTrips(false);
+        }
+    };
+
+    // Filter for upcoming/pending trips
+    const upcomingTrips = trips.filter(t =>
+        t.status === 'upcoming' || t.status === 'pending' || t.status === 'active'
+    ).slice(0, 3);
+
+    // Calculate stats
+    const completedTrips = trips.filter(t => t.status === 'completed');
+    const totalSpent = completedTrips.reduce((acc, t) => acc + (t.pricePerSeat || 0), 0);
+    const co2Saved = (completedTrips.length * 2.5).toFixed(1) + 'kg'; // Rough estimate: 2.5kg per trip
+
+    if (isAuthLoading || !user) {
+        return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -25,10 +61,16 @@ export default function PassengerDashboardPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-500">Good morning 👋</p>
-                            <h1 className="text-xl font-bold text-gray-900">{currentUser.name.split(' ')[0]}</h1>
+                            <h1 className="text-xl font-bold text-gray-900">{user.name.split(' ')[0]}</h1>
                         </div>
                         <Link href="/profile">
-                            <img src={currentUser.avatar} alt={currentUser.name} className="w-11 h-11 rounded-full border-2 border-white shadow-md" />
+                            {user.avatar ? (
+                                <img src={user.avatar} alt={user.name} className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover" />
+                            ) : (
+                                <div className="w-11 h-11 rounded-full border-2 border-white shadow-md bg-blue-500 flex items-center justify-center text-white font-semibold">
+                                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                            )}
                         </Link>
                     </div>
                 </div>
@@ -74,9 +116,9 @@ export default function PassengerDashboardPage() {
             <div className="px-4 py-6">
                 <div className="grid grid-cols-3 gap-4 mb-6">
                     {[
-                        { value: currentUser.totalTrips, label: 'Trips Taken', color: 'blue' },
-                        { value: '$180', label: 'Total Saved', color: 'green' },
-                        { value: '95kg', label: 'CO₂ Reduced', color: 'purple' },
+                        { value: completedTrips.length, label: 'Trips Taken', color: 'blue' },
+                        { value: '$' + totalSpent, label: 'Total Spent', color: 'green' },
+                        { value: co2Saved, label: 'CO₂ Reduced', color: 'purple' },
                     ].map((stat, i) => (
                         <motion.div
                             key={stat.label}
@@ -94,19 +136,28 @@ export default function PassengerDashboardPage() {
                 {/* Upcoming Trips */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-gray-900">Upcoming Trips</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">Your Trips</h2>
                         <Link href="/passenger/history" className="text-sm text-blue-600 font-medium">View all</Link>
                     </div>
-                    {upcomingTrips.length > 0 ? (
+
+                    {isLoadingTrips ? (
+                        <div className="space-y-4">
+                            {[1].map(i => <Card key={i} className="h-32 animate-pulse bg-gray-100" />)}
+                        </div>
+                    ) : upcomingTrips.length > 0 ? (
                         <div className="space-y-4">
                             {upcomingTrips.map((trip) => (
-                                <TripCard key={trip.id} trip={trip} variant="compact" />
+                                <Link href={`/passenger/trip/${trip.id}`} key={trip.id}>
+                                    <div className="block hover:bg-gray-50 transition-colors">
+                                        <TripCard trip={trip} variant="compact" />
+                                    </div>
+                                </Link>
                             ))}
                         </div>
                     ) : (
                         <Card className="text-center py-8">
                             <p className="text-gray-500 mb-3">No upcoming trips</p>
-                            <Link href="/passenger/search"><Button size="sm">Find a Trip</Button></Link>
+                            <Link href="/passenger/create"><Button size="sm">Post a Trip Request</Button></Link>
                         </Card>
                     )}
                 </div>

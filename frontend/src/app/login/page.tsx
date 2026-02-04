@@ -46,10 +46,17 @@ export default function LoginPage() {
         const success = await login(email, password);
 
         if (success) {
-            showToast('success', 'OTP sent to your email!');
-            router.push('/verify-otp');
+            showToast('success', 'Login successful!');
+            // Redirect based on role
+            if (role === 'driver') {
+                router.push('/driver/dashboard');
+            } else if (role === 'passenger') {
+                router.push('/passenger/dashboard');
+            } else {
+                router.push('/select-role');
+            }
         } else {
-            showToast('error', 'Login failed. Please try again.');
+            showToast('error', 'Invalid email or password. Please try again.');
         }
     };
 

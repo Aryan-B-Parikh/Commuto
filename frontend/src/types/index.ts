@@ -12,7 +12,8 @@ export interface User {
     name: string;
     email: string;
     phone: string;
-    avatar: string;
+    avatar?: string;  // Make optional to handle empty values
+    role?: 'passenger' | 'driver';  // Add role field
     rating: number;
     totalTrips: number;
     verified: boolean;
@@ -31,7 +32,7 @@ export interface Trip {
     pricePerSeat: number;
     driver: User;
     passengers: User[];
-    status: 'upcoming' | 'active' | 'completed' | 'cancelled';
+    status: 'pending' | 'upcoming' | 'active' | 'completed' | 'cancelled';
     distance: string;
     duration: string;
     vehicleType: string;

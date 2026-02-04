@@ -6,12 +6,13 @@ import schemas_trips as trip_schemas
 import auth
 import uuid
 from typing import List
+from uuid import UUID
 
 router = APIRouter(prefix="/bids", tags=["Bidding"])
 
 @router.post("/{ride_id}", response_model=trip_schemas.BidResponse, status_code=status.HTTP_201_CREATED)
 def place_bid(
-    ride_id: str,
+    ride_id: UUID,
     bid_data: trip_schemas.BidCreate,
     current_user: models.User = Depends(auth.require_role(["driver"])),
     db: Session = Depends(get_db)
@@ -24,33 +25,41 @@ def place_bid(
             detail="Trip not found"
         )
     
-    # Can't bid on own trip
-    if trip.passenger_id == current_user.id:
+    # Check if user is the passenger (can't bid on own trip)
+    is_passenger = db.query(models.Booking).filter(
+        models.Booking.trip_id == ride_id,
+        models.Booking.passenger_id == current_user.id
+    ).first() is not None
+    
+    if is_passenger:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot bid on your own trip"
         )
     
-    # Can only bid on pending or bidding trips
-    if trip.status not in [models.TripStatus.PENDING, models.TripStatus.BIDDING]:
+    # Can only bid on pending or active trips
+    if trip.status not in ["pending", "active"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This trip is no longer accepting bids"
         )
     
-    # Create bid
-    new_bid = models.Bid(
-        id=str(uuid.uuid4()),
-        trip_id=ride_id,
-        driver_id=current_user.id,
-        amount=bid_data.amount,
-        message=bid_data.message,
-        status=models.BidStatus.PENDING
-    )
+    # Get driver profile
+    driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
+    if not driver:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Driver profile not found"
+        )
     
-    # Update trip status to bidding if it was pending
-    if trip.status == models.TripStatus.PENDING:
-        trip.status = models.TripStatus.BIDDING
+    # Create bid using TripBid model
+    new_bid = models.TripBid(
+        id=uuid.uuid4(),
+        trip_id=ride_id,
+        driver_id=current_user.id,  # This references drivers.user_id
+        bid_amount=bid_data.amount,
+        status="pending"
+    )
     
     db.add(new_bid)
     db.commit()
@@ -60,7 +69,7 @@ def place_bid(
 
 @router.get("/{ride_id}/all", response_model=List[trip_schemas.BidWithDriver])
 def get_ride_bids(
-    ride_id: str,
+    ride_id: UUID,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -72,43 +81,49 @@ def get_ride_bids(
             detail="Trip not found"
         )
     
-    # Only passenger can see bids
-    if trip.passenger_id != current_user.id:
+    # Check if user is the passenger
+    is_passenger = db.query(models.Booking).filter(
+        models.Booking.trip_id == ride_id,
+        models.Booking.passenger_id == current_user.id
+    ).first() is not None
+    
+    if not is_passenger:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the trip creator can view bids"
         )
     
-    # Get bids with driver info
-    bids = db.query(models.Bid, models.User).join(
-        models.User, models.Bid.driver_id == models.User.id
-    ).filter(models.Bid.trip_id == ride_id).all()
+    # Get bids with driver info - join through Driver to User
+    bids = db.query(models.TripBid, models.User, models.Driver).join(
+        models.Driver, models.TripBid.driver_id == models.Driver.user_id
+    ).join(
+        models.User, models.Driver.user_id == models.User.id
+    ).filter(models.TripBid.trip_id == ride_id).all()
     
     result = []
-    for bid, driver in bids:
+    for bid, user, driver in bids:
         result.append({
             "id": bid.id,
             "trip_id": bid.trip_id,
             "driver_id": bid.driver_id,
-            "amount": bid.amount,
-            "message": bid.message,
-            "status": bid.status.value,
+            "bid_amount": bid.bid_amount,
+            "status": bid.status,
             "created_at": bid.created_at,
-            "driver_name": driver.full_name,
+            "driver_name": user.full_name,
             "driver_rating": driver.rating,
-            "driver_avatar": driver.avatar
+            "driver_avatar": user.avatar
         })
     
     return result
 
 @router.post("/{bid_id}/accept", status_code=status.HTTP_200_OK)
 def accept_bid(
-    bid_id: str,
+    bid_id: UUID,
     current_user: models.User = Depends(auth.require_role(["passenger"])),
     db: Session = Depends(get_db)
 ):
     # Get bid
-    bid = db.query(models.Bid).filter(models.Bid.id == bid_id).first()
+    bid = db.query(models.TripBid).filter(models.TripBid.id == bid_id).first()
     if not bid:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -118,90 +133,101 @@ def accept_bid(
     # Get trip
     trip = db.query(models.Trip).filter(models.Trip.id == bid.trip_id).first()
     
-    # Only trip creator can accept bids
-    if trip.passenger_id != current_user.id:
+    # Check if user is the passenger
+    is_passenger = db.query(models.Booking).filter(
+        models.Booking.trip_id == bid.trip_id,
+        models.Booking.passenger_id == current_user.id
+    ).first() is not None
+    
+    if not is_passenger:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the trip creator can accept bids"
         )
     
     # Update bid status
-    bid.status = models.BidStatus.ACCEPTED
+    bid.status = "accepted"
     
-    # Update trip with driver and status
+    # Update trip with driver and price
     trip.driver_id = bid.driver_id
-    trip.price_per_seat = bid.amount
-    trip.status = models.TripStatus.ACCEPTED
+    trip.price_per_seat = bid.bid_amount
+    trip.status = "active"
+    
+    # Generate OTP for ride start
+    import random
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    trip.start_otp = otp
+    trip.otp_verified = False
     
     # Reject all other bids
-    other_bids = db.query(models.Bid).filter(
-        models.Bid.trip_id == bid.trip_id,
-        models.Bid.id != bid_id,
-        models.Bid.status == models.BidStatus.PENDING
+    other_bids = db.query(models.TripBid).filter(
+        models.TripBid.trip_id == bid.trip_id,
+        models.TripBid.id != bid_id,
+        models.TripBid.status == "pending"
     ).all()
     
     for other_bid in other_bids:
-        other_bid.status = models.BidStatus.REJECTED
+        other_bid.status = "rejected"
     
-    # Create OTP for ride start
-    import random
-    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    # Update booking with price
+    booking = db.query(models.Booking).filter(
+        models.Booking.trip_id == trip.id,
+        models.Booking.passenger_id == current_user.id
+    ).first()
     
-    active_ride = models.ActiveRide(
-        id=str(uuid.uuid4()),
-        trip_id=trip.id,
-        otp=otp
-    )
+    if booking:
+        booking.total_price = bid.bid_amount * booking.seats_booked
+        booking.status = "confirmed"
     
-    db.add(active_ride)
     db.commit()
     
     return {
         "message": "Bid accepted successfully",
-        "trip_id": trip.id,
+        "trip_id": str(trip.id),
         "otp": otp
     }
 
 @router.post("/{bid_id}/counter", response_model=trip_schemas.BidResponse)
 def counter_bid(
-    bid_id: str,
+    bid_id: UUID,
     bid_data: trip_schemas.BidCreate,
     current_user: models.User = Depends(auth.require_role(["passenger"])),
     db: Session = Depends(get_db)
 ):
     # Get original bid
-    original_bid = db.query(models.Bid).filter(models.Bid.id == bid_id).first()
+    original_bid = db.query(models.TripBid).filter(models.TripBid.id == bid_id).first()
     if not original_bid:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Bid not found"
         )
     
-    # Get trip
-    trip = db.query(models.Trip).filter(models.Trip.id == original_bid.trip_id).first()
+    # Check if user is the passenger
+    is_passenger = db.query(models.Booking).filter(
+        models.Booking.trip_id == original_bid.trip_id,
+        models.Booking.passenger_id == current_user.id
+    ).first() is not None
     
-    # Only trip creator can counter bids
-    if trip.passenger_id != current_user.id:
+    if not is_passenger:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the trip creator can counter bids"
         )
     
-    # Mark original bid as countered
-    original_bid.status = models.BidStatus.COUNTERED
+    # Mark original bid as rejected (NeonDB doesn't have "countered" status)
+    original_bid.status = "rejected"
     
     # Create new counter bid
-    counter_bid = models.Bid(
-        id=str(uuid.uuid4()),
+    counter_bid_obj = models.TripBid(
+        id=uuid.uuid4(),
         trip_id=original_bid.trip_id,
         driver_id=original_bid.driver_id,
-        amount=bid_data.amount,
-        message=f"Counter offer: {bid_data.message or ''}",
-        status=models.BidStatus.PENDING
+        bid_amount=bid_data.amount,
+        status="pending"
     )
     
-    db.add(counter_bid)
+    db.add(counter_bid_obj)
     db.commit()
-    db.refresh(counter_bid)
+    db.refresh(counter_bid_obj)
     
-    return counter_bid
+    return counter_bid_obj

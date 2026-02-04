@@ -10,7 +10,9 @@ import { PassengerBottomNav } from '@/components/layout/PassengerBottomNav';
 import { SkeletonTripCard } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/hooks/useToast';
-import { mockTrips } from '@/data/trips';
+import { tripsAPI } from '@/services/api';
+import type { TripResponse } from '@/types/api';
+import { transformTripResponses } from '@/utils/tripTransformers';
 
 export default function PassengerSearchPage() {
     const router = useRouter();
@@ -18,19 +20,35 @@ export default function PassengerSearchPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterDate, setFilterDate] = useState('');
+    const [trips, setTrips] = useState<TripResponse[]>([]);
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 1200);
-        return () => clearTimeout(timer);
+        const fetchTrips = async () => {
+            try {
+                setIsLoading(true);
+                const data = await tripsAPI.getOpenRides();
+                setTrips(data);
+            } catch (error) {
+                console.error('Failed to fetch trips:', error);
+                showToast('error', 'Failed to load trips');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTrips();
     }, []);
 
-    const filteredTrips = mockTrips.filter(trip => {
+    const filteredTrips = trips.filter(trip => {
         const matchesSearch = !searchQuery ||
-            trip.from.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            trip.to.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesDate = !filterDate || trip.date === filterDate;
-        return matchesSearch && matchesDate && trip.seatsAvailable > 0;
+            trip.from_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            trip.to_address.toLowerCase().includes(searchQuery.toLowerCase());
+        // Note: filterDate matching would need date parsing from start_time
+        return matchesSearch && trip.available_seats > 0;
     });
+
+    // Transform to frontend Trip type for UI components
+    const transformedTrips = transformTripResponses(filteredTrips);
 
     const handleJoinTrip = (tripId: string) => {
         showToast('success', 'Join request sent!');
@@ -77,7 +95,7 @@ export default function PassengerSearchPage() {
             {/* Results */}
             <div className="px-4 py-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    Available Trips {!isLoading && `(${filteredTrips.length})`}
+                    Available Trips {!isLoading && `(${transformedTrips.length})`}
                 </h2>
 
                 <AnimatePresence mode="wait">
@@ -85,9 +103,9 @@ export default function PassengerSearchPage() {
                         <motion.div key="loading" className="space-y-4">
                             {[1, 2, 3].map((i) => <SkeletonTripCard key={i} />)}
                         </motion.div>
-                    ) : filteredTrips.length > 0 ? (
+                    ) : transformedTrips.length > 0 ? (
                         <motion.div key="trips" className="space-y-4">
-                            {filteredTrips.map((trip, index) => (
+                            {transformedTrips.map((trip, index) => (
                                 <motion.div
                                     key={trip.id}
                                     initial={{ opacity: 0, y: 20 }}

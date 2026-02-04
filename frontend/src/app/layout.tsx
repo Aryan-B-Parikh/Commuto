@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { WebSocketProvider } from "@/context/WebSocketContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,9 +31,11 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <WebSocketProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </WebSocketProvider>
         </AuthProvider>
       </body>
     </html>

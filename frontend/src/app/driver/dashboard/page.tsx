@@ -1,37 +1,51 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { MapContainer } from '@/components/trip/MapContainer';
 import { DriverBottomNav } from '@/components/layout/DriverBottomNav';
 import { Card } from '@/components/ui/Card';
+import { Toggle } from '@/components/ui/Toggle';
 import { Button } from '@/components/ui/Button';
+import { RatingStars } from '@/components/ui/RatingStars';
 import { mockTrips } from '@/data/trips';
-import { currentUser } from '@/data/users';
+import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/formatters';
 
 export default function DriverDashboardPage() {
+    const { user, isLoading } = useAuth();
+    const [isOnline, setIsOnline] = useState(false);
     const activeTrips = mockTrips.filter(t => t.status === 'upcoming').slice(0, 2);
     const todayEarnings = 45.50;
     const weeklyEarnings = 312.80;
     const pendingRequests = 3;
 
+    if (isLoading || !user) {
+        return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Map + Header */}
-            <div className="relative h-[40vh]">
+            {/* Map Section */}
+            <div className="relative h-[45vh]">
                 <MapContainer className="h-full" showRoute={false} />
 
                 <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-white/90 to-transparent">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-500">Welcome back 🚗</p>
-                            <h1 className="text-xl font-bold text-gray-900">{currentUser.name.split(' ')[0]}</h1>
+                            <h1 className="text-xl font-bold text-gray-900">{user.name.split(' ')[0]}</h1>
                         </div>
                         <Link href="/profile">
                             <div className="relative">
-                                <img src={currentUser.avatar} alt={currentUser.name} className="w-11 h-11 rounded-full border-2 border-white shadow-md" />
+                                {user.avatar ? (
+                                    <img src={user.avatar} alt={user.name} className="w-11 h-11 rounded-full border-2 border-white shadow-md" />
+                                ) : (
+                                    <div className="w-11 h-11 rounded-full border-2 border-white shadow-md bg-green-500 flex items-center justify-center text-white font-semibold">
+                                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                    </div>
+                                )}
                                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold border-2 border-white">{pendingRequests}</span>
                             </div>
                         </Link>

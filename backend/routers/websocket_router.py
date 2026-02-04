@@ -1,6 +1,5 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from websocket_manager import manager
-import auth
 from jose import jwt, JWTError
 import os
 from dotenv import load_dotenv
@@ -16,7 +15,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
     # Verify token and extract user_id
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
+        user_id: str = payload.get("sub")  # This is already a string (UUID converted in login)
         if user_id is None:
             await websocket.close(code=1008)  # Policy violation
             return

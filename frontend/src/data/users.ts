@@ -7,7 +7,7 @@ export const currentUser: User = {
     name: '',
     email: '',
     phone: '',
-    avatar: '',
+    // avatar is now optional, so we don't need to provide empty string
     rating: 0,
     totalTrips: 0,
     verified: false,

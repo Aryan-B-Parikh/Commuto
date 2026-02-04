@@ -57,9 +57,24 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     
     return user
 
+def get_user_role(user: models.User, db: Session) -> str:
+    """Determine user role based on driver/passenger profile"""
+    # Check if user has driver profile
+    driver = db.query(models.Driver).filter(models.Driver.user_id == user.id).first()
+    if driver:
+        return "driver"
+    
+    # Check if user has passenger profile
+    passenger = db.query(models.Passenger).filter(models.Passenger.user_id == user.id).first()
+    if passenger:
+        return "passenger"
+    
+    return "unknown"
+
 def require_role(allowed_roles: list):
-    def role_checker(current_user: models.User = Depends(get_current_user)):
-        if current_user.role.value not in allowed_roles:
+    def role_checker(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+        user_role = get_user_role(current_user, db)
+        if user_role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to access this resource"

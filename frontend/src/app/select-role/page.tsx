@@ -85,8 +85,7 @@ export default function SelectRolePage() {
                             >
                                 <Card
                                     hoverable
-                                    className={`cursor-pointer border-2 border-transparent hover:border-${role.color}-500 transition-all duration-300`}
-                                    onClick={() => handleSelectRole(role.id)}
+                                    className={`border-2 border-transparent hover:border-${role.color}-500 transition-all duration-300`}
                                 >
                                     <div className="text-center p-4">
                                         {/* Icon */}
@@ -115,9 +114,10 @@ export default function SelectRolePage() {
                                         <motion.button
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
+                                            onClick={() => handleSelectRole(role.id)}
                                             className={`mt-6 w-full py-3 rounded-xl font-semibold transition-all ${role.id === 'passenger'
-                                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                                    : 'bg-green-600 hover:bg-green-700 text-white'
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                : 'bg-green-600 hover:bg-green-700 text-white'
                                                 }`}
                                         >
                                             Continue as {role.title}

@@ -11,15 +11,16 @@ import { isValidEmail, isValidName, getPasswordStrength } from '@/utils/validato
 
 export default function SignupPage() {
     const router = useRouter();
-    const { signup, isLoading, role } = useAuth() as any;
+    const { register, isLoading, role } = useAuth() as any;
     const { showToast } = useToast() as any;
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [phone, setPhone] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
-    const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; terms?: string }>({});
+    const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; phone?: string; terms?: string }>({});
 
     const passwordStrength = getPasswordStrength(password);
     const strengthColors = {
@@ -43,6 +44,12 @@ export default function SignupPage() {
             newErrors.email = 'Please enter a valid email';
         }
 
+        if (!phone) {
+            newErrors.phone = 'Phone number is required';
+        } else if (phone.length < 10) {
+            newErrors.phone = 'Please enter a valid phone number';
+        }
+
         if (!password) {
             newErrors.password = 'Password is required';
         } else if (password.length < 8) {
@@ -62,11 +69,28 @@ export default function SignupPage() {
 
         if (!validate()) return;
 
-        const success = await signup(name, email, password);
+        if (!role) {
+            showToast('error', 'Please select a role first (from /select-role)');
+            router.push('/select-role');
+            return;
+        }
+
+        const success = await register({
+            email,
+            password,
+            full_name: name,
+            phone,
+            role: role as 'passenger' | 'driver',
+        });
 
         if (success) {
-            showToast('success', 'Account created! Please verify your email.');
-            router.push('/verify-otp');
+            showToast('success', 'Account created successfully!');
+            // Redirect based on role
+            if (role === 'driver') {
+                router.push('/driver/dashboard');
+            } else {
+                router.push('/passenger/dashboard');
+            }
         } else {
             showToast('error', 'Signup failed. Please try again.');
         }
@@ -183,6 +207,25 @@ export default function SignupPage() {
                             />
                             {errors.email && (
                                 <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                            )}
+                        </div>
+
+                        {/* Phone */}
+                        <div>
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                                Phone number
+                            </label>
+                            <input
+                                id="phone"
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className={`w-full px-4 py-3 rounded-xl border ${errors.phone ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50'
+                                    } focus:bg-white transition-colors`}
+                                placeholder="+1234567890"
+                            />
+                            {errors.phone && (
+                                <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
                             )}
                         </div>
 

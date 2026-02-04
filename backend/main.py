@@ -13,7 +13,7 @@ app = FastAPI(title="Commuto API", version="1.0.0")
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # Frontend URLs
+    allow_origins=["*"],  # Allow all origins for debugging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,7 +34,8 @@ def root():
 def health_check(db: Session = Depends(get_db)):
     try:
         # Test database connection
-        db.execute("SELECT 1")
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         raise HTTPException(

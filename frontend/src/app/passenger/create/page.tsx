@@ -7,6 +7,9 @@ import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
+import { tripsAPI } from '@/services/api';
+import { prepareTripForBackend } from '@/utils/tripTransformers';
+import { geocodeAddress } from '@/utils/geocoding';
 
 export default function PassengerCreateTripPage() {
     const router = useRouter();
@@ -26,11 +29,23 @@ export default function PassengerCreateTripPage() {
         e.preventDefault();
         setIsLoading(true);
 
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            // Geocode addresses to get coordinates
+            const fromCoords = await geocodeAddress(formData.pickup);
+            const toCoords = await geocodeAddress(formData.destination);
 
-        showToast('success', 'Trip request posted! System is finding a route.');
-        router.push('/passenger/dashboard');
+            // Create trip with backend API using transformer and real coordinates
+            const tripData = prepareTripForBackend(formData, fromCoords, toCoords);
+            await tripsAPI.createTrip(tripData);
+
+            showToast('success', 'Trip request posted successfully!');
+            router.push('/passenger/dashboard');
+        } catch (error) {
+            console.error('Failed to create trip:', error);
+            showToast('error', 'Failed to post trip request. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -118,8 +133,8 @@ export default function PassengerCreateTripPage() {
                                             type="button"
                                             onClick={() => setFormData({ ...formData, passengers: num })}
                                             className={`flex-1 py-3 rounded-xl font-bold transition-all ${formData.passengers === num
-                                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 ring-2 ring-blue-500 ring-offset-2'
-                                                    : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 ring-2 ring-blue-500 ring-offset-2'
+                                                : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
                                                 }`}
                                         >
                                             {num}

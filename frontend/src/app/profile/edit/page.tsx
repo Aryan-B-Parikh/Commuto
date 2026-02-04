@@ -3,36 +3,75 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EditProfileForm } from '../../../components/profile/EditProfileForm';
-import { mockPassenger, mockDriver } from '../../../data/mock-profile';
-import { UserProfile } from '../../../types/profile';
+import { UserProfile, Gender } from '../../../types/profile';
 import { useAuth } from '../../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 export default function EditProfilePage() {
-    const { role, isLoading: authLoading } = useAuth();
+    const { user, role, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
-    const [currentData, setCurrentData] = useState<UserProfile>(mockPassenger);
+    const [currentData, setCurrentData] = useState<UserProfile | null>(null);
 
     useEffect(() => {
         if (authLoading) return;
 
-        if (!role) {
-            router.push('/select-role');
+        if (!user || !role) {
+            router.push('/login');
             return;
         }
 
-        setLoading(true);
-        // Simulate initial load delay
-        const timer = setTimeout(() => {
-            setCurrentData(role === 'passenger' ? mockPassenger : mockDriver);
-            setLoading(false);
-        }, 1200);
-        return () => clearTimeout(timer);
-    }, [role, authLoading, router]);
+        // Map User to UserProfile
+        const profileData: UserProfile = {
+            id: user.id,
+            fullName: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            avatar: user.avatar || '',
+            role: role as 'passenger' | 'driver',
+            gender: 'prefer-not-to-say' as Gender, // Default
+            dateOfBirth: '',
+            bio: '',
+            address: '',
+            emergencyContact: {
+                name: '',
+                relationship: '',
+                phone: ''
+            },
+            // Initialize empty preference/driver fields
+            preferences: {
+                smoking: false,
+                pets: false,
+                music: false,
+                chat: false
+            },
+            driverDetails: role === 'driver' ? {
+                licenseNumber: '',
+                vehicle: {
+                    make: '',
+                    model: '',
+                    plateNumber: '',
+                    color: '',
+                    year: 2020
+                },
+                experience: 0,
+                documents: {
+                    license: true,
+                    insurance: true,
+                    registration: true
+                }
+            } : undefined
+        };
+
+        setCurrentData(profileData);
+        setLoading(false);
+
+    }, [user, role, authLoading, router]);
 
     const handleSave = async (newData: UserProfile) => {
         console.log('Saving profile data:', newData);
+        // TODO: Call API to update profile
+        // await authAPI.updateProfile(newData);
         setCurrentData(newData);
     };
 
@@ -70,7 +109,7 @@ export default function EditProfilePage() {
                 </section>
 
                 <AnimatePresence mode="wait">
-                    {loading ? (
+                    {loading || !currentData ? (
                         <motion.div
                             key="skeleton"
                             initial={{ opacity: 0 }}

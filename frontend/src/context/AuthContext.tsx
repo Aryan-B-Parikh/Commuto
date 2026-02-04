@@ -2,7 +2,9 @@
 
 import React, { createContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
-import { currentUser } from '@/data/users';
+import { authAPI } from '@/services/api';
+import { transformBackendUser } from '@/utils/transformers';
+import type { RegisterRequest } from '@/types/api';
 
 export type UserRole = 'driver' | 'passenger' | null;
 
@@ -12,11 +14,10 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<boolean>;
-    signup: (name: string, email: string, password: string) => Promise<boolean>;
-    verifyOTP: (otp: string) => Promise<boolean>;
+    register: (data: RegisterRequest) => Promise<boolean>;
     logout: () => void;
     setRole: (role: UserRole) => void;
-    pendingEmail: string | null;
+    refreshUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -29,14 +30,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [role, setRoleState] = useState<UserRole>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
-    // Load role from localStorage on mount
+    // Load user from token on mount
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const savedRole = localStorage.getItem('commuto_role') as UserRole;
-            if (savedRole) setRoleState(savedRole);
-        }
+        const loadUser = async () => {
+            if (typeof window !== 'undefined') {
+                const token = localStorage.getItem('auth_token');
+                const savedRole = localStorage.getItem('commuto_role') as UserRole;
+
+                if (savedRole) setRoleState(savedRole);
+
+                if (token) {
+                    try {
+                        setIsLoading(true);
+                        const userData = await authAPI.getCurrentUser();
+                        const frontendUser = transformBackendUser(userData);
+                        setUser(frontendUser);
+                        setRoleState(userData.role as UserRole);
+                    } catch (error) {
+                        console.error('Failed to load user:', error);
+                        localStorage.removeItem('auth_token');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                }
+            }
+        };
+        loadUser();
     }, []);
 
     // Set role and persist to localStorage
@@ -51,60 +71,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }, []);
 
-    // Simulated login
+    // Real login with backend API
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
         setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            const authResponse = await authAPI.login({ email, password });
+            localStorage.setItem('auth_token', authResponse.access_token);
 
-        if (email && password) {
-            setPendingEmail(email);
+            // Fetch user data
+            const userData = await authAPI.getCurrentUser();
+            const frontendUser = transformBackendUser(userData);
+
+            setUser(frontendUser);
+            setRole(userData.role as UserRole);
             setIsLoading(false);
             return true;
+        } catch (error) {
+            console.error('Login failed:', error);
+            setIsLoading(false);
+            return false;
         }
+    }, [setRole]);
 
-        setIsLoading(false);
-        return false;
-    }, []);
-
-    // Simulated signup
-    const signup = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
+    // Real registration with backend API
+    const register = useCallback(async (data: RegisterRequest): Promise<boolean> => {
         setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            const userData = await authAPI.register(data);
+            const frontendUser = transformBackendUser(userData);
 
-        if (name && email && password) {
-            setPendingEmail(email);
+            // Auto-login after registration
+            const loginSuccess = await login(data.email, data.password);
+
             setIsLoading(false);
-            return true;
-        }
-
-        setIsLoading(false);
-        return false;
-    }, []);
-
-    // Simulated OTP verification
-    const verifyOTP = useCallback(async (otp: string): Promise<boolean> => {
-        setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        if (otp === '123456') {
-            setUser({
-                ...currentUser,
-                email: pendingEmail || currentUser.email,
-            });
-            setPendingEmail(null);
+            return loginSuccess;
+        } catch (error) {
+            console.error('Registration failed:', error);
             setIsLoading(false);
-            return true;
+            return false;
         }
+    }, [login]);
 
-        setIsLoading(false);
-        return false;
-    }, [pendingEmail]);
+    // Refresh user data
+    const refreshUser = useCallback(async () => {
+        try {
+            const userData = await authAPI.getCurrentUser();
+            const frontendUser = transformBackendUser(userData);
+            setUser(frontendUser);
+            setRole(userData.role as UserRole);
+        } catch (error) {
+            console.error('Failed to refresh user:', error);
+        }
+    }, [setRole]);
 
     // Logout
     const logout = useCallback(() => {
         setUser(null);
-        setPendingEmail(null);
-        // Keep role for convenience
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+        }
     }, []);
 
     return (
@@ -115,11 +140,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 isAuthenticated: !!user,
                 isLoading,
                 login,
-                signup,
-                verifyOTP,
+                register,
                 logout,
                 setRole,
-                pendingEmail,
+                refreshUser,
             }}
         >
             {children}
