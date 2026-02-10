@@ -10,15 +10,70 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
-import { mockTrips } from '@/data/trips';
+import { tripsAPI } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function DriverLivePage() {
     const router = useRouter();
     const { showToast } = useToast();
+    const { user } = useAuth();
     const [progress, setProgress] = useState(0);
     const [showEndModal, setShowEndModal] = useState(false);
+    const [trip, setTrip] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const trip = mockTrips[0];
+    useEffect(() => {
+        const fetchActiveTrip = async () => {
+            try {
+                if (!user) return;
+                
+                // Fetch the driver's active trip
+                const trips = await tripsAPI.getDriverTrips();
+                const activeTrip = trips.find(trip => trip.status === 'active');
+                
+                setTrip(activeTrip);
+                if (activeTrip) {
+                    // Calculate initial progress based on trip start time
+                    const startTime = new Date(activeTrip.startTime).getTime();
+                    const currentTime = Date.now();
+                    const durationMs = activeTrip.durationMinutes * 60 * 1000;
+                    const progressPercent = Math.min(90, ((currentTime - startTime) / durationMs) * 100);
+                    setProgress(Math.round(progressPercent));
+                }
+            } catch (err) {
+                console.error('Failed to fetch active trip:', err);
+                setError('Failed to load trip information.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchActiveTrip();
+    }, [user]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-gray-900 mb-2">Loading Trip Information</h3>
+                    <p className="text-gray-500 mb-6">Please wait while we fetch your active trip...</p>
+                </Card>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-red-500 mb-2">⚠️ Error</h3>
+                    <p className="text-gray-500 mb-6">{error}</p>
+                    <Button onClick={() => window.location.reload()}>Retry</Button>
+                </Card>
+            </div>
+        );
+    }
 
     if (!trip) {
         return (
