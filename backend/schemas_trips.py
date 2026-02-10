@@ -3,18 +3,37 @@ from typing import Optional
 from datetime import datetime
 from uuid import UUID
 
-# Trip Schemas
+# Location Schemas
 class LocationCreate(BaseModel):
     address: str
     lat: float = Field(ge=-90, le=90)
     lng: float = Field(ge=-180, le=180)
 
+
+class LocationUpdate(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+
+
+class LocationResponse(BaseModel):
+    id: UUID
+    trip_id: UUID
+    latitude: float
+    longitude: float
+    timestamp: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Trip Schemas
 class TripCreate(BaseModel):
     from_location: LocationCreate
     to_location: LocationCreate
     date: str
     time: str
     seats_requested: int = Field(ge=1, le=4)
+
 
 class TripResponse(BaseModel):
     id: UUID
@@ -37,10 +56,23 @@ class TripResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class TripCancellationRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+class TripCancellationResponse(BaseModel):
+    message: str
+    trip_id: str
+    penalty_amount: float
+    reason: Optional[str] = None
+
+
 # Bid Schemas
 class BidCreate(BaseModel):
     amount: float = Field(gt=0)
     message: Optional[str] = None
+
 
 class BidResponse(BaseModel):
     id: UUID
@@ -53,6 +85,7 @@ class BidResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class BidWithDriver(BaseModel):
     id: UUID
     trip_id: UUID
@@ -64,6 +97,25 @@ class BidWithDriver(BaseModel):
     driver_rating: Optional[float]
     driver_avatar: Optional[str] = None
 
+
+class BidAcceptResponse(BaseModel):
+    message: str
+    trip_id: str
+    otp: str
+
+
 # OTP Schema
 class OTPVerify(BaseModel):
     otp: str = Field(min_length=6, max_length=6)
+
+
+class OTPVerifyResponse(BaseModel):
+    message: str
+    trip_id: str
+    started_at: datetime
+
+
+class TripCompleteResponse(BaseModel):
+    message: str
+    trip_id: str
+    completed_at: datetime
