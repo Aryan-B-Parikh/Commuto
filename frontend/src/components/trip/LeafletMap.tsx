@@ -64,13 +64,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
                 </Marker>
             ))}
 
-            {/* Mock Route for demo if showRoute is true and no specific route provided */}
-            {/* In a real app, we would calculate route using OSRM or GraphHopper */}
             {showRoute && markers.length >= 2 && (
-                // Simple straight line for now
+                // Route visualization would be implemented here
                 <React.Fragment />
-                // Polyline would require importing Polyline from react-leaflet, 
-                // omitting for brevity unless specifically requested for routing visualization
             )}
         </LMapContainer>
     );

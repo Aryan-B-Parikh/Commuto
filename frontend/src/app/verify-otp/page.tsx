@@ -158,13 +158,7 @@ export default function VerifyOTPPage() {
                                     </p>
                                 </div>
 
-                                {/* Demo hint */}
-                                <div className="mt-8 p-4 bg-gray-50 rounded-xl">
-                                    <p className="text-xs text-gray-500">
-                                        <span className="font-medium">Demo:</span> Use code <span className="font-mono font-bold text-blue-600">123456</span> to verify
-                                    </p>
-                                </div>
-                            </motion.div>
+                                </motion.div>
                         ) : (
                             <motion.div
                                 key="success"

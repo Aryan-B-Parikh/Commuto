@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { AvatarBadge } from '@/components/ui/AvatarBadge';
 import { DriverBottomNav } from '@/components/layout/DriverBottomNav';
 import { useToast } from '@/hooks/useToast';
-import { mockUsers } from '@/data/users';
+import { bidsAPI } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PassengerRequest {
     id: string;
@@ -18,18 +19,66 @@ interface PassengerRequest {
     status: 'pending' | 'approved' | 'rejected';
 }
 
-const mockRequests: PassengerRequest[] = [];
-
 export default function DriverRequestsPage() {
     const { showToast } = useToast();
-    const [requests, setRequests] = useState(mockRequests);
+    const { user } = useAuth();
+    const [requests, setRequests] = useState<PassengerRequest[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const handleAction = (id: string, action: 'approve' | 'reject') => {
-        setRequests(prev => prev.map(r =>
-            r.id === id ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r
-        ));
-        showToast(action === 'approve' ? 'success' : 'info',
-            action === 'approve' ? 'Passenger approved!' : 'Request declined');
+    useEffect(() => {
+        const fetchPendingRequests = async () => {
+            try {
+                if (!user) return;
+                
+                // Fetch pending bids/requests for this driver
+                const bidsResponse = await bidsAPI.getDriverBids();
+                const pendingBids = bidsResponse.filter(bid => bid.status === 'pending');
+                
+                // Transform bids to requests format
+                const requestsData = pendingBids.map(bid => ({
+                    id: bid.id,
+                    passenger: bid.passenger,
+                    trip: {
+                        from: bid.trip.from.name,
+                        to: bid.trip.to.name,
+                        date: bid.trip.date
+                    },
+                    seats: bid.seats,
+                    status: 'pending'
+                }));
+                
+                setRequests(requestsData);
+            } catch (err) {
+                console.error('Failed to fetch pending requests:', err);
+                setError('Failed to load requests. Please try again later.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchPendingRequests();
+    }, [user]);
+
+    const handleAction = async (id: string, action: 'approve' | 'reject') => {
+        try {
+            // Call the real API to update bid status
+            const response = await bidsAPI.updateBidStatus(id, action === 'approve' ? 'accepted' : 'rejected');
+            
+            if (response.success) {
+                // Update local state
+                setRequests(prev => prev.map(r =>
+                    r.id === id ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r
+                ));
+                showToast(action === 'approve' ? 'success' : 'info',
+                    action === 'approve' ? 'Passenger approved!' : 'Request declined');
+            } else {
+                showToast('error', response.message || 'Failed to update request status');
+            }
+        } catch (err) {
+            console.error('Failed to update bid status:', err);
+            showToast('error', 'Failed to update request status. Please try again.');
+        }
     };
 
     const pendingRequests = requests.filter(r => r.status === 'pending');

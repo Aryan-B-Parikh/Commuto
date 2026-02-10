@@ -10,39 +10,68 @@ import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
-import { mockGroupedRoutes, Stop } from '@/data/groupedRoutes';
+import { tripsAPI } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LiveRoutePage() {
     const { id } = useParams();
     const router = useRouter();
     const { showToast } = useToast() as any;
-    const initialRoute = mockGroupedRoutes.find(r => r.id === id);
-
-    const [stops, setStops] = useState<Stop[]>(initialRoute?.stops || []);
+    const { user } = useAuth();
+    const [stops, setStops] = useState<Stop[]>([]);
     const [activeStopIndex, setActiveStopIndex] = useState(0);
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [otpInput, setOtpInput] = useState('');
     const [isFinishing, setIsFinishing] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchRouteDetails = async () => {
+            try {
+                if (!user || !id) return;
+                
+                // Fetch the specific route details from API
+                const routeDetails = await tripsAPI.getRouteDetails(id);
+                setStops(routeDetails.stops || []);
+            } catch (err) {
+                console.error('Failed to fetch route details:', err);
+                setError('Failed to load route information.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchRouteDetails();
+    }, [user, id]);
 
     const activeStop = stops[activeStopIndex];
     const completedCount = stops.filter(s => s.isCompleted).length;
     const progress = Math.round((completedCount / stops.length) * 100);
 
-    const handleVerifyOtp = () => {
-        if (otpInput === activeStop.otp) {
-            const updatedStops = [...stops];
-            updatedStops[activeStopIndex] = { ...activeStop, isCompleted: true };
-            setStops(updatedStops);
-            setShowOtpModal(false);
-            setOtpInput('');
-            showToast('success', `${activeStop.passengerName} verified and picked up!`);
+    const handleVerifyOtp = async () => {
+        try {
+            // Call the real API to verify OTP
+            const response = await tripsAPI.verifyStopOTP(activeStop.id, otpInput);
+            
+            if (response.success) {
+                const updatedStops = [...stops];
+                updatedStops[activeStopIndex] = { ...activeStop, isCompleted: true };
+                setStops(updatedStops);
+                setShowOtpModal(false);
+                setOtpInput('');
+                showToast('success', `${activeStop.passengerName} verified and picked up!`);
 
-            // Move to next stop if available
-            if (activeStopIndex < stops.length - 1) {
-                setActiveStopIndex(activeStopIndex + 1);
+                // Move to next stop if available
+                if (activeStopIndex < stops.length - 1) {
+                    setActiveStopIndex(activeStopIndex + 1);
+                }
+            } else {
+                showToast('error', response.message || 'Invalid OTP. Please try again.');
             }
-        } else {
-            showToast('error', 'Invalid OTP. Please try again.');
+        } catch (err) {
+            console.error('OTP verification failed:', err);
+            showToast('error', 'Failed to verify OTP. Please check your connection and try again.');
         }
     };
 
@@ -64,15 +93,24 @@ export default function LiveRoutePage() {
         router.push('/driver/routes');
     };
 
-    if (!initialRoute) {
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4">
                 <Card className="text-center py-12">
-                    <h3 className="font-semibold text-gray-900 mb-2">Route Not Found</h3>
-                    <p className="text-gray-500 mb-6">The requested route could not be found.</p>
-                    <Link href="/driver/routes">
-                        <Button variant="outline">Back to Routes</Button>
-                    </Link>
+                    <h3 className="font-semibold text-gray-900 mb-2">Loading Route</h3>
+                    <p className="text-gray-500 mb-6">Please wait while we fetch your route details...</p>
+                </Card>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-red-500 mb-2">⚠️ Error</h3>
+                    <p className="text-gray-500 mb-6">{error}</p>
+                    <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
                 </Card>
             </div>
         );
@@ -243,10 +281,6 @@ export default function LiveRoutePage() {
                             placeholder="0000"
                             autoFocus
                         />
-                    </div>
-                    <div className="bg-blue-50 p-3 rounded-xl mb-8 flex justify-between items-center">
-                        <span className="text-xs font-bold text-blue-600 uppercase">Demo Preview</span>
-                        <span className="text-lg font-mono font-bold text-blue-700">{activeStop?.otp}</span>
                     </div>
                     <Button variant="primary" fullWidth size="lg" onClick={handleVerifyOtp} disabled={otpInput.length !== 4}>Confirm Boarding</Button>
                 </div>
