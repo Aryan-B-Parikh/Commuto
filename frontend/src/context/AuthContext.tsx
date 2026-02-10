@@ -13,6 +13,7 @@ interface AuthContextType {
     role: UserRole;
     isAuthenticated: boolean;
     isLoading: boolean;
+    token: string | null;
     login: (email: string, password: string) => Promise<boolean>;
     register: (data: RegisterRequest) => Promise<boolean>;
     logout: () => void;
@@ -139,6 +140,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 role,
                 isAuthenticated: !!user,
                 isLoading,
+                token: typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null,
                 login,
                 register,
                 logout,

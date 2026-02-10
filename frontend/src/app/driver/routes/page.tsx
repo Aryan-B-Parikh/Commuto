@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/useToast';
 import { tripsAPI, bidsAPI } from '@/services/api';
 import { transformTripResponses } from '@/utils/tripTransformers';
 import type { Trip } from '@/types';
-import { useSocketEvent } from '@/hooks/useWebSocket';
+import { useWebSocket } from '@/context/WebSocketContext';
 
 export default function GroupedRoutesDashboard() {
     const { showToast } = useToast() as any;
@@ -35,14 +35,16 @@ export default function GroupedRoutesDashboard() {
         }
     };
 
-    // Real-time new ride requests
-    useSocketEvent('new_ride_request', (data: any) => {
-        console.log('New ride request:', data);
-        // data.data contains the trip data from backend
-        // We might need to transform it or just refetch to be safe/simple
-        showToast('info', 'New ride request available!');
-        fetchRoutes();
-    });
+    const { lastMessage } = useWebSocket();
+
+    // Listen for real-time new ride requests
+    useEffect(() => {
+        if (lastMessage && lastMessage.type === 'new_ride_request') {
+            console.log('New ride request received:', lastMessage);
+            showToast('info', 'New ride request available!');
+            fetchRoutes();
+        }
+    }, [lastMessage]);
 
     const handlePlaceBid = async (tripId: string) => {
         const amount = bidAmounts[tripId] || 25; // Default 25 if not set
