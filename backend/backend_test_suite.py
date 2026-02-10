@@ -39,15 +39,15 @@ def run_request(method, endpoint, data=None, token=None):
         return {"status": 0, "body": str(e)}
 
 def test_backend():
-    print("🚀 Starting Backend Verification Suite...\n")
+    print("Starting Backend Verification Suite...\n")
 
     # 1. Health Check
     print("1. Testing Health Check (/health)...")
     res = run_request("GET", "/health")
     if res["status"] == 200:
-        print("✅ Health Check Passed")
+        print("Health Check Passed")
     else:
-        print(f"❌ Health Check Failed: {res}")
+        print(f"Health Check Failed: {res}")
         return
 
     # 2. Registration
@@ -65,9 +65,9 @@ def test_backend():
     
     res = run_request("POST", "/auth/register", payload)
     if res["status"] == 201:
-        print(f"✅ Registration Passed for {email}")
+        print(f"Registration Passed for {email}")
     else:
-        print(f"❌ Registration Failed: {res}")
+        print(f"Registration Failed: {res}")
         return
 
     # 3. Login
@@ -78,22 +78,22 @@ def test_backend():
     token = None
     if res["status"] == 200 and "access_token" in res["body"]:
         token = res["body"]["access_token"]
-        print("✅ Login Passed")
+        print("Login Passed")
     else:
-        print(f"❌ Login Failed: {res}")
+        print(f"Login Failed: {res}")
         return
 
     # 4. Get Current User (Auth/Me)
     print("\n4. Testing Get Current User (/auth/me)...")
     res = run_request("GET", "/auth/me", token=token)
     if res["status"] == 200:
-        print("✅ Get Current User Passed")
+        print("Get Current User Passed")
         print(f"   Response keys: {list(res['body'].keys())}")
     else:
-        print(f"❌ Get Current User Failed: {res}")
+        print(f"Get Current User Failed: {res}")
         return
 
-    print("\n🎉 All Backend Tests Passed!")
+    print("\nAll Backend Tests Passed!")
 
 if __name__ == "__main__":
     test_backend()

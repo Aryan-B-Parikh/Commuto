@@ -111,7 +111,7 @@ def get_ride_bids(
             "created_at": bid.created_at,
             "driver_name": user.full_name,
             "driver_rating": driver.rating,
-            "driver_avatar": user.avatar
+            "driver_avatar": user.avatar_url
         })
     
     return result

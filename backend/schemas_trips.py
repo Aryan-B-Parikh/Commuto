@@ -19,8 +19,8 @@ class TripCreate(BaseModel):
 class TripResponse(BaseModel):
     id: UUID
     driver_id: Optional[UUID] = None
-    from_address: str
-    to_address: str
+    from_address: str = Field(validation_alias="origin_address")
+    to_address: str = Field(validation_alias="dest_address")
     start_time: datetime
     seats_requested: int = None  # For backward compatibility
     total_seats: int
