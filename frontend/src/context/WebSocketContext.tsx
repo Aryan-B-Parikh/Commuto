@@ -29,7 +29,8 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         }
 
         const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
-        const socketUrl = `${wsUrl}/ws/${token}`;
+        // Use query parameter instead of path for token (security: prevents logging in server access logs)
+        const socketUrl = `${wsUrl}/ws?token=${encodeURIComponent(token)}`;
 
         console.log('Connecting to WebSocket:', socketUrl);
         const websocket = new WebSocket(socketUrl);

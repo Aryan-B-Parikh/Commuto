@@ -1,19 +1,63 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { MapContainer } from '@/components/trip/MapContainer';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { mockGroupedRoutes } from '@/data/groupedRoutes';
 import { formatCurrency } from '@/utils/formatters';
+import { tripsAPI } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function RouteDetailPage() {
     const { id } = useParams();
     const router = useRouter();
-    const route = mockGroupedRoutes.find(r => r.id === id);
+    const { user } = useAuth();
+    const [route, setRoute] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchRouteDetails = async () => {
+            try {
+                if (!user || !id) return;
+                
+                // Fetch the specific route details from API
+                const routeDetails = await tripsAPI.getRouteDetails(id);
+                setRoute(routeDetails);
+            } catch (err) {
+                console.error('Failed to fetch route details:', err);
+                setError('Failed to load route information.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchRouteDetails();
+    }, [user, id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <div className="text-center">
+                    <p className="text-gray-500 mb-4">Loading route details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <div className="text-center">
+                    <p className="text-red-500 mb-4">⚠️ {error}</p>
+                    <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
+                </div>
+            </div>
+        );
+    }
 
     if (!route) {
         return (

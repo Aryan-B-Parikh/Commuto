@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { MapContainer } from '@/components/trip/MapContainer';
@@ -9,20 +9,69 @@ import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
 import { Button } from '@/components/ui/Button';
 import { RatingStars } from '@/components/ui/RatingStars';
-import { mockTrips } from '@/data/trips';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/formatters';
+import { tripsAPI } from '@/services/api';
 
 export default function DriverDashboardPage() {
     const { user, isLoading } = useAuth();
     const [isOnline, setIsOnline] = useState(false);
-    const activeTrips = mockTrips.filter(t => t.status === 'upcoming').slice(0, 2);
-    const todayEarnings = 45.50;
-    const weeklyEarnings = 312.80;
-    const pendingRequests = 3;
+    const [activeTrips, setActiveTrips] = useState([]);
+    const [todayEarnings, setTodayEarnings] = useState(0);
+    const [weeklyEarnings, setWeeklyEarnings] = useState(0);
+    const [pendingRequests, setPendingRequests] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchDriverData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                // Fetch driver's active trips
+                const tripsResponse = await tripsAPI.getDriverTrips();
+                const activeTripsData = tripsResponse.filter(trip => trip.status === 'upcoming' || trip.status === 'active');
+                setActiveTrips(activeTripsData.slice(0, 2));
+                
+                // Fetch earnings data (this would come from a driver stats endpoint)
+                // For now, using placeholder values that would be replaced with real API calls
+                setTodayEarnings(45.50); // Would be: earningsResponse.today
+                setWeeklyEarnings(312.80); // Would be: earningsResponse.weekly
+                
+                // Fetch pending requests (would come from bids/requests endpoint)
+                setPendingRequests(3); // Would be: requestsResponse.pending_count
+                
+            } catch (err) {
+                console.error('Failed to fetch driver data:', err);
+                setError('Failed to load dashboard data. Please try again later.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        if (user) {
+            fetchDriverData();
+        }
+    }, [user]);
 
     if (isLoading || !user) {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    }
+
+    if (loading) {
+        return <div className="min-h-screen flex items-center justify-center">Loading dashboard data...</div>;
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Card className="text-center py-6 max-w-md">
+                    <p className="text-red-500 mb-3">⚠️ {error}</p>
+                    <Button size="sm" variant="primary" onClick={() => window.location.reload()}>Retry</Button>
+                </Card>
+            </div>
+        );
     }
 
     return (

@@ -1,16 +1,63 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { RatingStars } from '@/components/ui/RatingStars';
 import { DriverBottomNav } from '@/components/layout/DriverBottomNav';
-import { mockTrips } from '@/data/trips';
+import { Button } from '@/components/ui/Button';
 import { formatDate, formatCurrency } from '@/utils/formatters';
+import { tripsAPI } from '@/services/api';
 
 export default function DriverHistoryPage() {
-    const completedTrips = mockTrips.filter(t => t.status === 'completed');
+    const [completedTrips, setCompletedTrips] = useState([]);
+    const [totalEarnings, setTotalEarnings] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchTripHistory = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                // Fetch driver's completed trips
+                const tripsResponse = await tripsAPI.getDriverTrips();
+                const completedTripsData = tripsResponse.filter(trip => trip.status === 'completed');
+                setCompletedTrips(completedTripsData);
+                
+                // Calculate total earnings from completed trips
+                const earnings = completedTripsData.reduce((sum, trip) => {
+                    return sum + (trip.pricePerSeat * trip.passengers.length);
+                }, 0);
+                setTotalEarnings(earnings);
+                
+            } catch (err) {
+                console.error('Failed to fetch trip history:', err);
+                setError('Failed to load trip history. Please try again later.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchTripHistory();
+    }, []);
+
+    if (loading) {
+        return <div className="min-h-screen flex items-center justify-center">Loading trip history...</div>;
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Card className="text-center py-6 max-w-md">
+                    <p className="text-red-500 mb-3">⚠️ {error}</p>
+                    <Button size="sm" variant="primary" onClick={() => window.location.reload()}>Retry</Button>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -26,7 +73,7 @@ export default function DriverHistoryPage() {
                         <p className="text-sm text-gray-500">Trips Completed</p>
                     </Card>
                     <Card className="text-center">
-                        <p className="text-2xl font-bold text-green-600">$486</p>
+                        <p className="text-2xl font-bold text-green-600">{formatCurrency(totalEarnings)}</p>
                         <p className="text-sm text-gray-500">Total Earned</p>
                     </Card>
                 </div>

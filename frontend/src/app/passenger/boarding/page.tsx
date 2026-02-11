@@ -9,19 +9,73 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useToast } from '@/hooks/useToast';
-import { mockTrips } from '@/data/trips';
+import { tripsAPI } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function BoardingPage() {
     const router = useRouter();
     const { showToast } = useToast() as any;
     const { seconds, start, formattedTime } = useCountdown();
+    const { user } = useAuth();
 
     const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
+    const [trip, setTrip] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const trip = mockTrips[0]; // Mock current trip
+    useEffect(() => {
+        const fetchActiveTrip = async () => {
+            try {
+                if (!user) return;
+                
+                // Fetch the user's active trip that needs boarding
+                const trips = await tripsAPI.getMyTrips();
+                const activeTrip = trips.find(trip => 
+                    trip.status === 'accepted' && 
+                    trip.driver && 
+                    trip.otp && 
+                    !trip.hasStarted
+                );
+                
+                setTrip(activeTrip);
+                if (activeTrip) {
+                    start(300); // 5 minute countdown
+                }
+            } catch (err) {
+                console.error('Failed to fetch active trip:', err);
+                setError('Failed to load trip information.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchActiveTrip();
+    }, [user, start]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-gray-900 mb-2">Loading Trip Information</h3>
+                    <p className="text-gray-500 mb-6">Please wait while we fetch your trip details...</p>
+                </Card>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-red-500 mb-2">⚠️ Error</h3>
+                    <p className="text-gray-500 mb-6">{error}</p>
+                    <Button size="sm" variant="primary" onClick={() => window.location.reload()}>Retry</Button>
+                </Card>
+            </div>
+        );
+    }
 
     if (!trip) {
         return (
@@ -48,17 +102,23 @@ export default function BoardingPage() {
         setIsVerifying(true);
         setError('');
 
-        // Simulate verification
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        if (otp === '123456') {
-            setIsVerified(true);
-            showToast('success', 'Boarding verified! Have a safe trip.');
-            setTimeout(() => {
-                router.push('/passenger/live');
-            }, 2500);
-        } else {
-            setError('Invalid OTP. Please try again.');
+        try {
+            // Call the real API to verify OTP
+            const response = await tripsAPI.verifyTripOTP(trip.id, otp);
+            
+            if (response.success) {
+                setIsVerified(true);
+                showToast('success', 'Boarding verified! Have a safe trip.');
+                setTimeout(() => {
+                    router.push('/passenger/live');
+                }, 2500);
+            } else {
+                setError(response.message || 'Invalid OTP. Please try again.');
+                setIsVerifying(false);
+            }
+        } catch (err) {
+            console.error('OTP verification failed:', err);
+            setError('Failed to verify OTP. Please check your connection and try again.');
             setIsVerifying(false);
         }
     };
@@ -178,10 +238,6 @@ export default function BoardingPage() {
                                     </div>
                                 </div>
 
-                                {/* Demo hint */}
-                                <p className="mt-4 text-xs text-gray-400">
-                                    Demo: Use code <span className="font-mono font-bold">123456</span>
-                                </p>
                             </Card>
                         </motion.div>
                     ) : (

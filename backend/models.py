@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey, Enum, Text, Numeric, Date
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey, Enum, Text, Numeric, Date, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
@@ -84,7 +84,7 @@ class Passenger(Base):
     __tablename__ = "passengers"
     
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
-    preferences = Column(JSONB, nullable=True)
+    preferences = Column(JSON, nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="passenger_profile")
@@ -134,7 +134,21 @@ class Trip(Base):
     start_otp = Column(String(6), nullable=True)
     otp_verified = Column(Boolean, default=False)
     
+    # Optimistic locking
+    version = Column(Integer, default=0, nullable=False)
+    
+    # Cancellation tracking
+    cancelled_at = Column(DateTime, nullable=True)
+    cancelled_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    cancellation_reason = Column(Text, nullable=True)
+    cancellation_penalty = Column(Numeric, default=0)
+    
+    # Payment tracking
+    payment_intent_id = Column(String(255), nullable=True)
+    payment_status = Column(String(20), default="pending")
+    
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     driver = relationship("Driver", back_populates="trips", foreign_keys=[driver_id])
@@ -142,6 +156,7 @@ class Trip(Base):
     bookings = relationship("Booking", back_populates="trip", cascade="all, delete-orphan")
     bids = relationship("TripBid", back_populates="trip", cascade="all, delete-orphan")
     locations = relationship("TripLocation", back_populates="trip", cascade="all, delete-orphan")
+    cancelled_by_user = relationship("User", foreign_keys=[cancelled_by])
 
 # Booking Model
 class Booking(Base):
@@ -174,11 +189,20 @@ class TripBid(Base):
     bid_amount = Column(Numeric, nullable=False)
     status = Column(String(20), default="pending")
     
+    # Optimistic locking for concurrent bid updates
+    version = Column(Integer, default=0, nullable=False)
+    
+    # Counter bid tracking
+    parent_bid_id = Column(UUID(as_uuid=True), ForeignKey("trip_bids.id"), nullable=True)
+    is_counter_bid = Column(Boolean, default=False)
+    
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     trip = relationship("Trip", back_populates="bids")
     driver = relationship("Driver", back_populates="bids")
+    parent_bid = relationship("TripBid", remote_side=[id], backref="counter_bids")
 
 # SavedPlace Model
 class SavedPlace(Base):
