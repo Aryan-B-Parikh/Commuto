@@ -5,6 +5,7 @@ import models
 import schemas
 import auth
 import uuid
+from datetime import datetime
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -113,7 +114,69 @@ def get_current_user_info(
         if driver:
             user_response.license_number = driver.license_number
             user_response.is_online = driver.is_online
+            user_response.rating = float(driver.rating) if driver.rating else 0.0
+            user_response.total_trips = driver.total_trips
+            
+            # Calculate today's earnings
+            today = datetime.utcnow().date()
+            today_trips = db.query(models.Trip).filter(
+                models.Trip.driver_id == current_user.id,
+                models.Trip.status == "completed",
+                models.Trip.created_at >= today
+            ).all()
+            
+            user_response.today_earnings = sum(float(trip.price_per_seat) * (trip.total_seats - trip.available_seats) for trip in today_trips)
+            
+            # Mock online hours for now as we don't track session duration yet
+            user_response.online_hours = 4.5 if driver.is_online else 0.0
+            
+    elif user_response.role == "passenger":
+        # Any passenger specific stats can go here
+        passenger_bookings = db.query(models.Booking).filter(
+            models.Booking.passenger_id == current_user.id,
+            models.Booking.status == "completed"
+        ).all()
+        user_response.total_trips = len(passenger_bookings)
+        # Mock rating for passenger
+        user_response.rating = 5.0
+
+    return user_response
+@router.patch("/me", response_model=schemas.UserResponse)
+def update_profile(
+    user_update: schemas.UserUpdate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if user_update.full_name is not None:
+        current_user.full_name = user_update.full_name
+    if user_update.phone is not None:
+        current_user.phone_number = user_update.phone
+    if user_update.avatar_url is not None:
+        current_user.avatar_url = user_update.avatar_url
+    
+    # Update driver-specific fields if user is a driver
+    if user_update.license_number is not None:
+        driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
+        if driver:
+            driver.license_number = user_update.license_number
+        elif auth.get_user_role(current_user, db) == "driver":
+            # If they should have a driver profile but don't for some reason, create it
+            driver = models.Driver(user_id=current_user.id, license_number=user_update.license_number)
+            db.add(driver)
+
+    db.commit()
+    db.refresh(current_user)
+    
+    # Return formatted response
+    user_response = current_user
+    user_response.role = auth.get_user_role(current_user, db)
+    
+    if user_response.role == "driver":
+        driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
+        if driver:
+            user_response.license_number = driver.license_number
+            user_response.is_online = driver.is_online
             user_response.rating = driver.rating
             user_response.total_trips = driver.total_trips
-    
+            
     return user_response

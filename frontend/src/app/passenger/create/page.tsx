@@ -1,17 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Card } from '@/components/ui/Card';
+import { MapContainer } from '@/components/trip/MapContainer';
+import { PassengerList } from '@/components/trip/PassengerList';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
 import { tripsAPI } from '@/services/api';
-import { prepareTripForBackend } from '@/utils/tripTransformers';
 import { geocodeAddress } from '@/utils/geocoding';
+import { prepareTripForBackend } from '@/utils/tripTransformers';
+import { mockTrips } from '@/data/trips';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
-export default function PassengerCreateTripPage() {
+export default function PassengerLivePage() {
     const router = useRouter();
     const { showToast } = useToast() as any;
     const [isLoading, setIsLoading] = useState(false);
@@ -30,54 +35,59 @@ export default function PassengerCreateTripPage() {
         setIsLoading(true);
 
         try {
-            // Geocode addresses to get coordinates
-            const fromCoords = await geocodeAddress(formData.pickup);
-            const toCoords = await geocodeAddress(formData.destination);
+            // Geocode addresses
+            const fromResult = await geocodeAddress(formData.pickup);
+            const toResult = await geocodeAddress(formData.destination);
 
-            // Create trip with backend API using transformer and real coordinates
-            const tripData = prepareTripForBackend(formData, fromCoords, toCoords);
-            await tripsAPI.createTrip(tripData);
+            if (fromResult.status !== 'OK' || toResult.status !== 'OK') {
+                const errorMsg = fromResult.error_message || toResult.error_message || 'Geocoding failed';
+                const status = fromResult.status !== 'OK' ? fromResult.status : toResult.status;
 
-            showToast('success', 'Trip request posted successfully!');
+                if (status === 'REQUEST_DENIED' || status === 'OVER_QUERY_LIMIT') {
+                    showToast('error', `Google Maps Error: ${errorMsg}. Please ensure the Geocoding API is enabled and billing is active.`);
+                } else {
+                    showToast('error', `Location Error: ${errorMsg}`);
+                }
+                setIsLoading(false);
+                return;
+            }
+
+            const tripRequest = prepareTripForBackend(
+                formData,
+                fromResult.coordinates,
+                toResult.coordinates
+            );
+
+            await tripsAPI.createTrip(tripRequest);
+            showToast('success', 'Ride request created successfully!');
             router.push('/passenger/dashboard');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to create trip:', error);
-            showToast('error', 'Failed to post trip request. Please try again.');
+            const errorDetail = error.response?.data?.detail || error.message || 'Unknown error';
+            showToast('error', `Failed to create ride request: ${errorDetail}`);
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-10">
-            {/* Header */}
-            <div className="bg-white px-4 py-6 border-b border-gray-100 flex items-center gap-4 sticky top-0 z-10">
-                <Link href="/passenger/dashboard">
-                    <button className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                </Link>
-                <h1 className="text-xl font-bold text-gray-900">Request a Trip</h1>
-            </div>
-
-            <div className="p-4 max-w-lg mx-auto">
+        <DashboardLayout userType="passenger" title="Request a Trip">
+            <div className="max-w-2xl mx-auto space-y-6">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <Card padding="md" className="space-y-5">
+                        <Card padding="md" className="space-y-5 dark:glass">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Pickup Location</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Pickup Location</label>
                                 <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500" />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-emerald-500" />
                                     <input
                                         type="text"
                                         required
                                         placeholder="Enter pickup address"
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none text-foreground"
                                         value={formData.pickup}
                                         onChange={e => setFormData({ ...formData, pickup: e.target.value })}
                                     />
@@ -85,14 +95,14 @@ export default function PassengerCreateTripPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Destination</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Destination</label>
                                 <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-green-500" />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-red-500" />
                                     <input
                                         type="text"
                                         required
                                         placeholder="Where to?"
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none text-foreground"
                                         value={formData.destination}
                                         onChange={e => setFormData({ ...formData, destination: e.target.value })}
                                     />
@@ -101,21 +111,21 @@ export default function PassengerCreateTripPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Date</label>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Date</label>
                                     <input
                                         type="date"
                                         required
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white transition-all outline-none"
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black transition-all outline-none text-foreground"
                                         value={formData.date}
                                         onChange={e => setFormData({ ...formData, date: e.target.value })}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Time</label>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Time</label>
                                     <input
                                         type="time"
                                         required
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white transition-all outline-none"
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black transition-all outline-none text-foreground"
                                         value={formData.time}
                                         onChange={e => setFormData({ ...formData, time: e.target.value })}
                                     />
@@ -123,9 +133,9 @@ export default function PassengerCreateTripPage() {
                             </div>
                         </Card>
 
-                        <Card padding="md" className="space-y-4">
+                        <Card padding="md" className="space-y-4 dark:glass">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Number of Passengers</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Number of Passengers</label>
                                 <div className="flex gap-2">
                                     {['1', '2', '3', '4'].map((num) => (
                                         <button
@@ -133,8 +143,8 @@ export default function PassengerCreateTripPage() {
                                             type="button"
                                             onClick={() => setFormData({ ...formData, passengers: num })}
                                             className={`flex-1 py-3 rounded-xl font-bold transition-all ${formData.passengers === num
-                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 ring-2 ring-blue-500 ring-offset-2'
-                                                : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                                                : 'bg-gray-50 dark:bg-slate-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'
                                                 }`}
                                         >
                                             {num}
@@ -144,11 +154,11 @@ export default function PassengerCreateTripPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Additional Notes (Optional)</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Additional Notes (Optional)</label>
                                 <textarea
                                     rows={3}
                                     placeholder="Any specific requests?"
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white transition-all outline-none"
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black transition-all outline-none text-foreground"
                                     value={formData.notes}
                                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
                                 />
@@ -162,11 +172,11 @@ export default function PassengerCreateTripPage() {
                                 fullWidth
                                 size="lg"
                                 isLoading={isLoading}
-                                className="bg-blue-600 hover:bg-blue-700 h-14 shadow-xl shadow-blue-600/30"
+                                className="bg-emerald-500 hover:bg-emerald-600 h-14 shadow-lg shadow-emerald-500/30 text-lg font-bold"
                             >
                                 Post Trip Request
                             </Button>
-                            <p className="text-center text-xs text-gray-400 mt-4 leading-relaxed">
+                            <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4 leading-relaxed">
                                 By posting, you agree to Commuto&apos;s Terms of Service. <br />
                                 The system will automatically group you with nearby riders.
                             </p>
@@ -174,6 +184,6 @@ export default function PassengerCreateTripPage() {
                     </form>
                 </motion.div>
             </div>
-        </div>
+        </DashboardLayout>
     );
 }

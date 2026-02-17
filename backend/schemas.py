@@ -40,6 +40,8 @@ class UserResponse(BaseModel):
     # Driver-specific fields (optional)
     license_number: Optional[str] = None
     is_online: Optional[bool] = False
+    today_earnings: Optional[float] = 0.0
+    online_hours: Optional[float] = 0.0
     
     class Config:
         from_attributes = True
@@ -62,5 +64,13 @@ class VehicleResponse(BaseModel):
     capacity: int
     color: Optional[str]
     
+    class Config:
+        from_attributes = True
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    avatar_url: Optional[str] = None
+    license_number: Optional[str] = None
+
     class Config:
         from_attributes = True

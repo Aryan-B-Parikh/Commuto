@@ -23,11 +23,12 @@ export const Card: React.FC<CardProps> = ({
     const baseStyles = 'rounded-2xl transition-all duration-200';
 
     const variantStyles = {
-        default: 'bg-white border border-gray-100 shadow-sm',
-        glass: 'bg-white/80 backdrop-blur-lg border border-white/20 shadow-lg',
-        elevated: 'bg-white shadow-xl shadow-gray-200/50',
-        outline: 'bg-white border border-gray-200',
+        default: 'bg-card border border-card-border shadow-sm',
+        glass: 'bg-card/80 backdrop-blur-lg border border-card-border/20 shadow-lg',
+        elevated: 'bg-card shadow-xl shadow-gray-200/50 dark:shadow-black/50',
+        outline: 'bg-card border border-card-border',
     };
+
 
     const paddingStyles = {
         none: '',
