@@ -78,13 +78,20 @@ export function AvatarBadge({
 
     return (
         <div className={`relative inline-block ${className}`}>
-            <motion.img
-                whileHover={{ scale: 1.05 }}
-                src={src}
-                alt={alt}
-                className={`${sizeClasses[size]} rounded-full object-cover border-2 border-white shadow-md`}
-            />
+            {src ? (
+                <motion.img
+                    whileHover={{ scale: 1.05 }}
+                    src={src}
+                    alt={alt}
+                    className={`${sizeClasses[size]} rounded-full object-cover border-2 border-card-border shadow-md`}
+                />
+            ) : (
+                <div className={`${sizeClasses[size]} rounded-full bg-muted flex items-center justify-center text-muted-foreground border-2 border-card-border shadow-md font-bold`}>
+                    {alt ? alt.charAt(0).toUpperCase() : 'U'}
+                </div>
+            )}
             {getBadgeContent()}
+
             {rating !== undefined && (
                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-yellow-400 rounded-full text-[10px] font-bold text-yellow-900 shadow-sm flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">

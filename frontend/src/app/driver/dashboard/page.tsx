@@ -1,223 +1,172 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { MapContainer } from '@/components/trip/MapContainer';
-import { DriverBottomNav } from '@/components/layout/DriverBottomNav';
-import { Card } from '@/components/ui/Card';
-import { Toggle } from '@/components/ui/Toggle';
-import { Button } from '@/components/ui/Button';
-import { RatingStars } from '@/components/ui/RatingStars';
-import { useAuth } from '@/hooks/useAuth';
-import { formatCurrency } from '@/utils/formatters';
+import React, { useEffect, useState } from 'react';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { StatCard } from '@/components/ui/StatCard';
+import { MapWidget } from '@/components/map/MapWidget';
 import { tripsAPI } from '@/services/api';
+import { TripResponse } from '@/types/api';
+import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+import Link from 'next/link';
 
-export default function DriverDashboardPage() {
-    const { user, isLoading } = useAuth();
-    const [isOnline, setIsOnline] = useState(false);
-    const [activeTrips, setActiveTrips] = useState([]);
-    const [todayEarnings, setTodayEarnings] = useState(0);
-    const [weeklyEarnings, setWeeklyEarnings] = useState(0);
-    const [pendingRequests, setPendingRequests] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+export default function DriverDashboard() {
+    const [requests, setRequests] = useState<TripResponse[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { user } = useAuth();
+    const { showToast } = useToast() as any;
 
     useEffect(() => {
-        const fetchDriverData = async () => {
+        const fetchRequests = async () => {
             try {
-                setLoading(true);
-                setError(null);
-                
-                // Fetch driver's active trips
-                const tripsResponse = await tripsAPI.getDriverTrips();
-                const activeTripsData = tripsResponse.filter(trip => trip.status === 'upcoming' || trip.status === 'active');
-                setActiveTrips(activeTripsData.slice(0, 2));
-                
-                // Fetch earnings data (this would come from a driver stats endpoint)
-                // For now, using placeholder values that would be replaced with real API calls
-                setTodayEarnings(45.50); // Would be: earningsResponse.today
-                setWeeklyEarnings(312.80); // Would be: earningsResponse.weekly
-                
-                // Fetch pending requests (would come from bids/requests endpoint)
-                setPendingRequests(3); // Would be: requestsResponse.pending_count
-                
-            } catch (err) {
-                console.error('Failed to fetch driver data:', err);
-                setError('Failed to load dashboard data. Please try again later.');
+                const data = await tripsAPI.getOpenRides();
+                setRequests(data);
+            } catch (error) {
+                console.error('Failed to fetch requests:', error);
+                showToast('error', 'Failed to load requests.');
             } finally {
-                setLoading(false);
+                setIsLoading(false);
             }
         };
-        
-        if (user) {
-            fetchDriverData();
-        }
-    }, [user]);
 
-    if (isLoading || !user) {
-        return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    }
-
-    if (loading) {
-        return <div className="min-h-screen flex items-center justify-center">Loading dashboard data...</div>;
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Card className="text-center py-6 max-w-md">
-                    <p className="text-red-500 mb-3">⚠️ {error}</p>
-                    <Button size="sm" variant="primary" onClick={() => window.location.reload()}>Retry</Button>
-                </Card>
-            </div>
-        );
-    }
+        fetchRequests();
+    }, []);
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Map Section */}
-            <div className="relative h-[45vh]">
-                <MapContainer className="h-full" showRoute={false} />
+        <DashboardLayout userType="driver" title="Driver Command Center">
 
-                <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-white/90 to-transparent">
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <StatCard
+                    label="Today's Earnings"
+                    value={`$${user?.todayEarnings?.toFixed(2) || '0.00'}`}
+                    trend={user?.todayEarnings && user.todayEarnings > 0 ? "Active today" : "No earnings yet"}
+                    trendUp={user?.todayEarnings && user.todayEarnings > 0}
+                    icon={<span className="text-2xl">💰</span>}
+                    color="emerald"
+                />
+                <StatCard
+                    label="Rides Completed"
+                    value={user?.totalTrips?.toString() || '0'}
+                    trend="Lifetime trips"
+                    trendUp={true}
+                    icon={<span className="text-2xl">🚗</span>}
+                    color="blue"
+                />
+                <StatCard
+                    label="Online Hours"
+                    value={`${user?.onlineHours || 0}h`}
+                    icon={<span className="text-2xl">⏱️</span>}
+                    color="purple"
+                />
+                <StatCard
+                    label="Rating"
+                    value={user?.rating?.toFixed(1) || '5.0'}
+                    trend={user?.rating && user.rating >= 4.5 ? "Top rated" : "Maintain your rating"}
+                    trendUp={user?.rating && user.rating >= 4.5}
+                    icon={<span className="text-2xl">⭐</span>}
+                    color="orange"
+                />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                {/* Main Map Area */}
+                <div className="lg:col-span-2 h-[500px] rounded-2xl overflow-hidden glass border border-card-border shadow-sm relative z-0">
+                    <div className="absolute top-4 left-4 z-[10] bg-card/90 dark:bg-black/90 backdrop-blur-md px-4 py-2 rounded-xl border border-card-border shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                            <span className="text-sm font-semibold text-foreground">You are Online</span>
+                        </div>
+                    </div>
+
+                    <MapWidget />
+
+                    {/* "Scan for Riders" Overlay */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000]">
+                        <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-emerald-500/40 transition-all flex items-center gap-2">
+                            <svg className="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            Scanning Area...
+                        </button>
+                    </div>
+                </div>
+
+                {/* Requests Side Panel */}
+                <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500">Welcome back 🚗</p>
-                            <h1 className="text-xl font-bold text-gray-900">{user.name.split(' ')[0]}</h1>
-                        </div>
-                        <Link href="/profile">
-                            <div className="relative">
-                                {user.avatar ? (
-                                    <img src={user.avatar} alt={user.name} className="w-11 h-11 rounded-full border-2 border-white shadow-md" />
-                                ) : (
-                                    <div className="w-11 h-11 rounded-full border-2 border-white shadow-md bg-green-500 flex items-center justify-center text-white font-semibold">
-                                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                                    </div>
-                                )}
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold border-2 border-white">{pendingRequests}</span>
-                            </div>
-                        </Link>
+                        <h2 className="text-lg font-bold text-foreground">Incoming Requests</h2>
+                        {requests.length > 0 && (
+                            <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-1 rounded-full">
+                                {requests.length} New
+                            </span>
+                        )}
                     </div>
-                </div>
 
-                {/* System Routes CTA */}
-                <div className="absolute bottom-6 left-4 right-4">
-                    <Card variant="glass" padding="md" className="shadow-xl">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">Today&apos;s Opportunities</h2>
-                        <Link href="/driver/routes">
-                            <motion.div
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.99 }}
-                                className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors cursor-pointer"
-                            >
-                                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                    </svg>
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-semibold text-gray-900">System Routes</p>
-                                    <p className="text-sm text-gray-500">Accept optimized passenger groups</p>
-                                </div>
-                                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </motion.div>
-                        </Link>
-                    </Card>
-                </div>
-            </div>
+                    <div className="space-y-4">
+                        {isLoading ? (
+                            [1, 2].map(i => (
+                                <div key={i} className="h-[200px] w-full bg-card/50 animate-pulse rounded-2xl border border-card-border" />
+                            ))
+                        ) : requests.length > 0 ? (
+                            requests.slice(0, 3).map((request) => (
+                                <div key={request.id} className="bg-card p-5 rounded-2xl border border-card-border shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
 
-            <div className="px-4 py-6">
-                {/* Earnings Overview */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
-                            <p className="text-sm text-green-100">Today&apos;s Earnings</p>
-                            <p className="text-2xl font-bold">{formatCurrency(todayEarnings)}</p>
-                        </Card>
-                    </motion.div>
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                        <Card>
-                            <p className="text-sm text-gray-500">This Week</p>
-                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(weeklyEarnings)}</p>
-                        </Card>
-                    </motion.div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    {[
-                        { value: '24', label: 'Trips', color: 'blue' },
-                        { value: '4.9', label: 'Rating', color: 'yellow' },
-                        { value: '98%', label: 'Accept', color: 'green' },
-                    ].map((stat, i) => (
-                        <motion.div
-                            key={stat.label}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 + i * 0.05 }}
-                            className="bg-white rounded-2xl p-3 text-center shadow-sm"
-                        >
-                            <p className={`text-lg font-bold text-${stat.color}-600`}>{stat.value}</p>
-                            <p className="text-xs text-gray-500">{stat.label}</p>
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Pending Requests */}
-                {pendingRequests > 0 && (
-                    <Link href="/driver/requests">
-                        <Card hoverable className="bg-orange-50 border-orange-100 mb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                    </svg>
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-semibold text-orange-900">{pendingRequests} Pending Requests</p>
-                                    <p className="text-sm text-orange-700">Passengers waiting for approval</p>
-                                </div>
-                                <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </div>
-                        </Card>
-                    </Link>
-                )}
-
-                {/* Active Trips */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-gray-900">Your Trips</h2>
-                        <Link href="/driver/history" className="text-sm text-green-600 font-medium">View all</Link>
-                    </div>
-                    {activeTrips.length > 0 ? (
-                        <div className="space-y-3">
-                            {activeTrips.map(trip => (
-                                <Card key={trip.id} hoverable>
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="font-medium text-gray-900">{trip.from.name} → {trip.to.name}</p>
-                                            <p className="text-sm text-gray-500">{trip.date} • {trip.seatsAvailable} seats left</p>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-xs">
+                                                {request.seats_requested}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-foreground">Passenger ID: {request.id.substring(0, 5)}</p>
+                                                <p className="text-xs text-muted-foreground">Pending Approval</p>
+                                            </div>
                                         </div>
-                                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Active</span>
+                                        <span className="text-xs font-bold text-muted-foreground">
+                                            {new Date(request.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
                                     </div>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <Card className="text-center py-6">
-                            <p className="text-gray-500 mb-3">No active trips</p>
-                            <Link href="/driver/routes"><Button size="sm" variant="primary">View Available Routes</Button></Link>
-                        </Card>
-                    )}
+
+                                    <div className="space-y-3 mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                            <p className="text-sm text-muted-foreground truncate">{request.origin_address}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                            <p className="text-sm text-muted-foreground truncate">{request.dest_address}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <Link href="/driver/requests" className="flex-1">
+                                            <button className="w-full bg-emerald-500 text-white font-bold py-2 rounded-xl hover:bg-emerald-600 transition-colors shadow-sm text-sm">
+                                                Review Details
+                                            </button>
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-10 bg-muted/10 rounded-2xl border-2 border-dashed border-card-border">
+                                <p className="text-muted-foreground text-sm">No incoming requests</p>
+                            </div>
+                        )}
+
+                        {requests.length > 3 && (
+                            <Link href="/driver/requests" className="block text-center text-sm font-bold text-emerald-500 hover:underline pt-2">
+                                View all {requests.length} requests
+                            </Link>
+                        )}
+                    </div>
+
                 </div>
             </div>
-
-            <DriverBottomNav />
-        </div>
+        </DashboardLayout>
     );
 }

@@ -43,18 +43,12 @@ export default function LoginPage() {
 
         if (!validate()) return;
 
-        const success = await login(email, password);
+        const loggedInUser = await login(email, password);
 
-        if (success) {
+        if (loggedInUser) {
             showToast('success', 'Login successful!');
-            // Redirect based on role
-            if (role === 'driver') {
-                router.push('/driver/dashboard');
-            } else if (role === 'passenger') {
-                router.push('/passenger/dashboard');
-            } else {
-                router.push('/select-role');
-            }
+            // Always redirect to role selection as requested by user
+            router.push('/select-role');
         } else {
             showToast('error', 'Invalid email or password. Please try again.');
         }

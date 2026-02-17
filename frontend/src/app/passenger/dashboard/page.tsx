@@ -1,184 +1,132 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { MapContainer } from '@/components/trip/MapContainer';
-import { TripCard } from '@/components/trip/TripCard';
-import { PassengerBottomNav } from '@/components/layout/PassengerBottomNav';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/hooks/useAuth';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ActiveTripCard } from '@/components/trip/ActiveTripCard';
+import { MapWidget } from '@/components/map/MapWidget';
 import { tripsAPI } from '@/services/api';
-import { transformTripResponses } from '@/utils/tripTransformers';
-import type { Trip } from '@/types';
+import { TripResponse } from '@/types/api';
+import { useToast } from '@/hooks/useToast';
 
-export default function PassengerDashboardPage() {
-    const { user, isLoading: isAuthLoading } = useAuth();
-    const [trips, setTrips] = useState<Trip[]>([]);
-    const [isLoadingTrips, setIsLoadingTrips] = useState(true);
+export default function PassengerDashboard() {
+    const [trips, setTrips] = useState<TripResponse[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { showToast } = useToast() as any;
 
     useEffect(() => {
-        if (user) {
-            fetchMyTrips();
-        }
-    }, [user]);
+        const fetchTrips = async () => {
+            try {
+                const data = await tripsAPI.getMyTrips();
+                setTrips(data);
+            } catch (error) {
+                console.error('Failed to fetch trips:', error);
+                showToast('error', 'Failed to load your trips. Please check your connection.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-    const fetchMyTrips = async () => {
-        try {
-            setIsLoadingTrips(true);
-            const data = await tripsAPI.getMyTrips();
-            setTrips(transformTripResponses(data));
-        } catch (error) {
-            console.error('Failed to fetch my trips:', error);
-        } finally {
-            setIsLoadingTrips(false);
-        }
-    };
-
-    // Filter for upcoming/pending trips
-    const upcomingTrips = trips.filter(t =>
-        t.status === 'upcoming' || t.status === 'pending' || t.status === 'active'
-    ).slice(0, 3);
-
-    // Calculate stats
-    const completedTrips = trips.filter(t => t.status === 'completed');
-    const totalSpent = completedTrips.reduce((acc, t) => acc + (t.pricePerSeat || 0), 0);
-    const co2Saved = (completedTrips.length * 2.5).toFixed(1) + 'kg'; // Rough estimate: 2.5kg per trip
-
-    if (isAuthLoading || !user) {
-        return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    }
+        fetchTrips();
+    }, []);
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Map Section */}
-            <div className="relative h-[45vh]">
-                <MapContainer className="h-full" showRoute={false} />
+        <DashboardLayout userType="passenger" title="Dashboard">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* Header Overlay */}
-                <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-white/90 to-transparent">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500">Good morning 👋</p>
-                            <h1 className="text-xl font-bold text-gray-900">{user.name.split(' ')[0]}</h1>
+                {/* Left Column: Active Trips & Quick Actions */}
+                <div className="lg:col-span-2 space-y-8">
+
+                    {/* Active Trips Section */}
+                    <section>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-bold text-foreground">Active Trips</h2>
+                            <button className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium">View All</button>
                         </div>
-                        <Link href="/profile">
-                            {user.avatar ? (
-                                <img src={user.avatar} alt={user.name} className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover" />
+
+                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide min-h-[150px]">
+                            {isLoading ? (
+                                <div className="flex gap-4 w-full">
+                                    {[1, 2].map(i => (
+                                        <div key={i} className="min-w-[320px] h-[180px] rounded-2xl bg-muted/50 animate-pulse border border-card-border" />
+                                    ))}
+                                </div>
+                            ) : trips.length > 0 ? (
+                                trips.map((trip) => (
+                                    <ActiveTripCard
+                                        key={trip.id}
+                                        id={trip.id.substring(0, 8).toUpperCase()}
+                                        status={trip.status.charAt(0).toUpperCase() + trip.status.slice(1) as any}
+                                        pickup={trip.origin_address}
+                                        dropoff={trip.dest_address}
+                                        distance="Calculating..."
+                                        estimatedTime={new Date(trip.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        driverName={trip.driver_name}
+                                        price={trip.price_per_seat && trip.price_per_seat > 0 ? `$${trip.price_per_seat}` : "Pending Bid"}
+                                    />
+                                ))
                             ) : (
-                                <div className="w-11 h-11 rounded-full border-2 border-white shadow-md bg-blue-500 flex items-center justify-center text-white font-semibold">
-                                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                <div className="w-full py-10 text-center border-2 border-dashed border-card-border rounded-2xl bg-muted/20">
+                                    <p className="text-muted-foreground font-medium">No active trips found.</p>
+                                    <Link href="/passenger/create" className="text-emerald-500 hover:underline text-sm font-bold mt-2 inline-block">
+                                        Request your first ride →
+                                    </Link>
                                 </div>
                             )}
-                        </Link>
-                    </div>
+                        </div>
+                    </section>
+
+                    {/* Map Section */}
+                    <section className="h-[400px] rounded-2xl overflow-hidden border border-card-border shadow-sm relative z-0">
+                        <MapWidget />
+                    </section>
+
                 </div>
 
-                {/* Action Cards */}
-                <div className="absolute bottom-6 left-4 right-4 flex flex-col gap-3">
-                    <Card variant="glass" padding="md" className="shadow-xl">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">Where are you going?</h2>
-                        <div className="grid grid-cols-2 gap-3">
-                            <Link href="/passenger/search" className="flex-1">
-                                <motion.div
-                                    whileTap={{ scale: 0.98 }}
-                                    className="h-full flex flex-col items-center justify-center p-4 bg-blue-50 rounded-2xl border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer text-center"
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white mb-2 shadow-lg shadow-blue-500/20">
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                    </div>
-                                    <p className="text-sm font-bold text-gray-900 leading-tight">Find Rides</p>
-                                </motion.div>
-                            </Link>
+                {/* Right Column: Recent Activity / Quick Book */}
+                <div className="space-y-6">
 
-                            <Link href="/passenger/create" className="flex-1">
-                                <motion.div
-                                    whileTap={{ scale: 0.98 }}
-                                    className="h-full flex flex-col items-center justify-center p-4 bg-green-50 rounded-2xl border border-green-100 hover:bg-green-100 transition-colors cursor-pointer text-center"
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2 shadow-lg shadow-green-500/20">
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                        </svg>
-                                    </div>
-                                    <p className="text-sm font-bold text-gray-900 leading-tight">Post Request</p>
-                                </motion.div>
+                    {/* Quick Book Widget */}
+                    <div className="bg-card p-6 rounded-2xl border border-card-border shadow-sm">
+                        <h3 className="text-lg font-bold text-foreground mb-4">Quick Book</h3>
+                        <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                                Ready to head out? Set your route and find the best nearby drivers in seconds.
+                            </p>
+
+                            <Link href="/passenger/create" className="block">
+                                <button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/30 cursor-pointer">
+                                    Start New Request
+                                </button>
                             </Link>
                         </div>
-                    </Card>
-                </div>
-            </div>
-
-            {/* Stats */}
-            <div className="px-4 py-6">
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    {[
-                        { value: completedTrips.length, label: 'Trips Taken', color: 'blue' },
-                        { value: '$' + totalSpent, label: 'Total Spent', color: 'green' },
-                        { value: co2Saved, label: 'CO₂ Reduced', color: 'purple' },
-                    ].map((stat, i) => (
-                        <motion.div
-                            key={stat.label}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            className="bg-white rounded-2xl p-4 text-center shadow-sm"
-                        >
-                            <p className={`text-xl font-bold text-${stat.color}-600`}>{stat.value}</p>
-                            <p className="text-xs text-gray-500">{stat.label}</p>
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Upcoming Trips */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-gray-900">Your Trips</h2>
-                        <Link href="/passenger/history" className="text-sm text-blue-600 font-medium">View all</Link>
                     </div>
 
-                    {isLoadingTrips ? (
-                        <div className="space-y-4">
-                            {[1].map(i => <Card key={i} className="h-32 animate-pulse bg-gray-100" />)}
-                        </div>
-                    ) : upcomingTrips.length > 0 ? (
-                        <div className="space-y-4">
-                            {upcomingTrips.map((trip) => (
-                                <Link href={`/passenger/trip/${trip.id}`} key={trip.id}>
-                                    <div className="block hover:bg-gray-50 transition-colors">
-                                        <TripCard trip={trip} variant="compact" />
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    ) : (
-                        <Card className="text-center py-8">
-                            <p className="text-gray-500 mb-3">No upcoming trips</p>
-                            <Link href="/passenger/create"><Button size="sm">Post a Trip Request</Button></Link>
-                        </Card>
-                    )}
-                </div>
-
-                {/* Safety Banner */}
-                <Card className="bg-blue-50 border-blue-100">
-                    <div className="flex gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-blue-900">Your safety matters</h3>
-                            <p className="text-sm text-blue-700">All drivers are verified. Share your trip with loved ones.</p>
-                        </div>
+                    {/* Recent Locations */}
+                    <div className="bg-card p-6 rounded-2xl border border-card-border shadow-sm">
+                        <h3 className="text-lg font-bold text-foreground mb-4">Recent Places</h3>
+                        <ul className="space-y-3">
+                            {trips.length > 0 ? (
+                                trips.slice(0, 3).map((trip) => (
+                                    <li key={trip.id} className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg cursor-pointer transition-colors">
+                                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                                            🕒
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-foreground truncate">{trip.dest_address.split(',')[0]}</p>
+                                            <p className="text-xs text-muted-foreground truncate">{trip.dest_address}</p>
+                                        </div>
+                                    </li>
+                                ))
+                            ) : (
+                                <p className="text-xs text-muted-foreground py-4 text-center italic">Your recent destinations will appear here</p>
+                            )}
+                        </ul>
                     </div>
-                </Card>
-            </div>
 
-            <PassengerBottomNav />
-        </div>
+                </div>
+            </div>
+        </DashboardLayout>
     );
 }

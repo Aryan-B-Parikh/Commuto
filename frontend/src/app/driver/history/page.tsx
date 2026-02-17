@@ -1,118 +1,127 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { RatingStars } from '@/components/ui/RatingStars';
-import { DriverBottomNav } from '@/components/layout/DriverBottomNav';
-import { Button } from '@/components/ui/Button';
 import { formatDate, formatCurrency } from '@/utils/formatters';
-import { tripsAPI } from '@/services/api';
+import { mockTrips } from '@/data/trips';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 export default function DriverHistoryPage() {
-    const [completedTrips, setCompletedTrips] = useState([]);
-    const [totalEarnings, setTotalEarnings] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        const fetchTripHistory = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                
-                // Fetch driver's completed trips
-                const tripsResponse = await tripsAPI.getDriverTrips();
-                const completedTripsData = tripsResponse.filter(trip => trip.status === 'completed');
-                setCompletedTrips(completedTripsData);
-                
-                // Calculate total earnings from completed trips
-                const earnings = completedTripsData.reduce((sum, trip) => {
-                    return sum + (trip.pricePerSeat * trip.passengers.length);
-                }, 0);
-                setTotalEarnings(earnings);
-                
-            } catch (err) {
-                console.error('Failed to fetch trip history:', err);
-                setError('Failed to load trip history. Please try again later.');
-            } finally {
-                setLoading(false);
-            }
-        };
-        
-        fetchTripHistory();
-    }, []);
-
-    if (loading) {
-        return <div className="min-h-screen flex items-center justify-center">Loading trip history...</div>;
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Card className="text-center py-6 max-w-md">
-                    <p className="text-red-500 mb-3">⚠️ {error}</p>
-                    <Button size="sm" variant="primary" onClick={() => window.location.reload()}>Retry</Button>
-                </Card>
-            </div>
-        );
-    }
+    const completedTrips = mockTrips.filter(t => t.status === 'completed');
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="bg-white border-b px-4 py-4">
-                <h1 className="text-xl font-semibold text-gray-900">Trip History</h1>
-                <p className="text-sm text-gray-500">Your completed trips</p>
-            </div>
+        <DashboardLayout userType="driver" title="Ride History">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: History Items */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-foreground">Past Missions</h2>
+                        <div className="flex gap-2">
+                            <span className="text-sm font-bold text-blue-600 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-full">{completedTrips.length} Rides Ended</span>
+                        </div>
+                    </div>
 
-            <div className="px-4 py-6">
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <Card className="text-center">
-                        <p className="text-2xl font-bold text-green-600">{completedTrips.length}</p>
-                        <p className="text-sm text-gray-500">Trips Completed</p>
-                    </Card>
-                    <Card className="text-center">
-                        <p className="text-2xl font-bold text-green-600">{formatCurrency(totalEarnings)}</p>
-                        <p className="text-sm text-gray-500">Total Earned</p>
-                    </Card>
+                    <div className="space-y-4">
+                        {completedTrips.map((trip, index) => (
+                            <motion.div
+                                key={trip.id}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                            >
+                                <Card hoverable className="border-none shadow-sm dark:glass px-6 py-5">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex flex-col items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                            <span className="text-xs font-black leading-none">{formatDate(trip.date).split(' ')[0]}</span>
+                                            <span className="text-xl font-black">{formatDate(trip.date).split(' ')[1]}</span>
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="font-bold text-gray-900 dark:text-white truncate">
+                                                    {trip.from.name} <span className="text-gray-400 font-medium mx-1">→</span> {trip.to.name}
+                                                </h3>
+                                                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                                                    +{formatCurrency(trip.pricePerSeat * trip.passengers.length)}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex -space-x-2">
+                                                        {trip.passengers.slice(0, 3).map((p) => (
+                                                            <img key={p.id} src={p.avatar} alt={p.name} className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-800 object-cover" />
+                                                        ))}
+                                                        {trip.passengers.length > 3 && (
+                                                            <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[8px] font-bold text-gray-500">
+                                                                +{trip.passengers.length - 3}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 font-bold">{trip.passengers.length} Passengers Joined</p>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <RatingStars rating={4.8} size="sm" />
+                                                    <span className="text-xs font-bold text-gray-400">4.8</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
 
-                <h2 className="font-semibold text-gray-900 mb-4">All Trips</h2>
-                <div className="space-y-4">
-                    {completedTrips.map((trip, index) => (
-                        <motion.div
-                            key={trip.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                        >
-                            <Card hoverable>
-                                <div className="flex items-center justify-between mb-3">
-                                    <div>
-                                        <p className="font-medium text-gray-900">{trip.from.name} → {trip.to.name}</p>
-                                        <p className="text-sm text-gray-500">{formatDate(trip.date)} • {trip.passengers.length} passengers</p>
-                                    </div>
-                                    <span className="text-lg font-bold text-green-600">+{formatCurrency(trip.pricePerSeat * trip.passengers.length)}</span>
+                {/* Right Column: Lifetime Stats */}
+                <div className="space-y-6">
+                    <Card className="dark:glass overflow-hidden relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-600" />
+                        <h3 className="text-lg font-bold text-foreground mb-6">Driver Overview</h3>
+
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600">💰</div>
+                                    <p className="text-sm font-bold text-gray-500 uppercase">Total Earned</p>
                                 </div>
-                                <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                                    <div className="flex -space-x-2">
-                                        {trip.passengers.slice(0, 3).map((p) => (
-                                            <img key={p.id} src={p.avatar} alt={p.name} className="w-6 h-6 rounded-full border-2 border-white" />
-                                        ))}
-                                    </div>
-                                    <div className="flex items-center gap-1 ml-auto">
-                                        <RatingStars rating={4.8} size="sm" />
-                                        <span className="text-sm text-gray-500">4.8</span>
-                                    </div>
+                                <p className="text-xl font-black text-foreground">{formatCurrency(4862)}</p>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">🚗</div>
+                                    <p className="text-sm font-bold text-gray-500 uppercase">Total Distance</p>
                                 </div>
-                            </Card>
-                        </motion.div>
-                    ))}
+                                <p className="text-xl font-black text-foreground">1,240 km</p>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600">⭐</div>
+                                    <p className="text-sm font-bold text-gray-500 uppercase">Avg. Rating</p>
+                                </div>
+                                <p className="text-xl font-black text-foreground">4.95</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
+                            <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] mb-2">Top Performance</p>
+                            <p className="text-xs text-gray-500 leading-relaxed px-4">You are in the top 5% of drivers in your region this month. Keep it up!</p>
+                        </div>
+                    </Card>
+
+                    <div className="bg-gradient-to-br from-emerald-500 to-teal-700 p-6 rounded-2xl text-white shadow-lg overflow-hidden relative group">
+                        <div className="relative z-10">
+                            <h4 className="font-black text-xl mb-1 italic tracking-tighter uppercase underline decoration-emerald-300">New Achievement</h4>
+                            <p className="text-sm text-emerald-50 leading-snug">Elite Navigator: You've completed 50 rides without a single cancellation!</p>
+                        </div>
+                        <div className="absolute -right-4 -bottom-4 text-7xl opacity-10 group-hover:scale-110 transition-transform">🏆</div>
+                    </div>
                 </div>
             </div>
-
-            <DriverBottomNav />
-        </div>
+        </DashboardLayout>
     );
 }

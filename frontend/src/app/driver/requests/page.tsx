@@ -1,154 +1,131 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AvatarBadge } from '@/components/ui/AvatarBadge';
-import { DriverBottomNav } from '@/components/layout/DriverBottomNav';
 import { useToast } from '@/hooks/useToast';
-import { bidsAPI } from '@/services/api';
-import { useAuth } from '@/hooks/useAuth';
-
-interface PassengerRequest {
-    id: string;
-    passenger: import('@/types').User;
-    trip: { from: string; to: string; date: string };
-    seats: number;
-    status: 'pending' | 'approved' | 'rejected';
-}
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useRouter } from 'next/navigation';
+import { tripsAPI } from '@/services/api';
+import { TripResponse } from '@/types/api';
 
 export default function DriverRequestsPage() {
-    const { showToast } = useToast();
-    const { user } = useAuth();
-    const [requests, setRequests] = useState<PassengerRequest[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const router = useRouter();
+    const { showToast } = useToast() as any;
+    const [requests, setRequests] = useState<TripResponse[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchPendingRequests = async () => {
+        const fetchRequests = async () => {
             try {
-                if (!user) return;
-                
-                // Fetch pending bids/requests for this driver
-                const bidsResponse = await bidsAPI.getDriverBids();
-                const pendingBids = bidsResponse.filter(bid => bid.status === 'pending');
-                
-                // Transform bids to requests format
-                const requestsData = pendingBids.map(bid => ({
-                    id: bid.id,
-                    passenger: bid.passenger,
-                    trip: {
-                        from: bid.trip.from.name,
-                        to: bid.trip.to.name,
-                        date: bid.trip.date
-                    },
-                    seats: bid.seats,
-                    status: 'pending'
-                }));
-                
-                setRequests(requestsData);
-            } catch (err) {
-                console.error('Failed to fetch pending requests:', err);
-                setError('Failed to load requests. Please try again later.');
+                const data = await tripsAPI.getOpenRides();
+                setRequests(data);
+            } catch (error) {
+                console.error('Failed to fetch requests:', error);
+                showToast('error', 'Failed to load requests.');
             } finally {
-                setLoading(false);
+                setIsLoading(false);
             }
         };
-        
-        fetchPendingRequests();
-    }, [user]);
 
-    const handleAction = async (id: string, action: 'approve' | 'reject') => {
-        try {
-            // Call the real API to update bid status
-            const response = await bidsAPI.updateBidStatus(id, action === 'approve' ? 'accepted' : 'rejected');
-            
-            if (response.success) {
-                // Update local state
-                setRequests(prev => prev.map(r =>
-                    r.id === id ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r
-                ));
-                showToast(action === 'approve' ? 'success' : 'info',
-                    action === 'approve' ? 'Passenger approved!' : 'Request declined');
-            } else {
-                showToast('error', response.message || 'Failed to update request status');
-            }
-        } catch (err) {
-            console.error('Failed to update bid status:', err);
-            showToast('error', 'Failed to update request status. Please try again.');
+        fetchRequests();
+    }, []);
+
+    const handleAction = (id: string, action: 'approve' | 'reject') => {
+        // For now, just a UI feedback until bid flow is fully integrated
+        showToast(action === 'approve' ? 'success' : 'info',
+            action === 'approve' ? 'Request accepted! Proceeding to bidding.' : 'Request declined');
+
+        if (action === 'approve') {
+            // Future: trigger bidding modal or navigation
         }
+
+        setRequests(prev => prev.filter(r => r.id !== id));
     };
 
-    const pendingRequests = requests.filter(r => r.status === 'pending');
-
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="bg-white border-b px-4 py-4">
-                <div className="flex items-center gap-4">
-                    <Link href="/driver/dashboard" className="p-2 -ml-2 hover:bg-gray-100 rounded-lg">
-                        <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </Link>
-                    <div>
-                        <h1 className="text-xl font-semibold text-gray-900">Passenger Requests</h1>
-                        <p className="text-sm text-gray-500">{pendingRequests.length} pending approval</p>
-                    </div>
+        <DashboardLayout userType="driver" title="Passenger Requests">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6">
+                <div className="mb-8">
+                    <h2 className="text-lg font-semibold text-muted-foreground">
+                        {requests.length} pending approval
+                    </h2>
                 </div>
-            </div>
 
-            <div className="px-4 py-6">
-                <AnimatePresence>
-                    {pendingRequests.length > 0 ? (
-                        <div className="space-y-4">
-                            {pendingRequests.map((request, index) => (
+                <AnimatePresence mode="popLayout">
+                    {isLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="h-[250px] bg-card/50 animate-pulse rounded-2xl border border-card-border" />
+                            ))}
+                        </div>
+                    ) : requests.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {requests.map((request, index) => (
                                 <motion.div
                                     key={request.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, x: -100 }}
-                                    transition={{ delay: index * 0.1 }}
+                                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, x: -20 }}
+                                    transition={{ duration: 0.2, delay: index * 0.05 }}
                                 >
-                                    <Card>
-                                        <div className="flex items-start gap-4 mb-4">
-                                            <AvatarBadge src={request.passenger.avatar} alt={request.passenger.name} size="lg" badge="passenger" rating={request.passenger.rating} />
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-gray-900">{request.passenger.name}</h3>
-                                                <p className="text-sm text-gray-500">{request.passenger.totalTrips} trips completed</p>
-                                                <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                    </svg>
-                                                    <span>{request.trip.from} → {request.trip.to}</span>
+                                    <Card className="">
+                                        <div className="flex items-start gap-4 mb-6">
+                                            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-xl shadow-inner">
+                                                {request.seats_requested}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-bold text-foreground text-lg line-clamp-1">Request {request.id.substring(0, 8).toUpperCase()}</h3>
+                                                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Seats Requested: {request.seats_requested}</p>
+
+                                                <div className="mt-4 space-y-2">
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                                                        <span className="truncate">{request.origin_address}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+                                                        <span className="truncate">{request.dest_address}</span>
+                                                    </div>
                                                 </div>
-                                                <p className="text-xs text-gray-400 mt-1">{request.trip.date} • {request.seats} seat(s)</p>
+                                                <p className="text-xs text-muted-foreground mt-3 font-medium">
+                                                    📅 {new Date(request.start_time).toLocaleDateString()} • ⏱️ {new Date(request.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="flex gap-3">
-                                            <Button variant="outline" fullWidth onClick={() => handleAction(request.id, 'reject')}>Decline</Button>
-                                            <Button variant="primary" fullWidth onClick={() => handleAction(request.id, 'approve')}>Approve</Button>
+                                            <Button variant="outline" fullWidth onClick={() => handleAction(request.id, 'reject')} className="font-bold uppercase tracking-widest text-xs">Ignore</Button>
+                                            <Button variant="primary" fullWidth className="bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 font-bold uppercase tracking-widest text-xs border-none" onClick={() => handleAction(request.id, 'approve')}>Accept Request</Button>
                                         </div>
                                     </Card>
                                 </motion.div>
                             ))}
                         </div>
                     ) : (
-                        <Card className="text-center py-12">
-                            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">All caught up!</h3>
-                            <p className="text-gray-500">No pending requests</p>
-                        </Card>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                            <Card className="text-center py-20">
+                                <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mx-auto mb-6">
+                                    <svg className="w-10 h-10 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-foreground mb-2">All caught up!</h3>
+                                <p className="text-muted-foreground">No pending passenger requests at the moment.</p>
+                                <Button
+                                    variant="outline"
+                                    className="mt-8 font-bold uppercase tracking-widest text-xs"
+                                    onClick={() => router.push('/driver/dashboard')}
+                                >
+                                    Back to Dashboard
+                                </Button>
+                            </Card>
+                        </motion.div>
                     )}
                 </AnimatePresence>
             </div>
 
-            <DriverBottomNav />
-        </div>
+        </DashboardLayout>
     );
 }

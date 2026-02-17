@@ -88,31 +88,32 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
     return (
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto pb-32">
             {/* Header & Avatar */}
-            <div className="mb-8 text-center bg-gradient-to-b from-blue-50/50 to-transparent pt-8 pb-4 rounded-3xl">
+            <div className="mb-8 text-center bg-gradient-to-b from-emerald-50/50 dark:from-emerald-900/10 to-transparent pt-8 pb-4 rounded-3xl">
                 <ProfileImageUpload
                     currentImageUrl={formData.avatar}
                     onImageChange={(url) => handleSharedChange({ avatar: url })}
                 />
                 <div className="mt-4 flex flex-col items-center">
                     <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold text-slate-900">{formData.fullName}</h1>
+                        <h1 className="text-2xl font-bold text-foreground">{formData.fullName}</h1>
                         <AnimatePresence>
                             {isDirty && !isSaving && !showSuccess && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.8 }}
-                                    className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-full border border-amber-100"
+                                    className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-full border border-amber-100 dark:border-amber-800"
                                 >
                                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                                    <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">Unsaved Changes</span>
+                                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-tight">Unsaved Changes</span>
                                 </motion.div>
                             )}
                         </AnimatePresence>
                     </div>
-                    <p className="text-slate-500 text-sm mt-1">{formData.role === 'driver' ? 'Verified Driver' : 'Passenger'}</p>
+                    <p className="text-muted-foreground text-sm mt-1">{formData.role === 'driver' ? 'Verified Driver' : 'Passenger'}</p>
                 </div>
             </div>
+
 
             {/* Shared Section: Basic Info */}
             <CollapsibleSection
@@ -232,7 +233,8 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
             pointer-events-auto h-16 px-10 rounded-full shadow-2xl flex items-center gap-3 font-bold text-lg transition-all
             ${showSuccess
                             ? 'bg-green-500 text-white'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200/50'}
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200/50'}
+
             disabled:opacity-70 disabled:cursor-not-allowed
           `}
                 >

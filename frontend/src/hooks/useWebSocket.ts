@@ -1,5 +1,3 @@
-'use client';
-
 import { useContext, useEffect } from 'react';
 import { WebSocketContext } from '@/context/WebSocketContext';
 

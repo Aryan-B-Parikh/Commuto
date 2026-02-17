@@ -1,4 +1,5 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 import type {
     RegisterRequest,
     LoginRequest,
@@ -18,6 +19,16 @@ const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+axiosRetry(api, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
+
+api.interceptors.response.use(
+    response => response,
+    error => {
+        console.error('API Error:', error.response?.data || error.message);
+        return Promise.reject(error);
+    }
+);
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
@@ -44,7 +55,13 @@ export const authAPI = {
         const response = await api.get<UserResponse>('/auth/me');
         return response.data;
     },
+
+    updateProfile: async (data: any): Promise<UserResponse> => {
+        const response = await api.patch<UserResponse>('/auth/me', data);
+        return response.data;
+    },
 };
+
 
 // Trips APIs
 export const tripsAPI = {

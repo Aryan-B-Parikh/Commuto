@@ -9,11 +9,16 @@ import { Card } from '@/components/ui/Card';
 
 export default function SelectRolePage() {
     const router = useRouter();
-    const { setRole } = useAuth();
+    const { setRole, isAuthenticated } = useAuth() as any;
 
     const handleSelectRole = (role: 'driver' | 'passenger') => {
         setRole(role);
-        router.push('/signup');
+        // If user is already logged in, redirect to their new dashboard
+        if (isAuthenticated) {
+            router.push(`/${role}/dashboard`);
+        } else {
+            router.push('/signup');
+        }
     };
 
     const roles = [

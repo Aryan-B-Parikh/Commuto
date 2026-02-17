@@ -17,9 +17,11 @@ export function transformBackendUser(backendUser: BackendUser | UserResponse): U
         avatar: backendUser.avatar_url,
         role: 'role' in backendUser ? backendUser.role as 'passenger' | 'driver' : undefined,
         rating: 0, // Default, should come from driver/passenger profile
-        totalTrips: 0, // Default, should come from driver/passenger profile
+        totalTrips: (backendUser as UserResponse).total_trips || 0,
         verified: backendUser.is_verified,
         joinedDate: backendUser.created_at,
+        todayEarnings: (backendUser as UserResponse).today_earnings || 0,
+        onlineHours: (backendUser as UserResponse).online_hours || 0,
     };
 }
 

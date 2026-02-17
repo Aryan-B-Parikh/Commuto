@@ -13,9 +13,8 @@ interface AuthContextType {
     role: UserRole;
     isAuthenticated: boolean;
     isLoading: boolean;
-    token: string | null;
-    login: (email: string, password: string) => Promise<boolean>;
-    register: (data: RegisterRequest) => Promise<boolean>;
+    login: (email: string, password: string) => Promise<User | null>;
+    register: (data: RegisterRequest) => Promise<User | null>;
     logout: () => void;
     setRole: (role: UserRole) => void;
     refreshUser: () => Promise<void>;
@@ -73,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, []);
 
     // Real login with backend API
-    const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    const login = useCallback(async (email: string, password: string): Promise<User | null> => {
         setIsLoading(true);
         try {
             const authResponse = await authAPI.login({ email, password });
@@ -86,30 +85,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(frontendUser);
             setRole(userData.role as UserRole);
             setIsLoading(false);
-            return true;
+            return frontendUser;
         } catch (error) {
             console.error('Login failed:', error);
             setIsLoading(false);
-            return false;
+            return null;
         }
     }, [setRole]);
 
     // Real registration with backend API
-    const register = useCallback(async (data: RegisterRequest): Promise<boolean> => {
+    const register = useCallback(async (data: RegisterRequest): Promise<User | null> => {
         setIsLoading(true);
         try {
             const userData = await authAPI.register(data);
             const frontendUser = transformBackendUser(userData);
 
             // Auto-login after registration
-            const loginSuccess = await login(data.email, data.password);
+            const loggedInUser = await login(data.email, data.password);
 
             setIsLoading(false);
-            return loginSuccess;
+            return loggedInUser;
         } catch (error) {
             console.error('Registration failed:', error);
             setIsLoading(false);
-            return false;
+            return null;
         }
     }, [login]);
 
@@ -140,7 +139,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 role,
                 isAuthenticated: !!user,
                 isLoading,
-                token: typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null,
                 login,
                 register,
                 logout,

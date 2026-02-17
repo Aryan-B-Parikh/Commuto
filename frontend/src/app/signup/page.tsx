@@ -75,7 +75,7 @@ export default function SignupPage() {
             return;
         }
 
-        const success = await register({
+        const loggedInUser = await register({
             email,
             password,
             full_name: name,
@@ -83,10 +83,10 @@ export default function SignupPage() {
             role: role as 'passenger' | 'driver',
         });
 
-        if (success) {
+        if (loggedInUser) {
             showToast('success', 'Account created successfully!');
-            // Redirect based on role
-            if (role === 'driver') {
+            // Redirect based on role from the user object
+            if (loggedInUser.role === 'driver') {
                 router.push('/driver/dashboard');
             } else {
                 router.push('/passenger/dashboard');

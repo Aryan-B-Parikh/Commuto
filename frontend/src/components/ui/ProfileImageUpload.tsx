@@ -31,7 +31,7 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
     return (
         <div className={`flex flex-col items-center gap-4 ${className}`}>
             <div className="relative group">
-                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg ring-1 ring-slate-100 relative">
+                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-card shadow-lg ring-1 ring-card-border relative">
                     {currentImageUrl ? (
                         <img
                             src={currentImageUrl}
@@ -39,8 +39,8 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         />
                     ) : (
-                        <div className="w-full h-full bg-slate-200 flex items-center justify-center">
-                            <svg className="w-12 h-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                            <svg className="w-12 h-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
@@ -71,7 +71,7 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
 
                 <label
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-white cursor-pointer hover:bg-blue-700 transition-colors"
+                    className="absolute bottom-0 right-0 bg-emerald-600 text-white p-2 rounded-full shadow-lg border-2 border-card cursor-pointer hover:bg-emerald-700 transition-colors"
                 >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -88,8 +88,8 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
             </div>
 
             <div className="text-center">
-                <h3 className="text-sm font-semibold text-slate-900">Profile Photo</h3>
-                <p className="text-xs text-slate-500 mt-1">Recommended: Square, at least 400x400px</p>
+                <h3 className="text-sm font-semibold text-foreground">Profile Photo</h3>
+                <p className="text-xs text-muted-foreground mt-1">Recommended: Square, at least 400x400px</p>
             </div>
         </div>
     );

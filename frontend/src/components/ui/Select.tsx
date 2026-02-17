@@ -45,7 +45,7 @@ export const Select: React.FC<SelectProps> = ({
 
     return (
         <div className={`flex flex-col gap-1.5 w-full ${className}`} ref={containerRef}>
-            <label className="text-sm font-medium text-slate-700 ml-1">
+            <label className="text-sm font-medium text-foreground ml-1">
                 {label}
             </label>
             <div className="relative">
@@ -53,18 +53,18 @@ export const Select: React.FC<SelectProps> = ({
                     type="button"
                     onClick={() => setIsOpen(!isOpen)}
                     className={`
-            w-full bg-white border rounded-xl py-3 px-4 flex items-center justify-between transition-all duration-200 outline-none
+            w-full bg-card border rounded-xl py-3 px-4 flex items-center justify-between transition-all duration-200 outline-none
             ${error
                             ? 'border-red-300 ring-2 ring-red-50/50'
-                            : 'border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50'}
-            ${isOpen ? 'border-blue-500 ring-4 ring-blue-50/50' : ''}
+                            : 'border-card-border hover:border-muted-foreground/30 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50/50'}
+            ${isOpen ? 'border-emerald-500 ring-4 ring-emerald-50/50' : ''}
           `}
                 >
-                    <span className={`text-sm ${selectedOption ? 'text-slate-900' : 'text-slate-400'}`}>
+                    <span className={`text-sm ${selectedOption ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {selectedOption ? selectedOption.label : placeholder}
                     </span>
                     <svg
-                        className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -80,7 +80,7 @@ export const Select: React.FC<SelectProps> = ({
                             animate={{ opacity: 1, y: 5, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                             transition={{ duration: 0.15, ease: 'easeOut' }}
-                            className="absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+                            className="absolute z-50 w-full bg-card border border-card-border rounded-xl shadow-xl overflow-hidden"
                         >
                             <div className="max-h-60 overflow-y-auto py-1">
                                 {options.map((option) => (
@@ -93,7 +93,7 @@ export const Select: React.FC<SelectProps> = ({
                                         }}
                                         className={`
                       w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors
-                      ${value === option.value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700 hover:bg-slate-50'}
+                      ${value === option.value ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium' : 'text-foreground hover:bg-muted'}
                     `}
                                     >
                                         {option.icon}

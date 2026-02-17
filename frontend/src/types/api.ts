@@ -46,6 +46,9 @@ export interface UserResponse {
     role: string;
     is_verified: boolean;
     created_at: string;
+    total_trips?: number;
+    today_earnings?: number;
+    online_hours?: number;
 }
 
 // Trip Types matching backend
@@ -68,13 +71,15 @@ export interface TripRequest {
 export interface TripResponse {
     id: string;
     driver_id?: string;
-    from_address: string;
-    to_address: string;
+    origin_address: string;
+    dest_address: string;
+    from_address?: string; // for backward compatibility
+    to_address?: string;   // for backward compatibility
     start_time: string;
     seats_requested?: number;
     total_seats: number;
     available_seats: number;
-    price_per_seat?: number;
+    price_per_seat: number;
     status: string;
     created_at: string;
     driver_name?: string;
