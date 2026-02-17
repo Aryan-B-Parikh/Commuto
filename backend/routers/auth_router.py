@@ -199,33 +199,122 @@ def get_current_user_info(
 @rate_limit(max_requests=10, window_seconds=60, key_suffix="update_me")
 def update_current_user(
     request: Request,
-    update_data: dict,
+    update_data: schemas.ProfileUpdate,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update current user profile"""
-    
-    # Allowed fields for update
-    allowed_fields = {"full_name", "phone_number", "avatar_url"}
+    """Update current user profile — persists all Tier 1 fields"""
+    from datetime import date as date_type
     
     try:
-        for key, value in update_data.items():
-            if key in allowed_fields and value is not None:
-                setattr(current_user, key, value)
+        # --- User-level fields ---
+        user_fields = {"full_name", "phone_number", "avatar_url", "gender", "bio", "address"}
+        data = update_data.model_dump(exclude_none=True)
+        
+        for key in user_fields:
+            if key in data:
+                setattr(current_user, key, data[key])
+        
+        # Date of birth (parse string to date)
+        if data.get("date_of_birth"):
+            try:
+                current_user.date_of_birth = date_type.fromisoformat(data["date_of_birth"])
+            except ValueError:
+                pass
+        
+        # Emergency contact (JSON)
+        if data.get("emergency_contact"):
+            current_user.emergency_contact = data["emergency_contact"]
+        
+        # --- Driver-specific fields ---
+        role = auth.get_user_role(current_user, db)
+        
+        if role == "driver":
+            driver = db.query(models.Driver).filter(
+                models.Driver.user_id == current_user.id
+            ).first()
+            
+            if driver:
+                if data.get("license_number"):
+                    driver.license_number = data["license_number"]
+                if data.get("insurance_status"):
+                    driver.insurance_status = data["insurance_status"]
+                if data.get("max_passengers") is not None:
+                    driver.max_passengers = data["max_passengers"]
+                if data.get("route_radius") is not None:
+                    driver.route_radius = data["route_radius"]
+                if data.get("is_available") is not None:
+                    driver.is_online = data["is_available"]
+                
+                # Vehicle info
+                vehicle_data = {}
+                if data.get("vehicle_model"):
+                    vehicle_data["model"] = data["vehicle_model"]
+                if data.get("vehicle_type"):
+                    vehicle_data["make"] = data["vehicle_type"]
+                if data.get("vehicle_plate"):
+                    vehicle_data["plate_number"] = data["vehicle_plate"]
+                if data.get("vehicle_color"):
+                    vehicle_data["color"] = data["vehicle_color"]
+                if data.get("vehicle_capacity") is not None:
+                    vehicle_data["capacity"] = data["vehicle_capacity"]
+                
+                if vehicle_data:
+                    vehicle = db.query(models.Vehicle).filter(
+                        models.Vehicle.driver_id == driver.user_id
+                    ).first()
+                    if vehicle:
+                        for k, v in vehicle_data.items():
+                            setattr(vehicle, k, v)
+                    else:
+                        # Create new vehicle
+                        new_vehicle = models.Vehicle(
+                            driver_id=driver.user_id,
+                            make=vehicle_data.get("make", "Unknown"),
+                            model=vehicle_data.get("model", "Unknown"),
+                            plate_number=vehicle_data.get("plate_number", ""),
+                            capacity=vehicle_data.get("capacity", 4),
+                            color=vehicle_data.get("color")
+                        )
+                        db.add(new_vehicle)
+        
+        # --- Passenger-specific fields ---
+        if role == "passenger":
+            passenger = db.query(models.Passenger).filter(
+                models.Passenger.user_id == current_user.id
+            ).first()
+            
+            if passenger:
+                prefs = passenger.preferences or {}
+                if data.get("travel_preferences") is not None:
+                    prefs["travel_preferences"] = data["travel_preferences"]
+                passenger.preferences = prefs
+                
+                if data.get("accessibility_needs") is not None:
+                    passenger.accessibility_needs = data["accessibility_needs"]
         
         db.commit()
         db.refresh(current_user)
         
-        # Re-populate role and driver fields for response
-        current_user.role = auth.get_user_role(current_user, db)
+        # Build response with all fields
+        current_user.role = role
         
-        if current_user.role == "driver":
+        if role == "driver":
             driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
             if driver:
                 current_user.license_number = driver.license_number
                 current_user.is_online = driver.is_online
                 current_user.rating = driver.rating
                 current_user.total_trips = driver.total_trips
+                current_user.insurance_status = driver.insurance_status
+                current_user.max_passengers = driver.max_passengers
+                current_user.route_radius = driver.route_radius
+        elif role == "passenger":
+            passenger = db.query(models.Passenger).filter(models.Passenger.user_id == current_user.id).first()
+            if passenger:
+                prefs = passenger.preferences or {}
+                current_user.travel_preferences = prefs.get("travel_preferences", [])
+                current_user.accessibility_needs = passenger.accessibility_needs
         
         logger.info(f"User profile updated: {current_user.email}")
         return current_user
@@ -237,4 +326,5 @@ def update_current_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update profile"
         )
+
 

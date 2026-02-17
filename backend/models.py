@@ -44,13 +44,21 @@ class User(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    phone_number = Column(String(20))  # Changed from 'phone'
+    phone_number = Column(String(20))
     full_name = Column(String(255), nullable=False)
-    avatar_url = Column(Text)  # Changed from 'avatar'
-    hashed_password = Column(Text, nullable=False)  # Changed from 'password_hash'
-    role = Column(String(20), nullable=False)  # Added role field
+    avatar_url = Column(Text)
+    hashed_password = Column(Text, nullable=False)
+    role = Column(String(20), nullable=False)
     is_verified = Column(Boolean, default=False)
     is_phone_verified = Column(Boolean, default=False)
+    
+    # Profile fields
+    gender = Column(String(20), nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    bio = Column(Text, nullable=True)
+    address = Column(Text, nullable=True)
+    emergency_contact = Column(JSON, nullable=True)  # {name, relationship, phone}
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -59,6 +67,8 @@ class User(Base):
     passenger_profile = relationship("Passenger", back_populates="user", uselist=False)
     saved_places = relationship("SavedPlace", back_populates="user")
     bookings = relationship("Booking", back_populates="passenger", foreign_keys="Booking.passenger_id")
+    payment_methods = relationship("PaymentMethod", back_populates="user", cascade="all, delete-orphan")
+    wallet = relationship("Wallet", back_populates="user", uselist=False)
 
 # Driver Model
 class Driver(Base):
@@ -68,10 +78,13 @@ class Driver(Base):
     license_number = Column(String(50), nullable=True)
     license_url = Column(Text, nullable=True)
     insurance_expiry = Column(Date, nullable=True)
+    insurance_status = Column(String(20), default="pending")  # active, pending, expired
     rating = Column(Numeric(3, 2), nullable=True)
     total_trips = Column(Integer, default=0)
     is_online = Column(Boolean, default=False)
     last_seen = Column(DateTime, nullable=True)
+    max_passengers = Column(Integer, default=4)
+    route_radius = Column(Integer, default=10)  # km
     
     # Relationships
     user = relationship("User", back_populates="driver_profile")
@@ -84,7 +97,8 @@ class Passenger(Base):
     __tablename__ = "passengers"
     
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
-    preferences = Column(JSON, nullable=True)
+    preferences = Column(JSON, nullable=True)  # {travel_preferences: [], route_radius, max_passengers}
+    accessibility_needs = Column(Boolean, default=False)
     
     # Relationships
     user = relationship("User", back_populates="passenger_profile")
@@ -232,3 +246,51 @@ class TripLocation(Base):
     
     # Relationships
     trip = relationship("Trip", back_populates="locations")
+
+# PaymentMethod Model
+class PaymentMethod(Base):
+    __tablename__ = "payment_methods"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    type = Column(String(20), nullable=False)  # card, upi, netbanking
+    provider = Column(String(50), nullable=False)  # Visa, Mastercard, GPay, etc.
+    last4 = Column(String(4), nullable=True)
+    is_default = Column(Boolean, default=False)
+    razorpay_token = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="payment_methods")
+
+# Wallet Model
+class Wallet(Base):
+    __tablename__ = "wallets"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False)
+    balance = Column(Numeric(10, 2), default=0.00)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="wallet")
+    transactions = relationship("Transaction", back_populates="wallet", cascade="all, delete-orphan")
+
+# Transaction Model
+class Transaction(Base):
+    __tablename__ = "transactions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    wallet_id = Column(UUID(as_uuid=True), ForeignKey("wallets.id"), nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
+    type = Column(String(20), nullable=False)  # credit, payment, refund
+    description = Column(Text, nullable=True)
+    status = Column(String(20), default="pending")  # pending, completed, failed
+    razorpay_order_id = Column(String(100), nullable=True)
+    razorpay_payment_id = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    wallet = relationship("Wallet", back_populates="transactions")
+

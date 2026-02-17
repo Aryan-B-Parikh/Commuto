@@ -8,7 +8,7 @@ import logging
 
 from database import engine, get_db, Base
 import models
-from routers import auth_router, rides_router, bids_router, otp_router, websocket_router
+from routers import auth_router, rides_router, bids_router, otp_router, websocket_router, payment_methods_router, wallet_router
 from rate_limiter import rate_limit
 
 load_dotenv()
@@ -59,6 +59,8 @@ app.include_router(rides_router.router)
 app.include_router(bids_router.router)
 app.include_router(otp_router.router)
 app.include_router(websocket_router.router)
+app.include_router(payment_methods_router.router)
+app.include_router(wallet_router.router)
 
 @app.get("/")
 def root():
