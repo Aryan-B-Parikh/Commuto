@@ -29,12 +29,14 @@ class UserResponse(BaseModel):
     id: UUID
     email: str
     full_name: str
-
     phone_number: str
-    role: str  # Will be determined by presence of driver/passenger profile
+    role: str
     avatar_url: Optional[str] = None
+    is_verified: bool = False
     rating: Optional[float] = 0.0
     total_trips: Optional[int] = 0
+    today_earnings: Optional[float] = 0
+    online_hours: Optional[float] = 0
     created_at: datetime
     
     # Driver-specific fields (optional)

@@ -151,6 +151,8 @@ def get_current_user_info(
     db: Session = Depends(get_db)
 ):
     """Get current user info with rate limiting"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
     
     # Add role to response
     user_response = current_user
@@ -164,5 +166,75 @@ def get_current_user_info(
             user_response.is_online = driver.is_online
             user_response.rating = driver.rating
             user_response.total_trips = driver.total_trips
+            
+            # Compute today's earnings from completed trips
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_earnings_result = db.query(func.sum(models.Trip.price_per_seat)).filter(
+                models.Trip.driver_id == current_user.id,
+                models.Trip.status == "completed",
+                models.Trip.updated_at >= today_start
+            ).scalar()
+            user_response.today_earnings = float(today_earnings_result) if today_earnings_result else 0
+            
+            # Compute online hours (approximate from active/completed trips today)
+            today_trip_count = db.query(func.count(models.Trip.id)).filter(
+                models.Trip.driver_id == current_user.id,
+                models.Trip.status.in_(["active", "completed"]),
+                models.Trip.updated_at >= today_start
+            ).scalar() or 0
+            user_response.online_hours = round(today_trip_count * 0.5, 1)  # estimate 30 min per trip
+    else:
+        # Passenger: count total trips via bookings
+        from sqlalchemy import func as sqlfunc
+        total = db.query(sqlfunc.count(models.Booking.id)).filter(
+            models.Booking.passenger_id == current_user.id,
+            models.Booking.status.in_(["confirmed", "completed"])
+        ).scalar() or 0
+        user_response.total_trips = total
     
     return user_response
+
+
+@router.patch("/me", response_model=schemas.UserResponse)
+@rate_limit(max_requests=10, window_seconds=60, key_suffix="update_me")
+def update_current_user(
+    request: Request,
+    update_data: dict,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user profile"""
+    
+    # Allowed fields for update
+    allowed_fields = {"full_name", "phone_number", "avatar_url"}
+    
+    try:
+        for key, value in update_data.items():
+            if key in allowed_fields and value is not None:
+                setattr(current_user, key, value)
+        
+        db.commit()
+        db.refresh(current_user)
+        
+        # Re-populate role and driver fields for response
+        current_user.role = auth.get_user_role(current_user, db)
+        
+        if current_user.role == "driver":
+            driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
+            if driver:
+                current_user.license_number = driver.license_number
+                current_user.is_online = driver.is_online
+                current_user.rating = driver.rating
+                current_user.total_trips = driver.total_trips
+        
+        logger.info(f"User profile updated: {current_user.email}")
+        return current_user
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating profile: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update profile"
+        )
+

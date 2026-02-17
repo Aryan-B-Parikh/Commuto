@@ -75,8 +75,10 @@ def create_ride_request(
         db.commit()
         db.refresh(new_trip)
         
-        # Add seats_requested for backward compatibility
+        # Add backward-compat fields
         new_trip.seats_requested = trip_data.seats_requested
+        new_trip.from_address = new_trip.origin_address
+        new_trip.to_address = new_trip.dest_address
         
         logger.info(f"Trip created: {new_trip.id} by passenger {current_user.id}")
         
@@ -106,9 +108,10 @@ def get_my_trips(
         models.Booking.passenger_id == current_user.id
     ).order_by(models.Trip.created_at.desc()).all()
     
-    # Add seats_requested for backward compatibility
     for trip in trips:
         trip.seats_requested = trip.total_seats
+        trip.from_address = trip.origin_address
+        trip.to_address = trip.dest_address
         
         # Populate driver details if driver is assigned
         if trip.driver and trip.driver.user:
@@ -134,6 +137,8 @@ def get_driver_trips(
     
     for trip in trips:
         trip.seats_requested = trip.total_seats
+        trip.from_address = trip.origin_address
+        trip.to_address = trip.dest_address
         
     return trips
 
@@ -152,9 +157,10 @@ def get_open_rides(
         models.Trip.status.in_(["pending"])
     ).all()
     
-    # Add seats_requested for each trip
     for ride in rides:
         ride.seats_requested = ride.total_seats
+        ride.from_address = ride.origin_address
+        ride.to_address = ride.dest_address
         
         # Populate driver details if driver is assigned
         if ride.driver and ride.driver.user:

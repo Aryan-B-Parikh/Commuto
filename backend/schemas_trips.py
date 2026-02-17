@@ -38,10 +38,12 @@ class TripCreate(BaseModel):
 class TripResponse(BaseModel):
     id: UUID
     driver_id: Optional[UUID] = None
-    from_address: str = Field(validation_alias="origin_address")
-    to_address: str = Field(validation_alias="dest_address")
+    origin_address: str
+    dest_address: str
+    from_address: Optional[str] = None  # backward compat
+    to_address: Optional[str] = None    # backward compat
     start_time: datetime
-    seats_requested: int = None  # For backward compatibility
+    seats_requested: Optional[int] = None
     total_seats: int
     available_seats: int
     price_per_seat: Optional[float] = None
