@@ -81,6 +81,8 @@ class BidResponse(BaseModel):
     bid_amount: float
     status: str
     created_at: datetime
+    is_counter_bid: Optional[bool] = False
+    parent_bid_id: Optional[UUID] = None
     
     class Config:
         from_attributes = True
@@ -93,6 +95,8 @@ class BidWithDriver(BaseModel):
     bid_amount: float
     status: str
     created_at: datetime
+    is_counter_bid: Optional[bool] = False
+    parent_bid_id: Optional[UUID] = None
     driver_name: str
     driver_rating: Optional[float]
     driver_avatar: Optional[str] = None

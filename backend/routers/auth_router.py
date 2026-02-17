@@ -84,6 +84,15 @@ def register(
         db.commit()
         db.refresh(new_user)
         
+        # Attach driver-specific fields to the returned user object so Pydantic includes them
+        if user_data.role == "driver":
+            driver = db.query(models.Driver).filter(models.Driver.user_id == new_user.id).first()
+            if driver:
+                new_user.license_number = driver.license_number
+                new_user.is_online = driver.is_online
+                new_user.rating = driver.rating
+                new_user.total_trips = driver.total_trips
+
         # Add role to response
         user_response = new_user
         user_response.role = user_data.role

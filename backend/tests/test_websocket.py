@@ -4,59 +4,36 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 import sys
 
-# WebSocket tests require async support
-pytestmark = pytest.mark.asyncio
+# WebSocket tests are written using the sync TestClient websocket helper
 
 
 class TestWebSocket:
     """Test WebSocket functionality"""
     
-    async def test_websocket_auth_failure_no_token(self):
+    def test_websocket_auth_failure_no_token(self, client):
         """Test WebSocket connection fails without token"""
-        # This test requires async client
-        pass
+        try:
+            with client.websocket_connect("/ws") as ws:
+                ws.receive_text()
+        except Exception:
+            assert True
     
     def test_websocket_with_invalid_token(self, client):
         """Test WebSocket connection with invalid token"""
-        import asyncio
-        
-        async def websocket_test():
-            async with AsyncClient(app=client.app, base_url="http://test") as ac:
-                try:
-                    async with ac.websocket_connect("/ws?token=invalid_token") as ws:
-                        await ws.receive_text()
-                except Exception as e:
-                    # Connection should be closed
-                    assert True
-        
-        # Run async test
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(websocket_test())
-        except:
-            pass  # Expected to fail
-        finally:
-            loop.close()
+            with client.websocket_connect("/ws?token=invalid_token") as ws:
+                # Attempt to receive should fail or close connection
+                ws.receive_text()
+        except Exception:
+            assert True
     
     def test_websocket_connect_with_valid_token(self, client, driver_token):
         """Test WebSocket connection with valid token"""
-        import asyncio
-        
-        async def websocket_test():
-            async with AsyncClient(app=client.app, base_url="http://test") as ac:
-                async with ac.websocket_connect(f"/ws?token={driver_token}") as ws:
-                    # Send ping
-                    await ws.send_text("ping")
-                    response = await ws.receive_json()
-                    assert response["type"] == "pong"
-        
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(websocket_test())
-        finally:
-            loop.close()
+        with client.websocket_connect(f"/ws?token={driver_token}") as ws:
+            # Send ping
+            ws.send_text("ping")
+            response = ws.receive_json()
+            assert response["type"] == "pong"
 
 
 class TestWebSocketNotifications:

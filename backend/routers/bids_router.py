@@ -146,6 +146,8 @@ def get_ride_bids(
             "driver_name": user.full_name,
             "driver_rating": driver.rating,
             "driver_avatar": user.avatar_url
+            ,"is_counter_bid": getattr(bid, "is_counter_bid", False)
+            ,"parent_bid_id": getattr(bid, "parent_bid_id", None)
         })
     
     return result
@@ -262,6 +264,9 @@ def accept_bid(
             "otp": otp
         }
         
+    except HTTPException:
+        db.rollback()
+        raise
     except DBAPIError as e:
         db.rollback()
         logger.error(f"Database error (possible optimistic locking conflict): {str(e)}")
@@ -349,6 +354,9 @@ def counter_bid(
         
         return counter_bid_obj
         
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating counter bid: {str(e)}", exc_info=True)

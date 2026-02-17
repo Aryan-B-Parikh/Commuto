@@ -12,6 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
 from main import app
+from datetime import datetime, timedelta
 
 # Use in-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -51,6 +52,9 @@ def db():
 def client(db):
     """Create a test client with a fresh database"""
     Base.metadata.create_all(bind=engine)
+    import rate_limiter as _rate_limiter
+    # Clear any existing in-memory rate limit state to isolate tests
+    _rate_limiter._rate_limit_storage.clear()
     with TestClient(app) as c:
         yield c
     Base.metadata.drop_all(bind=engine)
@@ -65,7 +69,7 @@ def test_passenger(client):
         "full_name": "Test Passenger",
         "phone": "+1234567890",
         "role": "passenger"
-    })
+    }, headers={"X-Disable-RateLimit": "1"})
     return response.json()
 
 
@@ -83,7 +87,7 @@ def test_driver(client):
         "vehicle_model": "Camry",
         "vehicle_plate": "ABC123",
         "vehicle_capacity": 4
-    })
+    }, headers={"X-Disable-RateLimit": "1"})
     return response.json()
 
 
@@ -93,7 +97,7 @@ def passenger_token(client, test_passenger):
     response = client.post("/auth/login", json={
         "email": "passenger@test.com",
         "password": "testpassword123"
-    })
+    }, headers={"X-Disable-RateLimit": "1"})
     return response.json()["access_token"]
 
 
@@ -103,7 +107,7 @@ def driver_token(client, test_driver):
     response = client.post("/auth/login", json={
         "email": "driver@test.com",
         "password": "testpassword123"
-    })
+    }, headers={"X-Disable-RateLimit": "1"})
     return response.json()["access_token"]
 
 
@@ -122,6 +126,10 @@ def auth_headers_driver(driver_token):
 @pytest.fixture
 def test_trip(client, auth_headers_passenger):
     """Create a test trip"""
+    # Use a date in the future so tests remain valid regardless of current date
+    future_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
+    # Include rate-limit bypass header for setup actions
+    headers = {**auth_headers_passenger, "X-Disable-RateLimit": "1"}
     response = client.post("/rides/request", json={
         "from_location": {
             "address": "123 Start St, City",
@@ -133,8 +141,8 @@ def test_trip(client, auth_headers_passenger):
             "lat": 40.7589,
             "lng": -73.9851
         },
-        "date": "2025-12-31",
+        "date": future_date,
         "time": "14:00",
         "seats_requested": 2
-    }, headers=auth_headers_passenger)
+    }, headers=headers)
     return response.json()

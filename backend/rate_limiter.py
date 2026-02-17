@@ -6,6 +6,7 @@ in-memory storage. For production, consider using Redis.
 """
 
 import time
+import os
 from functools import wraps
 from fastapi import Request, HTTPException, status
 from typing import Dict, Tuple, Optional
@@ -66,6 +67,12 @@ def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
         key_suffix: Optional suffix to differentiate rate limits for the same IP
     """
     def decorator(func):
+        # Note: Do not short-circuit here so we can inspect the incoming Request
+        # at runtime and only bypass rate limiting when both the env var and
+        # an explicit request header are present. This allows tests to opt-in
+        # to bypass the limiter per-request while preserving behavior for
+        # rate-limit-specific tests.
+
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
             # Find request in args or kwargs
@@ -75,24 +82,32 @@ def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
                     if isinstance(arg, Request):
                         request = arg
                         break
-            
+
             if not request:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Rate limiting requires Request parameter"
                 )
-            
+
+            # Allow runtime bypass when env var is set AND caller provides
+            # an explicit header to opt-out. This avoids globally disabling
+            # rate limiting which would break rate-limit tests.
+            disable_for_tests = os.getenv("DISABLE_RATE_LIMITER_FOR_TESTS") == "1"
+            bypass_header = request.headers.get("X-Disable-RateLimit") == "1"
+            if disable_for_tests and bypass_header:
+                return await func(*args, **kwargs)
+
             key = get_client_key(request, key_suffix or func.__name__)
             is_limited, remaining, reset_after = is_rate_limited(key, max_requests, window_seconds)
-            
+
             if is_limited:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=f"Rate limit exceeded. Try again in {reset_after} seconds."
                 )
-            
+
             return await func(*args, **kwargs)
-        
+
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             # Find request in args or kwargs
@@ -102,30 +117,35 @@ def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
                     if isinstance(arg, Request):
                         request = arg
                         break
-            
+
             if not request:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Rate limiting requires Request parameter"
                 )
-            
+
+            disable_for_tests = os.getenv("DISABLE_RATE_LIMITER_FOR_TESTS") == "1"
+            bypass_header = request.headers.get("X-Disable-RateLimit") == "1"
+            if disable_for_tests and bypass_header:
+                return func(*args, **kwargs)
+
             key = get_client_key(request, key_suffix or func.__name__)
             is_limited, remaining, reset_after = is_rate_limited(key, max_requests, window_seconds)
-            
+
             if is_limited:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=f"Rate limit exceeded. Try again in {reset_after} seconds."
                 )
-            
+
             return func(*args, **kwargs)
-        
+
         # Return appropriate wrapper based on whether function is async or not
         import asyncio
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
-    
+
     return decorator
 
 
