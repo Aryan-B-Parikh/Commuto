@@ -69,7 +69,7 @@ def test_passenger(client):
         "full_name": "Test Passenger",
         "phone": "+1234567890",
         "role": "passenger"
-    }, headers={"X-Disable-RateLimit": "1"})
+    })
     return response.json()
 
 
@@ -87,7 +87,7 @@ def test_driver(client):
         "vehicle_model": "Camry",
         "vehicle_plate": "ABC123",
         "vehicle_capacity": 4
-    }, headers={"X-Disable-RateLimit": "1"})
+    })
     return response.json()
 
 
@@ -97,7 +97,7 @@ def passenger_token(client, test_passenger):
     response = client.post("/auth/login", json={
         "email": "passenger@test.com",
         "password": "testpassword123"
-    }, headers={"X-Disable-RateLimit": "1"})
+    })
     return response.json()["access_token"]
 
 
@@ -107,7 +107,7 @@ def driver_token(client, test_driver):
     response = client.post("/auth/login", json={
         "email": "driver@test.com",
         "password": "testpassword123"
-    }, headers={"X-Disable-RateLimit": "1"})
+    })
     return response.json()["access_token"]
 
 
@@ -128,8 +128,6 @@ def test_trip(client, auth_headers_passenger):
     """Create a test trip"""
     # Use a date in the future so tests remain valid regardless of current date
     future_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
-    # Include rate-limit bypass header for setup actions
-    headers = {**auth_headers_passenger, "X-Disable-RateLimit": "1"}
     response = client.post("/rides/request", json={
         "from_location": {
             "address": "123 Start St, City",
@@ -144,5 +142,5 @@ def test_trip(client, auth_headers_passenger):
         "date": future_date,
         "time": "14:00",
         "seats_requested": 2
-    }, headers=headers)
+    }, headers=auth_headers_passenger)
     return response.json()

@@ -1,15 +1,20 @@
-"""
-Rate limiting utilities for the Commuto API.
+"""backend.rate_limiter
+=======================
 
-This module provides a simplified rate limiting mechanism using
-in-memory storage. For production, consider using Redis.
+Small in-memory rate limiter used by route decorators.
+
+Notes:
+- This implementation is intentionally simple and stores counters in
+    process memory. For production use, prefer a centralized store
+    (Redis) so limits are enforced across multiple workers/instances.
+- Tests isolate rate limiting by clearing the in-memory store in the
+    test `TestClient` fixture (`backend/tests/conftest.py`).
 """
 
 import time
-import os
 from functools import wraps
 from fastapi import Request, HTTPException, status
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple
 import threading
 
 # In-memory rate limit storage
@@ -59,20 +64,15 @@ def is_rate_limited(key: str, max_requests: int, window_seconds: int) -> Tuple[b
 
 def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
     """
-    Decorator to apply rate limiting to a route.
-    
+    Decorator to apply rate limiting to a FastAPI/Starlette route.
+
     Args:
-        max_requests: Maximum number of requests allowed in the window
-        window_seconds: Time window in seconds
-        key_suffix: Optional suffix to differentiate rate limits for the same IP
+        max_requests: Maximum requests allowed inside the window.
+        window_seconds: Length of the window in seconds.
+        key_suffix: Optional suffix added to the client key to allow
+            separate limits for different actions from the same IP.
     """
     def decorator(func):
-        # Note: Do not short-circuit here so we can inspect the incoming Request
-        # at runtime and only bypass rate limiting when both the env var and
-        # an explicit request header are present. This allows tests to opt-in
-        # to bypass the limiter per-request while preserving behavior for
-        # rate-limit-specific tests.
-
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
             # Find request in args or kwargs
@@ -88,14 +88,6 @@ def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Rate limiting requires Request parameter"
                 )
-
-            # Allow runtime bypass when env var is set AND caller provides
-            # an explicit header to opt-out. This avoids globally disabling
-            # rate limiting which would break rate-limit tests.
-            disable_for_tests = os.getenv("DISABLE_RATE_LIMITER_FOR_TESTS") == "1"
-            bypass_header = request.headers.get("X-Disable-RateLimit") == "1"
-            if disable_for_tests and bypass_header:
-                return await func(*args, **kwargs)
 
             key = get_client_key(request, key_suffix or func.__name__)
             is_limited, remaining, reset_after = is_rate_limited(key, max_requests, window_seconds)
@@ -123,11 +115,6 @@ def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Rate limiting requires Request parameter"
                 )
-
-            disable_for_tests = os.getenv("DISABLE_RATE_LIMITER_FOR_TESTS") == "1"
-            bypass_header = request.headers.get("X-Disable-RateLimit") == "1"
-            if disable_for_tests and bypass_header:
-                return func(*args, **kwargs)
 
             key = get_client_key(request, key_suffix or func.__name__)
             is_limited, remaining, reset_after = is_rate_limited(key, max_requests, window_seconds)
