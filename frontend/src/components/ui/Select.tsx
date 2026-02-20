@@ -56,8 +56,8 @@ export const Select: React.FC<SelectProps> = ({
             w-full bg-card border rounded-xl py-3 px-4 flex items-center justify-between transition-all duration-200 outline-none
             ${error
                             ? 'border-red-300 ring-2 ring-red-50/50'
-                            : 'border-card-border hover:border-muted-foreground/30 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50/50'}
-            ${isOpen ? 'border-emerald-500 ring-4 ring-emerald-50/50' : ''}
+                            : 'border-card-border hover:border-muted-foreground/30 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50'}
+            ${isOpen ? 'border-indigo-500 ring-4 ring-indigo-50/50' : ''}
           `}
                 >
                     <span className={`text-sm ${selectedOption ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -93,7 +93,7 @@ export const Select: React.FC<SelectProps> = ({
                                         }}
                                         className={`
                       w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors
-                      ${value === option.value ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium' : 'text-foreground hover:bg-muted'}
+                      ${value === option.value ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-foreground hover:bg-muted'}
                     `}
                                     >
                                         {option.icon}

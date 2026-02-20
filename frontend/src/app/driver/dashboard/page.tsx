@@ -43,7 +43,7 @@ export default function DriverDashboard() {
                     trend={user?.todayEarnings && user.todayEarnings > 0 ? "Active today" : "No earnings yet"}
                     trendUp={user?.todayEarnings && user.todayEarnings > 0}
                     icon={<span className="text-2xl">💰</span>}
-                    color="emerald"
+                    color="indigo"
                 />
                 <StatCard
                     label="Rides Completed"
@@ -76,8 +76,8 @@ export default function DriverDashboard() {
                     <div className="absolute top-4 left-4 z-[10] bg-card/90 dark:bg-black/90 backdrop-blur-md px-4 py-2 rounded-xl border border-card-border shadow-sm">
                         <div className="flex items-center gap-2">
                             <span className="relative flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
                             </span>
                             <span className="text-sm font-semibold text-foreground">You are Online</span>
                         </div>
@@ -87,7 +87,7 @@ export default function DriverDashboard() {
 
                     {/* "Scan for Riders" Overlay */}
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000]">
-                        <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-emerald-500/40 transition-all flex items-center gap-2">
+                        <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-indigo-500/40 transition-all flex items-center gap-2">
                             <svg className="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
@@ -115,11 +115,11 @@ export default function DriverDashboard() {
                         ) : requests.length > 0 ? (
                             requests.slice(0, 3).map((request) => (
                                 <div key={request.id} className="bg-card p-5 rounded-2xl border border-card-border shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
 
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-xs">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-black text-xs">
                                                 {request.seats_requested}
                                             </div>
                                             <div>
@@ -134,7 +134,7 @@ export default function DriverDashboard() {
 
                                     <div className="space-y-3 mb-4">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
                                             <p className="text-sm text-muted-foreground truncate">{request.origin_address}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export default function DriverDashboard() {
 
                                     <div className="flex gap-2">
                                         <Link href="/driver/requests" className="flex-1">
-                                            <button className="w-full bg-emerald-500 text-white font-bold py-2 rounded-xl hover:bg-emerald-600 transition-colors shadow-sm text-sm">
+                                            <button className="w-full bg-indigo-500 text-white font-bold py-2 rounded-xl hover:bg-indigo-600 transition-colors shadow-sm text-sm">
                                                 Review Details
                                             </button>
                                         </Link>
@@ -159,7 +159,7 @@ export default function DriverDashboard() {
                         )}
 
                         {requests.length > 3 && (
-                            <Link href="/driver/requests" className="block text-center text-sm font-bold text-emerald-500 hover:underline pt-2">
+                            <Link href="/driver/requests" className="block text-center text-sm font-bold text-indigo-500 hover:underline pt-2">
                                 View all {requests.length} requests
                             </Link>
                         )}

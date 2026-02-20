@@ -84,22 +84,41 @@ def register(
         db.commit()
         db.refresh(new_user)
         
-        # Attach driver-specific fields to the returned user object so Pydantic includes them
+        # Build response dict
+        resp = {
+            "id": new_user.id,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "phone_number": new_user.phone_number,
+            "role": user_data.role,
+            "avatar_url": new_user.avatar_url,
+            "is_verified": new_user.is_verified,
+            "created_at": new_user.created_at,
+            "gender": new_user.gender,
+            "date_of_birth": new_user.date_of_birth,
+            "bio": new_user.bio,
+            "address": new_user.address,
+            "emergency_contact": new_user.emergency_contact,
+            "rating": 0.0,
+            "total_trips": 0,
+            "today_earnings": 0,
+            "online_hours": 0,
+        }
+
         if user_data.role == "driver":
             driver = db.query(models.Driver).filter(models.Driver.user_id == new_user.id).first()
             if driver:
-                new_user.license_number = driver.license_number
-                new_user.is_online = driver.is_online
-                new_user.rating = driver.rating
-                new_user.total_trips = driver.total_trips
-
-        # Add role to response
-        user_response = new_user
-        user_response.role = user_data.role
+                resp["license_number"] = driver.license_number
+                resp["is_online"] = driver.is_online
+                resp["rating"] = float(driver.rating) if driver.rating else 0.0
+                resp["total_trips"] = driver.total_trips or 0
+                resp["insurance_status"] = driver.insurance_status
+                resp["max_passengers"] = driver.max_passengers
+                resp["route_radius"] = driver.route_radius
         
         logger.info(f"New user registered: {new_user.email} with role {user_data.role}")
         
-        return user_response
+        return resp
         
     except HTTPException:
         raise
@@ -151,48 +170,76 @@ def get_current_user_info(
     db: Session = Depends(get_db)
 ):
     """Get current user info with rate limiting"""
-    from datetime import datetime, timedelta
+    from datetime import datetime
     from sqlalchemy import func
     
-    # Add role to response
-    user_response = current_user
-    user_response.role = auth.get_user_role(current_user, db)
+    role = auth.get_user_role(current_user, db)
     
-    # Add driver-specific fields if driver
-    if user_response.role == "driver":
+    # Build base response dict from user columns
+    resp = {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "phone_number": current_user.phone_number or "",
+        "role": role,
+        "avatar_url": current_user.avatar_url,
+        "is_verified": current_user.is_verified,
+        "created_at": current_user.created_at,
+        "gender": current_user.gender,
+        "date_of_birth": current_user.date_of_birth,
+        "bio": current_user.bio,
+        "address": current_user.address,
+        "emergency_contact": current_user.emergency_contact,
+        "rating": 0.0,
+        "total_trips": 0,
+        "today_earnings": 0,
+        "online_hours": 0,
+    }
+    
+    if role == "driver":
         driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
         if driver:
-            user_response.license_number = driver.license_number
-            user_response.is_online = driver.is_online
-            user_response.rating = driver.rating
-            user_response.total_trips = driver.total_trips
+            resp["license_number"] = driver.license_number
+            resp["is_online"] = driver.is_online
+            resp["rating"] = float(driver.rating) if driver.rating else 0.0
+            resp["total_trips"] = driver.total_trips or 0
+            resp["insurance_status"] = driver.insurance_status
+            resp["max_passengers"] = driver.max_passengers
+            resp["route_radius"] = driver.route_radius
             
-            # Compute today's earnings from completed trips
+            # Compute today's earnings
             today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
             today_earnings_result = db.query(func.sum(models.Trip.price_per_seat)).filter(
                 models.Trip.driver_id == current_user.id,
                 models.Trip.status == "completed",
                 models.Trip.updated_at >= today_start
             ).scalar()
-            user_response.today_earnings = float(today_earnings_result) if today_earnings_result else 0
+            resp["today_earnings"] = float(today_earnings_result) if today_earnings_result else 0
             
-            # Compute online hours (approximate from active/completed trips today)
+            # Compute online hours
             today_trip_count = db.query(func.count(models.Trip.id)).filter(
                 models.Trip.driver_id == current_user.id,
                 models.Trip.status.in_(["active", "completed"]),
                 models.Trip.updated_at >= today_start
             ).scalar() or 0
-            user_response.online_hours = round(today_trip_count * 0.5, 1)  # estimate 30 min per trip
+            resp["online_hours"] = round(today_trip_count * 0.5, 1)
     else:
-        # Passenger: count total trips via bookings
-        from sqlalchemy import func as sqlfunc
-        total = db.query(sqlfunc.count(models.Booking.id)).filter(
+        # Passenger
+        total = db.query(func.count(models.Booking.id)).filter(
             models.Booking.passenger_id == current_user.id,
             models.Booking.status.in_(["confirmed", "completed"])
         ).scalar() or 0
-        user_response.total_trips = total
+        resp["total_trips"] = total
+        
+        passenger = db.query(models.Passenger).filter(
+            models.Passenger.user_id == current_user.id
+        ).first()
+        if passenger:
+            prefs = passenger.preferences or {}
+            resp["travel_preferences"] = prefs.get("travel_preferences", [])
+            resp["accessibility_needs"] = passenger.accessibility_needs or False
     
-    return user_response
+    return resp
 
 
 @router.patch("/me", response_model=schemas.UserResponse)
@@ -296,28 +343,46 @@ def update_current_user(
         db.commit()
         db.refresh(current_user)
         
-        # Build response with all fields
-        current_user.role = role
-        
+        # Build response dict
+        resp = {
+            "id": current_user.id,
+            "email": current_user.email,
+            "full_name": current_user.full_name,
+            "phone_number": current_user.phone_number or "",
+            "role": role,
+            "avatar_url": current_user.avatar_url,
+            "is_verified": current_user.is_verified,
+            "created_at": current_user.created_at,
+            "gender": current_user.gender,
+            "date_of_birth": current_user.date_of_birth,
+            "bio": current_user.bio,
+            "address": current_user.address,
+            "emergency_contact": current_user.emergency_contact,
+            "rating": 0.0,
+            "total_trips": 0,
+            "today_earnings": 0,
+            "online_hours": 0,
+        }
+
         if role == "driver":
             driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
             if driver:
-                current_user.license_number = driver.license_number
-                current_user.is_online = driver.is_online
-                current_user.rating = driver.rating
-                current_user.total_trips = driver.total_trips
-                current_user.insurance_status = driver.insurance_status
-                current_user.max_passengers = driver.max_passengers
-                current_user.route_radius = driver.route_radius
+                resp["license_number"] = driver.license_number
+                resp["is_online"] = driver.is_online
+                resp["rating"] = float(driver.rating) if driver.rating else 0.0
+                resp["total_trips"] = driver.total_trips or 0
+                resp["insurance_status"] = driver.insurance_status
+                resp["max_passengers"] = driver.max_passengers
+                resp["route_radius"] = driver.route_radius
         elif role == "passenger":
             passenger = db.query(models.Passenger).filter(models.Passenger.user_id == current_user.id).first()
             if passenger:
                 prefs = passenger.preferences or {}
-                current_user.travel_preferences = prefs.get("travel_preferences", [])
-                current_user.accessibility_needs = passenger.accessibility_needs
+                resp["travel_preferences"] = prefs.get("travel_preferences", [])
+                resp["accessibility_needs"] = passenger.accessibility_needs or False
         
         logger.info(f"User profile updated: {current_user.email}")
-        return current_user
+        return resp
         
     except Exception as e:
         db.rollback()

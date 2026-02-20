@@ -42,7 +42,7 @@ export default function PassengerDashboard() {
                     <section>
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-lg font-bold text-foreground">Active Trips</h2>
-                            <button className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium">View All</button>
+                            <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-medium">View All</button>
                         </div>
 
                         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide min-h-[150px]">
@@ -69,7 +69,7 @@ export default function PassengerDashboard() {
                             ) : (
                                 <div className="w-full py-10 text-center border-2 border-dashed border-card-border rounded-2xl bg-muted/20">
                                     <p className="text-muted-foreground font-medium">No active trips found.</p>
-                                    <Link href="/passenger/create" className="text-emerald-500 hover:underline text-sm font-bold mt-2 inline-block">
+                                    <Link href="/passenger/create" className="text-indigo-500 hover:underline text-sm font-bold mt-2 inline-block">
                                         Request your first ride →
                                     </Link>
                                 </div>
@@ -96,7 +96,7 @@ export default function PassengerDashboard() {
                             </p>
 
                             <Link href="/passenger/create" className="block">
-                                <button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/30 cursor-pointer">
+                                <button className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/30 cursor-pointer">
                                     Start New Request
                                 </button>
                             </Link>

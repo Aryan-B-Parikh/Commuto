@@ -31,11 +31,11 @@ export default function DriverEarningsPage() {
                     {/* Monthly Overview Card */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                         <Card className="relative overflow-hidden border-none shadow-sm dark:glass">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
 
                             <div className="flex flex-col items-center py-8">
                                 <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-widest">Revenue This Month</p>
-                                <p className="text-5xl font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(stats.thisMonth)}</p>
+                                <p className="text-5xl font-black text-indigo-600 dark:text-indigo-400">{formatCurrency(stats.thisMonth)}</p>
                             </div>
 
                             <div className="grid grid-cols-2 border-t border-gray-100 dark:border-gray-800">
@@ -55,7 +55,7 @@ export default function DriverEarningsPage() {
                     <div>
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-foreground">Recent Activity</h2>
-                            <button className="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline">View All</button>
+                            <button className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View All</button>
                         </div>
                         <div className="space-y-4">
                             {recentEarnings.map((earning, index) => (
@@ -76,7 +76,7 @@ export default function DriverEarningsPage() {
                                                     <p className="text-sm text-gray-500 font-medium">{earning.date} • {earning.passengers} pax</p>
                                                 </div>
                                             </div>
-                                            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                                            <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
                                                 +{formatCurrency(earning.amount)}
                                             </span>
                                         </div>
@@ -109,7 +109,7 @@ export default function DriverEarningsPage() {
                             </div>
 
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
                                     $
                                 </div>
                                 <div className="flex-1">
@@ -118,7 +118,7 @@ export default function DriverEarningsPage() {
                                         <p className="text-lg font-black text-foreground">{formatCurrency(stats.avgPerTrip)}</p>
                                     </div>
                                     <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-emerald-600 rounded-full" style={{ width: '60%' }} />
+                                        <div className="h-full bg-indigo-600 rounded-full" style={{ width: '60%' }} />
                                     </div>
                                 </div>
                             </div>

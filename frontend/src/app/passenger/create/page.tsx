@@ -82,12 +82,12 @@ export default function PassengerLivePage() {
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Pickup Location</label>
                                 <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-indigo-500" />
                                     <input
                                         type="text"
                                         required
                                         placeholder="Enter pickup address"
-                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none text-foreground"
+                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none text-foreground"
                                         value={formData.pickup}
                                         onChange={e => setFormData({ ...formData, pickup: e.target.value })}
                                     />
@@ -102,7 +102,7 @@ export default function PassengerLivePage() {
                                         type="text"
                                         required
                                         placeholder="Where to?"
-                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none text-foreground"
+                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:bg-white dark:focus:bg-black focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none text-foreground"
                                         value={formData.destination}
                                         onChange={e => setFormData({ ...formData, destination: e.target.value })}
                                     />
@@ -143,7 +143,7 @@ export default function PassengerLivePage() {
                                             type="button"
                                             onClick={() => setFormData({ ...formData, passengers: num })}
                                             className={`flex-1 py-3 rounded-xl font-bold transition-all ${formData.passengers === num
-                                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
                                                 : 'bg-gray-50 dark:bg-slate-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'
                                                 }`}
                                         >
@@ -172,7 +172,7 @@ export default function PassengerLivePage() {
                                 fullWidth
                                 size="lg"
                                 isLoading={isLoading}
-                                className="bg-emerald-500 hover:bg-emerald-600 h-14 shadow-lg shadow-emerald-500/30 text-lg font-bold"
+                                className="bg-indigo-500 hover:bg-indigo-600 h-14 shadow-lg shadow-indigo-500/30 text-lg font-bold"
                             >
                                 Post Trip Request
                             </Button>

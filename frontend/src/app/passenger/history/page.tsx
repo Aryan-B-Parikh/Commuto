@@ -46,7 +46,7 @@ export default function PassengerHistoryPage() {
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl font-bold text-foreground">Recent Rides</h2>
                         <div className="flex gap-2">
-                            <span className="text-sm font-bold text-emerald-600 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full">{completedTrips.length} Completed</span>
+                            <span className="text-sm font-bold text-indigo-600 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-full">{completedTrips.length} Completed</span>
                         </div>
                     </div>
 
@@ -83,7 +83,7 @@ export default function PassengerHistoryPage() {
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center justify-between mb-2">
                                                             <h3 className="font-bold text-gray-900 dark:text-white truncate">{trip.driver.name}</h3>
-                                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${trip.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${trip.status === 'completed' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' :
                                                                 trip.status === 'active' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                                                     'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                                                                 }`}>
@@ -138,7 +138,7 @@ export default function PassengerHistoryPage() {
 
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600">📉</div>
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600">📉</div>
                                     <p className="text-sm font-bold text-gray-500 uppercase">CO₂ Saved</p>
                                 </div>
                                 <p className="text-xl font-black text-foreground">12.5 kg</p>

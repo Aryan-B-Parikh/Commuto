@@ -106,7 +106,7 @@ export const PassengerProfileFields: React.FC<PassengerProfileFieldsProps> = ({
                 }
             >
                 <div className="md:col-span-2 space-y-4">
-                    {data.savedPlaces.map((place, index) => (
+                    {data.savedPlaces?.map((place, index) => (
                         <div key={index} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
                             <div className="bg-white p-2 rounded-lg shadow-sm">
                                 <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">

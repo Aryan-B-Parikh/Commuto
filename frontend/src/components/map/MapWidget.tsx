@@ -77,7 +77,7 @@ export function MapWidget() {
             {/* Legend/Info Badge */}
             <div className="absolute bottom-4 left-4 z-10">
                 <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-gray-100 dark:border-slate-800 shadow-lg flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                     <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Mapbox Active</span>
                 </div>
             </div>

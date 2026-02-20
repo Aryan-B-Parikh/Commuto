@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   },
 };
 
+import Script from 'next/script';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,6 +39,7 @@ export default function RootLayout({
             </ToastProvider>
           </WebSocketProvider>
         </AuthProvider>
+        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </body>
     </html>
   );

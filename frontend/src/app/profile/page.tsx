@@ -70,7 +70,7 @@ export default function ProfilePage() {
                 <div className="space-y-6">
                     <Card className="relative overflow-hidden text-center border-none shadow-sm pb-8">
                         {/* Role-based Banner */}
-                        <div className={`absolute top-0 left-0 w-full h-24 ${role === 'driver' ? 'bg-gradient-to-r from-emerald-500 to-teal-600' : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                        <div className={`absolute top-0 left-0 w-full h-24 ${role === 'driver' ? 'bg-gradient-to-r from-indigo-500 to-blue-600' : 'bg-gradient-to-r from-blue-500 to-indigo-600'
                             }`} />
 
                         <div className="relative pt-12 mb-4">
@@ -114,7 +114,7 @@ export default function ProfilePage() {
                                 Sign Out
                             </Button>
                             <Link href="/profile/edit" className="block">
-                                <Button variant="primary" className="h-12 w-full font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20">
+                                <Button variant="primary" className="h-12 w-full font-bold text-xs uppercase tracking-widest shadow-lg shadow-indigo-500/20">
                                     Settings
                                 </Button>
                             </Link>
@@ -128,7 +128,7 @@ export default function ProfilePage() {
                             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Rides</p>
                         </Card>
                         <Card className="p-4 text-center border-none shadow-sm">
-                            <p className="text-2xl font-black text-emerald-600">{formatCurrency(totalSpent)}</p>
+                            <p className="text-2xl font-black text-indigo-600">{formatCurrency(totalSpent)}</p>
                             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Saved</p>
                         </Card>
                     </div>
@@ -163,7 +163,7 @@ export default function ProfilePage() {
 
                     {/* Security Tip Card */}
                     <div className="bg-slate-900 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32" />
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-32 -mt-32" />
                         <div className="relative z-10 flex items-center gap-6">
                             <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-3xl group-hover:rotate-12 transition-transform">🛡️</div>
                             <div>

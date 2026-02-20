@@ -27,7 +27,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
             w-full bg-card border rounded-xl py-3 px-4 transition-all duration-200 outline-none min-h-[120px] resize-none
             ${error
                             ? 'border-red-300 ring-2 ring-red-50/50 focus:border-red-500'
-                            : 'border-card-border hover:border-muted-foreground/30 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50/50'}
+                            : 'border-card-border hover:border-muted-foreground/30 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50'}
             text-foreground placeholder:text-muted-foreground
           `}
                     {...props}

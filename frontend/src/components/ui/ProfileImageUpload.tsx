@@ -71,7 +71,7 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
 
                 <label
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 bg-emerald-600 text-white p-2 rounded-full shadow-lg border-2 border-card cursor-pointer hover:bg-emerald-700 transition-colors"
+                    className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full shadow-lg border-2 border-card cursor-pointer hover:bg-indigo-700 transition-colors"
                 >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

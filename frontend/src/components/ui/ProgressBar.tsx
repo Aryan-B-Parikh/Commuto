@@ -39,11 +39,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         <div className={`w-full ${className}`}>
             {showLabel && (
                 <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">Progress</span>
-                    <span className="text-sm font-semibold text-gray-900">{clampedProgress}%</span>
+                    <span className="text-sm font-medium text-muted-foreground">Progress</span>
+                    <span className="text-sm font-semibold text-foreground">{clampedProgress}%</span>
                 </div>
             )}
-            <div className={`w-full bg-gray-200 rounded-full overflow-hidden ${sizeStyles[size]}`}>
+            <div className={`w-full bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden ${sizeStyles[size]}`}>
                 <motion.div
                     className={`h-full rounded-full ${variantStyles[variant]}`}
                     initial={animated ? { width: 0 } : { width: `${clampedProgress}%` }}
