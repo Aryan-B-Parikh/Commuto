@@ -1,190 +1,256 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { MapContainer } from '@/components/trip/MapContainer';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/utils/formatters';
 import { useToast } from '@/hooks/useToast';
-import { tripsAPI, bidsAPI } from '@/services/api';
-import { transformTripResponses } from '@/utils/tripTransformers';
-import type { Trip } from '@/types';
-import { useSocketEvent } from '@/hooks/useWebSocket';
+import { bidsAPI } from '@/services/api';
+import { calculateDistance } from '@/utils/geoUtils';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { RoleGuard } from '@/components/auth/RoleGuard';
+import type { DriverBidWithTrip } from '@/types/api';
+import {
+    Clock,
+    MapPin,
+    Navigation,
+    Users,
+    TrendingUp,
+    CheckCircle2,
+    XCircle,
+    Loader2,
+    RefreshCw,
+    CircleDot,
+    Inbox
+} from 'lucide-react';
 
-export default function GroupedRoutesDashboard() {
+export default function MyBidsPage() {
     const { showToast } = useToast() as any;
-    const [routes, setRoutes] = useState<Trip[]>([]);
+    const [bids, setBids] = useState<DriverBidWithTrip[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [bidAmounts, setBidAmounts] = useState<{ [key: string]: number }>({});
+    const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
 
     useEffect(() => {
-        fetchRoutes();
+        fetchBids();
     }, []);
 
-    const fetchRoutes = async () => {
+    const fetchBids = async () => {
         try {
             setIsLoading(true);
-            const data = await tripsAPI.getOpenRides();
-            setRoutes(transformTripResponses(data));
-        } catch (error) {
-            console.error('Failed to fetch routes:', error);
-            showToast('error', 'Failed to load available routes');
+            const data = await bidsAPI.getMyBids();
+            setBids(data);
+        } catch (error: any) {
+            if (error?.response?.status !== 401) {
+                console.error('Failed to fetch bids:', error);
+                showToast('error', 'Failed to load your bids.');
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Real-time new ride requests
-    useSocketEvent('new_ride_request', (data: any) => {
-        console.log('New ride request:', data);
-        showToast('info', 'New ride request available!');
-        fetchRoutes();
-    });
+    const filtered = filter === 'all' ? bids : bids.filter(b => b.status === filter);
 
-    const handlePlaceBid = async (tripId: string) => {
-        const amount = bidAmounts[tripId] || 25; // Default 25 if not set
-        try {
-            await bidsAPI.placeBid(tripId, { amount: amount });
-            showToast('success', `Bid placed for ${formatCurrency(amount)}`);
-            setRoutes(prev => prev.filter(r => r.id !== tripId));
-        } catch (error) {
-            console.error('Failed to place bid:', error);
-            showToast('error', 'Failed to place bid');
-        }
+    const statusConfig: Record<string, { bg: string, text: string, icon: React.ReactNode }> = {
+        pending: { bg: 'bg-amber-50', text: 'text-amber-600', icon: <Clock size={14} /> },
+        accepted: { bg: 'bg-emerald-50', text: 'text-emerald-600', icon: <CheckCircle2 size={14} /> },
+        rejected: { bg: 'bg-red-50', text: 'text-red-500', icon: <XCircle size={14} /> },
     };
 
-    const updateBidAmount = (tripId: string, amount: number) => {
-        setBidAmounts(prev => ({ ...prev, [tripId]: amount }));
+    const tripStatusConfig: Record<string, { bg: string, text: string }> = {
+        pending: { bg: 'bg-amber-50', text: 'text-amber-600' },
+        active: { bg: 'bg-emerald-50', text: 'text-emerald-600' },
+        completed: { bg: 'bg-slate-100', text: 'text-slate-600' },
+        cancelled: { bg: 'bg-red-50', text: 'text-red-500' },
+        bid_accepted: { bg: 'bg-blue-50', text: 'text-blue-600' },
+        driver_assigned: { bg: 'bg-indigo-50', text: 'text-indigo-600' },
+    };
+
+    const pendingCount = bids.filter(b => b.status === 'pending').length;
+    const acceptedCount = bids.filter(b => b.status === 'accepted').length;
+    const rejectedCount = bids.filter(b => b.status === 'rejected').length;
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { staggerChildren: 0.06 } }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 12 },
+        show: { opacity: 1, y: 0 }
     };
 
     return (
-        <DashboardLayout userType="driver" title="Available Routes">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: List of Routes */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold text-foreground">Nearby Trips</h2>
-                        <button onClick={fetchRoutes} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
-                            Refresh List
-                        </button>
+        <RoleGuard allowedRoles={['driver']}>
+            <DashboardLayout userType="driver" title="My Bids">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="max-w-5xl mx-auto space-y-8"
+                >
+                    {/* Stats Row */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <Card className="p-4 border-none shadow-sm text-center">
+                            <p className="text-3xl font-black text-foreground">{bids.length}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Bids</p>
+                        </Card>
+                        <Card className="p-4 border-none shadow-sm text-center">
+                            <p className="text-3xl font-black text-amber-500">{pendingCount}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Pending</p>
+                        </Card>
+                        <Card className="p-4 border-none shadow-sm text-center">
+                            <p className="text-3xl font-black text-emerald-500">{acceptedCount}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Accepted</p>
+                        </Card>
+                        <Card className="p-4 border-none shadow-sm text-center">
+                            <p className="text-3xl font-black text-red-400">{rejectedCount}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Rejected</p>
+                        </Card>
                     </div>
 
-                    {isLoading ? (
-                        <div className="space-y-4">
-                            {[1, 2, 3].map(i => <Card key={i} className="h-44 animate-pulse bg-muted rounded-2xl border-none" />)}
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {routes.length === 0 ? (
-                                <Card className="text-center py-20">
-                                    <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-900/10 flex items-center justify-center mx-auto mb-6 text-3xl">📭</div>
-                                    <h3 className="text-xl font-bold text-foreground mb-2">No available rides</h3>
-                                    <p className="text-muted-foreground">Check back later or refresh the list.</p>
-                                    <Button variant="outline" className="mt-8" onClick={fetchRoutes}>Refresh Now</Button>
-                                </Card>
-                            ) : routes.map((route, index) => (
-                                <motion.div
-                                    key={route.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
+                    {/* Filter Tabs + Refresh */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            {['all', 'pending', 'accepted', 'rejected'].map(f => (
+                                <button
+                                    key={f}
+                                    onClick={() => setFilter(f as any)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${filter === f
+                                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                                        : 'bg-card text-muted-foreground hover:bg-muted border border-card-border'
+                                        }`}
                                 >
-                                    <Card hoverable className="overflow-hidden border-none shadow-sm">
-                                        <div className="p-1">
-                                            <div className="flex justify-between items-start mb-6">
-                                                <div className="space-y-3 flex-1">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
-                                                        <p className="text-foreground font-bold truncate">{route.from.name}</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
-                                                        <p className="text-foreground font-bold truncate">{route.to.name}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right pl-4">
-                                                    <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 block">${bidAmounts[route.id] || 25}</span>
-                                                    <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Suggested Bid</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4 mb-6">
-                                                <div className="bg-muted p-4 rounded-2xl border border-card-border">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-muted-foreground text-sm">📍</span>
-                                                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">Distance</p>
-                                                    </div>
-                                                    <p className="text-lg font-black text-foreground">{route.distance || '5.2 km'}</p>
-                                                </div>
-                                                <div className="bg-muted p-4 rounded-2xl border border-card-border">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-muted-foreground text-sm">👥</span>
-                                                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">Seats</p>
-                                                    </div>
-                                                    <p className="text-lg font-black text-foreground">{route.seatsAvailable} / {route.totalSeats}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex gap-3">
-                                                <div className="flex-1">
-                                                    <input
-                                                        type="number"
-                                                        step="1"
-                                                        min="5"
-                                                        value={bidAmounts[route.id] || 25}
-                                                        onChange={(e) => updateBidAmount(route.id, parseFloat(e.target.value))}
-                                                        className="w-full h-14 px-4 bg-muted border border-card-border rounded-xl text-lg font-bold text-foreground focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-muted-foreground"
-                                                        placeholder="Your Bid"
-                                                    />
-                                                </div>
-                                                <Button
-                                                    variant="primary"
-                                                    className="px-8 h-14 bg-indigo-500 hover:bg-indigo-600 shadow-lg shadow-indigo-500/30 text-lg"
-                                                    onClick={() => handlePlaceBid(route.id)}
-                                                >
-                                                    Place Bid
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                </motion.div>
+                                    {f} {f === 'all' ? `(${bids.length})` : `(${bids.filter(b => b.status === f).length})`}
+                                </button>
                             ))}
                         </div>
-                    )}
-
-                </div>
-
-                {/* Right Column: Live Map & Stats */}
-                <div className="space-y-6">
-                    <Card padding="none" className="h-[300px] overflow-hidden rounded-2xl border-none shadow-sm dark:glass">
-                        <MapContainer className="h-full" />
-                    </Card>
-
-                    <Card padding="md" className="dark:glass">
-                        <h3 className="text-lg font-bold text-foreground mb-4">Quick Stats</h3>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                                <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">Routes Found</span>
-                                <span className="text-lg font-black text-blue-700 dark:text-blue-300">{routes.length}</span>
-                            </div>
-                            <div className="flex justify-between items-center p-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-                                <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Avg. Bid</span>
-                                <span className="text-lg font-black text-indigo-700 dark:text-indigo-300">$35.00</span>
-                            </div>
-                        </div>
-                    </Card>
-
-                    <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-6 rounded-2xl text-white shadow-lg shadow-indigo-500/20 overflow-hidden relative group">
-                        <div className="relative z-10">
-                            <h4 className="font-black text-xl mb-1 italic tracking-tighter">DRIVER PRO TIP</h4>
-                            <p className="text-sm text-indigo-50/80 leading-snug">Higher ratings increase your chances of being selected by passengers. Keep up the great work!</p>
-                        </div>
-                        <div className="absolute -right-4 -bottom-4 text-6xl opacity-10 group-hover:scale-110 transition-transform">🌟</div>
+                        <Button
+                            variant="outline"
+                            onClick={fetchBids}
+                            className="text-xs font-bold uppercase tracking-widest gap-2"
+                        >
+                            <RefreshCw size={14} />
+                            Refresh
+                        </Button>
                     </div>
-                </div>
-            </div>
-        </DashboardLayout>
+
+                    {/* Bids List */}
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center py-24">
+                            <Loader2 size={32} className="animate-spin text-indigo-500 mb-4" />
+                            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">Loading your bids...</p>
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <Card className="text-center py-20 border-none shadow-sm">
+                            <div className="w-20 h-20 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-6">
+                                <Inbox size={36} className="text-indigo-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-foreground mb-2">
+                                {filter === 'all' ? 'No bids yet' : `No ${filter} bids`}
+                            </h3>
+                            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                                {filter === 'all'
+                                    ? 'Start bidding on passenger ride requests from the Route Requests page.'
+                                    : `You don't have any ${filter} bids at the moment.`
+                                }
+                            </p>
+                        </Card>
+                    ) : (
+                        <motion.div
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="show"
+                            className="space-y-4"
+                        >
+                            <AnimatePresence mode="popLayout">
+                                {filtered.map(bid => {
+                                    const st = statusConfig[bid.status] || statusConfig.pending;
+                                    const ts = tripStatusConfig[bid.trip_status] || tripStatusConfig.pending;
+                                    const dist = calculateDistance(
+                                        { lat: bid.origin_lat, lng: bid.origin_lng },
+                                        { lat: bid.dest_lat, lng: bid.dest_lng }
+                                    ).toFixed(1);
+
+                                    return (
+                                        <motion.div key={bid.id} variants={itemVariants} layout>
+                                            <Card className="border-none shadow-sm hover:shadow-md transition-all p-6 relative overflow-hidden">
+                                                {/* Left accent */}
+                                                <div className={`absolute top-0 left-0 w-1 h-full rounded-r-full ${bid.status === 'accepted' ? 'bg-emerald-500' :
+                                                    bid.status === 'rejected' ? 'bg-red-400' : 'bg-indigo-500'
+                                                    }`} />
+
+                                                <div className="flex items-start justify-between gap-6">
+                                                    {/* Left: Route Info */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-3 mb-4">
+                                                            {/* Bid Status */}
+                                                            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${st.bg}`}>
+                                                                {st.icon}
+                                                                <span className={`text-[10px] font-bold uppercase tracking-widest ${st.text}`}>
+                                                                    {bid.status}
+                                                                </span>
+                                                            </div>
+                                                            {/* Trip Status */}
+                                                            <div className={`flex items-center gap-1  px-2.5 py-1 rounded-full ${ts.bg}`}>
+                                                                <span className={`text-[10px] font-bold uppercase tracking-widest ${ts.text}`}>
+                                                                    Trip: {bid.trip_status.replace('_', ' ')}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Route */}
+                                                        <div className="space-y-2 mb-4">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-2 ring-indigo-100" />
+                                                                <p className="text-sm font-bold text-foreground truncate">{bid.origin_address}</p>
+                                                            </div>
+                                                            <div className="ml-[5px] w-[1px] h-3 bg-gradient-to-b from-indigo-300 to-red-300" />
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" />
+                                                                <p className="text-sm font-bold text-foreground truncate">{bid.dest_address}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Meta */}
+                                                        <div className="flex items-center gap-4 text-muted-foreground">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Navigation size={12} className="text-indigo-500" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest">{dist} km</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Users size={12} className="text-indigo-500" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest">{bid.total_seats} Seats</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock size={12} className="text-indigo-500" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest">
+                                                                    {new Date(bid.start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} • {new Date(bid.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Right: Bid Amount */}
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Your Bid</p>
+                                                        <p className={`text-3xl font-black tracking-tight ${bid.status === 'accepted' ? 'text-emerald-600' :
+                                                            bid.status === 'rejected' ? 'text-red-400 line-through' : 'text-indigo-600'
+                                                            }`}>
+                                                            {formatCurrency(bid.bid_amount)}
+                                                        </p>
+                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Per Seat</p>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        </motion.div>
+                                    );
+                                })}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
+                </motion.div>
+            </DashboardLayout>
+        </RoleGuard>
     );
 }

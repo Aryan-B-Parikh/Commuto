@@ -1,127 +1,205 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
-import { RatingStars } from '@/components/ui/RatingStars';
-import { formatDate, formatCurrency } from '@/utils/formatters';
-import { mockTrips } from '@/data/trips';
+import { formatCurrency } from '@/utils/formatters';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { RoleGuard } from '@/components/auth/RoleGuard';
+import { tripsAPI } from '@/services/api';
+import { useToast } from '@/hooks/useToast';
+import { calculateDistance } from '@/utils/geoUtils';
+import { TripResponse } from '@/types/api';
+import {
+    Car,
+    Loader2,
+    Inbox,
+    TrendingUp,
+    Navigation,
+    Calendar,
+    Users,
+} from 'lucide-react';
 
 export default function DriverHistoryPage() {
-    const completedTrips = mockTrips.filter(t => t.status === 'completed');
+    const { showToast } = useToast() as any;
+    const [trips, setTrips] = useState<TripResponse[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [earnings, setEarnings] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [driverTrips, earningsData] = await Promise.all([
+                    tripsAPI.getDriverTrips(),
+                    tripsAPI.getDriverEarnings(),
+                ]);
+                setTrips(driverTrips);
+                setEarnings(earningsData);
+            } catch (error: any) {
+                if (error?.response?.status !== 401) {
+                    console.error('Failed to fetch history:', error);
+                    showToast('error', 'Failed to load ride history.');
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    const completedTrips = trips.filter(t => ['completed', 'active', 'bid_accepted', 'driver_assigned'].includes(t.status));
+
+    if (isLoading) {
+        return (
+            <RoleGuard allowedRoles={['driver']}>
+                <DashboardLayout userType="driver" title="Ride History">
+                    <div className="flex flex-col items-center justify-center py-32">
+                        <Loader2 size={32} className="animate-spin text-indigo-500 mb-4" />
+                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Loading history...</p>
+                    </div>
+                </DashboardLayout>
+            </RoleGuard>
+        );
+    }
 
     return (
-        <DashboardLayout userType="driver" title="Ride History">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: History Items */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold text-foreground">Past Missions</h2>
-                        <div className="flex gap-2">
-                            <span className="text-sm font-bold text-blue-600 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-full">{completedTrips.length} Rides Ended</span>
+        <RoleGuard allowedRoles={['driver']}>
+            <DashboardLayout userType="driver" title="Ride History">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column: History Items */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-foreground">Past Missions</h2>
+                            <div className="flex gap-2">
+                                <span className="text-sm font-bold text-blue-600 px-3 py-1 bg-blue-50 rounded-full">{completedTrips.length} Rides</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="space-y-4">
-                        {completedTrips.map((trip, index) => (
-                            <motion.div
-                                key={trip.id}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                            >
-                                <Card hoverable className="border-none shadow-sm dark:glass px-6 py-5">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400">
-                                            <span className="text-xs font-black leading-none">{formatDate(trip.date).split(' ')[0]}</span>
-                                            <span className="text-xl font-black">{formatDate(trip.date).split(' ')[1]}</span>
-                                        </div>
+                        {completedTrips.length > 0 ? (
+                            <div className="space-y-4">
+                                {completedTrips.map((trip, index) => {
+                                    const dist = calculateDistance(
+                                        { lat: trip.origin_lat, lng: trip.origin_lng },
+                                        { lat: trip.dest_lat, lng: trip.dest_lng }
+                                    ).toFixed(1);
+                                    const earning = (trip.price_per_seat || 0) * (trip.total_seats || 1);
+                                    const tripDate = new Date(trip.start_time || trip.created_at);
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="font-bold text-gray-900 dark:text-white truncate">
-                                                    {trip.from.name} <span className="text-gray-400 font-medium mx-1">→</span> {trip.to.name}
-                                                </h3>
-                                                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
-                                                    +{formatCurrency(trip.pricePerSeat * trip.passengers.length)}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex -space-x-2">
-                                                        {trip.passengers.slice(0, 3).map((p) => (
-                                                            <img key={p.id} src={p.avatar} alt={p.name} className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-800 object-cover" />
-                                                        ))}
-                                                        {trip.passengers.length > 3 && (
-                                                            <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[8px] font-bold text-gray-500">
-                                                                +{trip.passengers.length - 3}
-                                                            </div>
-                                                        )}
+                                    return (
+                                        <motion.div
+                                            key={trip.id}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.05 }}
+                                        >
+                                            <Card hoverable className="border-none shadow-sm px-6 py-5">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex flex-col items-center justify-center text-indigo-600">
+                                                        <span className="text-[10px] font-black leading-none uppercase">
+                                                            {tripDate.toLocaleDateString('en-GB', { month: 'short' })}
+                                                        </span>
+                                                        <span className="text-xl font-black">{tripDate.getDate()}</span>
                                                     </div>
-                                                    <p className="text-xs text-gray-500 font-bold">{trip.passengers.length} Passengers Joined</p>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <h3 className="font-bold text-foreground truncate text-sm">
+                                                                {trip.origin_address} <span className="text-muted-foreground font-medium mx-1">→</span> {trip.dest_address}
+                                                            </h3>
+                                                            <span className="text-xl font-black text-emerald-600 shrink-0 ml-3">
+                                                                +{formatCurrency(earning)}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-4 text-muted-foreground">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Navigation size={12} className="text-indigo-500" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest">{dist} km</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Users size={12} className="text-indigo-500" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest">{trip.total_seats} seats</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Calendar size={12} className="text-indigo-500" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest">
+                                                                    {tripDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <RatingStars rating={4.8} size="sm" />
-                                                    <span className="text-xs font-bold text-gray-400">4.8</span>
-                                                </div>
-                                            </div>
+                                            </Card>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <Card className="text-center py-20 border-none shadow-sm">
+                                <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+                                    <Inbox size={28} className="text-indigo-400" />
+                                </div>
+                                <h3 className="text-lg font-bold text-foreground mb-1">No rides yet</h3>
+                                <p className="text-sm text-muted-foreground">Complete trips to see your ride history here.</p>
+                            </Card>
+                        )}
+                    </div>
+
+                    {/* Right Column: Lifetime Stats */}
+                    <div className="space-y-6">
+                        <Card className="overflow-hidden relative border-none shadow-sm">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-600" />
+                            <h3 className="text-lg font-bold text-foreground mb-6">Driver Overview</h3>
+
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                            <TrendingUp size={18} />
                                         </div>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Earned</p>
                                     </div>
-                                </Card>
-                            </motion.div>
-                        ))}
+                                    <p className="text-xl font-black text-foreground">{formatCurrency(earnings?.total || 0)}</p>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                            <Car size={18} />
+                                        </div>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Trips</p>
+                                    </div>
+                                    <p className="text-xl font-black text-foreground">{earnings?.total_trips || 0}</p>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                            <Navigation size={18} />
+                                        </div>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg / Trip</p>
+                                    </div>
+                                    <p className="text-xl font-black text-foreground">{formatCurrency(earnings?.avg_per_trip || 0)}</p>
+                                </div>
+                            </div>
+                        </Card>
+
+                        <div className="bg-gradient-to-br from-indigo-500 to-blue-700 p-6 rounded-2xl text-white shadow-lg overflow-hidden relative group">
+                            <div className="relative z-10">
+                                <h4 className="font-black text-lg mb-1 tracking-tight uppercase">Keep Going!</h4>
+                                <p className="text-sm text-indigo-50 leading-snug">
+                                    {completedTrips.length > 0
+                                        ? `You've completed ${completedTrips.length} ride${completedTrips.length > 1 ? 's' : ''}. Keep accepting rides to grow your earnings!`
+                                        : 'Start completing rides to build your history and unlock achievements.'
+                                    }
+                                </p>
+                            </div>
+                            <div className="absolute -right-4 -bottom-4 text-7xl opacity-10 group-hover:scale-110 transition-transform">🏆</div>
+                        </div>
                     </div>
                 </div>
-
-                {/* Right Column: Lifetime Stats */}
-                <div className="space-y-6">
-                    <Card className="dark:glass overflow-hidden relative">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-600" />
-                        <h3 className="text-lg font-bold text-foreground mb-6">Driver Overview</h3>
-
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600">💰</div>
-                                    <p className="text-sm font-bold text-gray-500 uppercase">Total Earned</p>
-                                </div>
-                                <p className="text-xl font-black text-foreground">{formatCurrency(4862)}</p>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">🚗</div>
-                                    <p className="text-sm font-bold text-gray-500 uppercase">Total Distance</p>
-                                </div>
-                                <p className="text-xl font-black text-foreground">1,240 km</p>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600">⭐</div>
-                                    <p className="text-sm font-bold text-gray-500 uppercase">Avg. Rating</p>
-                                </div>
-                                <p className="text-xl font-black text-foreground">4.95</p>
-                            </div>
-                        </div>
-
-                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
-                            <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] mb-2">Top Performance</p>
-                            <p className="text-xs text-gray-500 leading-relaxed px-4">You are in the top 5% of drivers in your region this month. Keep it up!</p>
-                        </div>
-                    </Card>
-
-                    <div className="bg-gradient-to-br from-indigo-500 to-blue-700 p-6 rounded-2xl text-white shadow-lg overflow-hidden relative group">
-                        <div className="relative z-10">
-                            <h4 className="font-black text-xl mb-1 italic tracking-tighter uppercase underline decoration-indigo-300">New Achievement</h4>
-                            <p className="text-sm text-indigo-50 leading-snug">Elite Navigator: You've completed 50 rides without a single cancellation!</p>
-                        </div>
-                        <div className="absolute -right-4 -bottom-4 text-7xl opacity-10 group-hover:scale-110 transition-transform">🏆</div>
-                    </div>
-                </div>
-            </div>
-        </DashboardLayout>
+            </DashboardLayout>
+        </RoleGuard>
     );
 }

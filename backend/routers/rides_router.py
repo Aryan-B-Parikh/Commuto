@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import get_db
 from rate_limiter import rate_limit
 import models
@@ -8,11 +9,68 @@ import auth
 import uuid
 from uuid import UUID
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/driver-earnings")
+@rate_limit(max_requests=30, window_seconds=60, key_suffix="driver_earnings")
+def get_driver_earnings(
+    request: Request,
+    current_user: models.User = Depends(auth.require_role(["driver"])),
+    db: Session = Depends(get_db)
+):
+    """Get driver earnings breakdown from completed trips"""
+    
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=now.weekday())
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # All completed trips for this driver
+    completed_trips = db.query(models.Trip).filter(
+        models.Trip.driver_id == current_user.id,
+        models.Trip.status.in_(["completed", "active", "bid_accepted", "driver_assigned"])
+    ).order_by(models.Trip.created_at.desc()).all()
+    
+    # Calculate earnings
+    def trip_earning(trip):
+        if trip.price_per_seat and trip.total_seats:
+            return float(trip.price_per_seat) * trip.total_seats
+        return 0.0
+    
+    today_earning = sum(trip_earning(t) for t in completed_trips if t.created_at and t.created_at >= today_start)
+    week_earning = sum(trip_earning(t) for t in completed_trips if t.created_at and t.created_at >= week_start)
+    month_earning = sum(trip_earning(t) for t in completed_trips if t.created_at and t.created_at >= month_start)
+    total_earning = sum(trip_earning(t) for t in completed_trips)
+    total_trips = len(completed_trips)
+    avg_per_trip = total_earning / total_trips if total_trips > 0 else 0.0
+    
+    # Recent trips (last 10)
+    recent = []
+    for trip in completed_trips[:10]:
+        recent.append({
+            "id": str(trip.id),
+            "origin_address": trip.origin_address,
+            "dest_address": trip.dest_address,
+            "start_time": trip.start_time.isoformat() if trip.start_time else trip.created_at.isoformat(),
+            "total_seats": trip.total_seats,
+            "earning": trip_earning(trip),
+            "status": trip.status,
+        })
+    
+    return {
+        "today": round(today_earning, 2),
+        "this_week": round(week_earning, 2),
+        "this_month": round(month_earning, 2),
+        "total": round(total_earning, 2),
+        "total_trips": total_trips,
+        "avg_per_trip": round(avg_per_trip, 2),
+        "recent_trips": recent,
+    }
 
 
 @router.post("/request", response_model=trip_schemas.TripResponse, status_code=status.HTTP_201_CREATED)
@@ -27,7 +85,19 @@ def create_ride_request(
     
     # Parse date and time into datetime
     try:
-        start_time = datetime.strptime(f"{trip_data.date} {trip_data.time}", "%Y-%m-%d %H:%M")
+        # Combine date and time
+        dt_str = f"{trip_data.date} {trip_data.time}"
+        # Try different formats as browsers can be inconsistent
+        for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d %I:%M %p"]:
+            try:
+                start_time = datetime.strptime(dt_str, fmt)
+                break
+            except ValueError:
+                continue
+        else:
+            # If loop finishes without break, raise error
+            raise ValueError("Invalid format")
+            
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -118,6 +188,9 @@ def get_my_trips(
             trip.driver_name = trip.driver.user.full_name
             trip.driver_avatar = trip.driver.user.avatar_url
             trip.driver_rating = float(trip.driver.rating) if trip.driver.rating else None
+        
+        # Count bids for this trip
+        trip.bid_count = db.query(models.TripBid).filter(models.TripBid.trip_id == trip.id).count()
         
     return trips
 

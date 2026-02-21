@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useToast } from '@/hooks/useToast';
-import { mockTrips } from '@/data/trips';
+import { tripsAPI, otpAPI } from '@/services/api';
+import { TripResponse } from '@/types/api';
+import { Loader2 } from 'lucide-react';
 
 export default function BoardingPage() {
     const router = useRouter();
@@ -20,24 +22,34 @@ export default function BoardingPage() {
     const [error, setError] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
-
-    const trip = mockTrips[0]; // Mock current trip
-
-    if (!trip) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center p-4">
-                <Card className="text-center py-12">
-                    <h3 className="font-semibold text-gray-900 mb-2">No Active Trip</h3>
-                    <p className="text-gray-500 mb-6">You don't have an active trip to board.</p>
-                    <Link href="/passenger/dashboard" className="text-blue-600 hover:underline">Go to Dashboard</Link>
-                </Card>
-            </div>
-        );
-    }
+    const [trip, setTrip] = useState<TripResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        start(300); // 5 minute countdown
-    }, [start]);
+        const fetchActiveTrip = async () => {
+            try {
+                const myTrips = await tripsAPI.getMyTrips();
+                const activeTrip = myTrips.find((t: TripResponse) =>
+                    ['active', 'bid_accepted', 'driver_assigned'].includes(t.status)
+                );
+                if (activeTrip) {
+                    setTrip(activeTrip);
+                }
+            } catch (error) {
+                console.error('Failed to fetch active trip:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchActiveTrip();
+    }, []);
+
+    useEffect(() => {
+        if (trip) {
+            start(300); // 5 minute countdown
+        }
+    }, [trip, start]);
 
     const handleVerify = async () => {
         if (otp.length !== 6) {
@@ -45,23 +57,44 @@ export default function BoardingPage() {
             return;
         }
 
+        if (!trip) return;
+
         setIsVerifying(true);
         setError('');
 
-        // Simulate verification
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        if (otp === '123456') {
+        try {
+            await otpAPI.verifyOTP(trip.id, otp);
             setIsVerified(true);
             showToast('success', 'Boarding verified! Have a safe trip.');
             setTimeout(() => {
                 router.push('/passenger/live');
             }, 2500);
-        } else {
-            setError('Invalid OTP. Please try again.');
+        } catch (err: any) {
+            const msg = err?.response?.data?.detail || 'Invalid OTP. Please try again.';
+            setError(msg);
             setIsVerifying(false);
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center p-4">
+                <Loader2 size={32} className="animate-spin text-white" />
+            </div>
+        );
+    }
+
+    if (!trip) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center p-4">
+                <Card className="text-center py-12">
+                    <h3 className="font-semibold text-gray-900 mb-2">No Active Trip</h3>
+                    <p className="text-gray-500 mb-6">You don&apos;t have an active trip to board.</p>
+                    <Link href="/passenger/dashboard" className="text-blue-600 hover:underline">Go to Dashboard</Link>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex flex-col">
@@ -105,21 +138,19 @@ export default function BoardingPage() {
                                 {/* Trip Info */}
                                 <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <img
-                                            src={trip.driver.avatar}
-                                            alt={trip.driver.name}
-                                            className="w-10 h-10 rounded-full"
-                                        />
+                                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                                            {trip.driver_name ? trip.driver_name.charAt(0).toUpperCase() : 'D'}
+                                        </div>
                                         <div>
-                                            <p className="font-medium text-gray-900">{trip.driver.name}</p>
-                                            <p className="text-sm text-gray-500">{trip.vehicleType} • {trip.vehicleNumber}</p>
+                                            <p className="font-medium text-gray-900">{trip.driver_name || 'Driver'}</p>
+                                            <p className="text-sm text-gray-500">{trip.vehicle_details || 'Vehicle assigned'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-gray-600">
                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                         </svg>
-                                        <span>{trip.from.name} → {trip.to.name}</span>
+                                        <span>{trip.origin_address} → {trip.dest_address}</span>
                                     </div>
                                 </div>
 
@@ -177,11 +208,6 @@ export default function BoardingPage() {
                                         </p>
                                     </div>
                                 </div>
-
-                                {/* Demo hint */}
-                                <p className="mt-4 text-xs text-gray-400">
-                                    Demo: Use code <span className="font-mono font-bold">123456</span>
-                                </p>
                             </Card>
                         </motion.div>
                     ) : (

@@ -16,6 +16,45 @@ router = APIRouter(prefix="/bids", tags=["Bidding"])
 logger = logging.getLogger(__name__)
 
 
+@router.get("/my-bids", response_model=List[trip_schemas.DriverBidWithTrip])
+@rate_limit(max_requests=30, window_seconds=60, key_suffix="my_bids")
+def get_my_bids(
+    request: Request,
+    current_user: models.User = Depends(auth.require_role(["driver"])),
+    db: Session = Depends(get_db)
+):
+    """Get all bids placed by the current driver with trip details"""
+    
+    bids = db.query(models.TripBid, models.Trip).join(
+        models.Trip, models.TripBid.trip_id == models.Trip.id
+    ).filter(
+        models.TripBid.driver_id == current_user.id
+    ).order_by(models.TripBid.created_at.desc()).all()
+    
+    result = []
+    for bid, trip in bids:
+        result.append({
+            "id": bid.id,
+            "trip_id": bid.trip_id,
+            "driver_id": bid.driver_id,
+            "bid_amount": bid.bid_amount,
+            "status": bid.status,
+            "created_at": bid.created_at,
+            "origin_address": trip.origin_address,
+            "dest_address": trip.dest_address,
+            "origin_lat": trip.origin_lat,
+            "origin_lng": trip.origin_lng,
+            "dest_lat": trip.dest_lat,
+            "dest_lng": trip.dest_lng,
+            "trip_status": trip.status,
+            "start_time": trip.start_time,
+            "total_seats": trip.total_seats,
+            "price_per_seat": trip.price_per_seat,
+        })
+    
+    return result
+
+
 @router.post("/{ride_id}", response_model=trip_schemas.BidResponse, status_code=status.HTTP_201_CREATED)
 @rate_limit(max_requests=5, window_seconds=60, key_suffix="place_bid")
 def place_bid(

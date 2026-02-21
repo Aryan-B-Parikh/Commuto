@@ -9,6 +9,8 @@ export interface BackendUser {
     role: 'passenger' | 'driver';
     is_verified: boolean;
     is_phone_verified: boolean;
+    rating?: number;
+    total_trips?: number;
     created_at: string;
     updated_at: string;
 }
@@ -45,10 +47,11 @@ export interface UserResponse {
     avatar_url?: string;
     role: string;
     is_verified: boolean;
-    created_at: string;
+    rating?: number;
     total_trips?: number;
     today_earnings?: number;
     online_hours?: number;
+    created_at: string;
 }
 
 // Trip Types matching backend
@@ -85,6 +88,12 @@ export interface TripResponse {
     driver_name?: string;
     driver_rating?: number;
     driver_avatar?: string;
+    origin_lat: number;
+    origin_lng: number;
+    dest_lat: number;
+    dest_lng: number;
+    vehicle_details?: string;
+    bid_count?: number;
 }
 
 export interface BidRequest {
@@ -99,4 +108,23 @@ export interface BidResponse {
     bid_amount: number;
     status: string;
     created_at: string;
+}
+
+export interface DriverBidWithTrip {
+    id: string;
+    trip_id: string;
+    driver_id: string;
+    bid_amount: number;
+    status: string;
+    created_at: string;
+    origin_address: string;
+    dest_address: string;
+    origin_lat: number;
+    origin_lng: number;
+    dest_lat: number;
+    dest_lng: number;
+    trip_status: string;
+    start_time: string;
+    total_seats: number;
+    price_per_seat?: number;
 }

@@ -39,6 +39,7 @@ export interface Trip {
     duration: string;
     vehicleType: string;
     vehicleNumber: string;
+    bidCount?: number;
 }
 
 // Testimonial type

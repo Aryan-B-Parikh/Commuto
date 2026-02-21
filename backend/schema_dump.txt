@@ -1,0 +1,24 @@
+users:
+  Missing: []
+drivers:
+  Missing: []
+passengers:
+  Missing: []
+vehicles:
+  Missing: []
+trips:
+  Missing: []
+bookings:
+  Missing: []
+trip_bids:
+  Missing: []
+saved_places:
+  Missing: []
+trip_locations:
+  Missing: []
+payment_methods:
+  Missing: []
+wallets:
+  Missing: []
+transactions:
+  Missing: []

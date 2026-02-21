@@ -15,7 +15,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     height,
     className = '',
 }) => {
-    const baseStyles = 'animate-pulse bg-gray-200 dark:bg-slate-700';
+    const baseStyles = 'animate-pulse bg-gray-200';
 
     const variantStyles = {
         text: 'h-4 rounded',
@@ -60,7 +60,7 @@ export const SkeletonTripCard: React.FC = () => (
         <div className="flex items-start gap-4 mb-4">
             <div className="flex flex-col items-center gap-1">
                 <Skeleton variant="circular" width={12} height={12} />
-                <div className="w-0.5 h-8 bg-gray-200 dark:bg-slate-700" />
+                <div className="w-0.5 h-8 bg-gray-200" />
                 <Skeleton variant="circular" width={12} height={12} />
             </div>
             <div className="flex-1">

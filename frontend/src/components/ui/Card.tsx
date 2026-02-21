@@ -25,7 +25,7 @@ export const Card: React.FC<CardProps> = ({
     const variantStyles = {
         default: 'bg-card border border-card-border shadow-sm',
         glass: 'bg-card/80 backdrop-blur-lg border border-card-border/20 shadow-lg',
-        elevated: 'bg-card shadow-xl shadow-gray-200/50 dark:shadow-black/50',
+        elevated: 'bg-card shadow-xl shadow-gray-200/50',
         outline: 'bg-card border border-card-border',
     };
 

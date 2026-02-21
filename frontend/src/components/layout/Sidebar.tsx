@@ -17,7 +17,9 @@ import {
     User,
     LogOut,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Clock,
+    Navigation
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -34,13 +36,13 @@ const SidebarItem = ({ icon, label, href, isActive, isMini }: SidebarItemProps) 
             <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 cursor-pointer mb-1 mx-2 relative group
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 cursor-pointer mb-1 mx-3 relative group
           ${isActive
-                        ? 'bg-indigo-500/10 text-indigo-600 font-bold active-glow shadow-[0_0_15px_-3px_rgba(99,102,241,0.3)]'
-                        : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground hover-glow'
-                    } ${isMini ? 'justify-center px-2 mx-auto w-12' : ''}`}
+                        ? 'bg-indigo-600/5 text-indigo-600 font-semibold'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 group'
+                    } ${isMini ? 'justify-center px-0 mx-auto w-10' : ''}`}
             >
-                <div className={`transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 ${isActive ? 'scale-110 text-indigo-600' : 'text-muted-foreground'}`}>
+                <div className={`transition-all duration-200 ${isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
                     {icon}
                 </div>
                 {!isMini && <span className="text-sm font-medium tracking-tight">{label}</span>}
@@ -48,7 +50,7 @@ const SidebarItem = ({ icon, label, href, isActive, isMini }: SidebarItemProps) 
                 {isActive && (
                     <motion.div
                         layoutId="active-pill"
-                        className={`absolute left-0 w-1 bg-indigo-500 rounded-r-md ${isMini ? 'h-6 top-3' : 'h-8 top-2.5'}`}
+                        className="absolute left-0 w-1 bg-indigo-600 rounded-r-full h-5 top-1/2 -translate-y-1/2"
                     />
                 )}
 
@@ -79,6 +81,7 @@ export function Sidebar({
     const passengerLinks = [
         { label: 'Overview', href: '/passenger/dashboard', icon: <LayoutDashboard size={22} strokeWidth={2.5} /> },
         { label: 'Book a Ride', href: '/passenger/create', icon: <Car size={22} strokeWidth={2.5} /> },
+        { label: 'My Trips', href: '/passenger/history', icon: <Clock size={22} strokeWidth={2.5} /> },
         { label: 'Active Trips', href: '/passenger/live', icon: <MapPin size={22} strokeWidth={2.5} /> },
         { label: 'Wallet', href: '/passenger/wallet', icon: <Wallet size={22} strokeWidth={2.5} /> },
         { label: 'Settings', href: '/profile', icon: <Settings size={22} strokeWidth={2.5} /> },
@@ -88,6 +91,7 @@ export function Sidebar({
         { label: 'Overview', href: '/driver/dashboard', icon: <LayoutDashboard size={22} strokeWidth={2.5} /> },
         { label: 'Route Requests', href: '/driver/requests', icon: <Mail size={22} strokeWidth={2.5} /> },
         { label: 'My Routes', href: '/driver/routes', icon: <Map size={22} strokeWidth={2.5} /> },
+        { label: 'Live Trip', href: '/driver/live', icon: <Navigation size={22} strokeWidth={2.5} /> },
         { label: 'Earnings', href: '/driver/earnings', icon: <CircleDollarSign size={22} strokeWidth={2.5} /> },
         { label: 'Settings', href: '/profile', icon: <Settings size={22} strokeWidth={2.5} /> },
     ];
@@ -97,15 +101,15 @@ export function Sidebar({
     return (
         <aside
             className={`fixed left-0 top-0 h-screen bg-card border-r border-card-border flex flex-col z-50 shadow-sm transition-all duration-500 ease-[cubic-bezier(0.4, 0, 0.2, 1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'
-                } ${isMini ? 'w-[88px]' : 'w-[260px]'}`}
+                } ${isMini ? 'w-[88px]' : 'w-[240px]'}`}
         >
             {/* Logo Area */}
             <div className={`p-6 flex items-center gap-3 transition-all duration-500 ${isMini ? 'justify-center px-2' : ''}`}>
                 <div
                     onClick={onToggleMini}
-                    className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-[0_8px_30px_rgb(99,102,241,0.3)] transform hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer group/logo"
+                    className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20 transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group/logo"
                 >
-                    <Car size={28} strokeWidth={2.5} className="group-hover:rotate-12 transition-transform" />
+                    <Car size={24} strokeWidth={2.5} className="group-hover:rotate-3 transition-transform" />
                 </div>
                 {!isMini && (
                     <motion.div
@@ -139,8 +143,8 @@ export function Sidebar({
             </nav>
 
             {/* User Mini Profile */}
-            <div className={`p-4 border-t border-card-border/50 bg-muted/20 backdrop-blur-md transition-all duration-300 ${isMini ? 'items-center' : ''}`}>
-                <div className={`flex items-center gap-3 p-2 rounded-2xl hover:bg-card hover:shadow-lg border border-transparent hover:border-card-border/50 transition-all group cursor-pointer ${isMini ? 'justify-center p-1' : ''}`}>
+            <div className={`p-4 border-t border-slate-100 bg-slate-50/50 transition-all duration-300 ${isMini ? 'items-center' : ''}`}>
+                <div className={`flex items-center gap-3 p-2 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 transition-all group cursor-pointer ${isMini ? 'justify-center p-1' : ''}`}>
                     {user?.avatar ? (
                         <div className="relative">
                             <img src={user.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-indigo-500/20" alt="Avatar" />

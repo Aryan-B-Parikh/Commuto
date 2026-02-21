@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ModalProps {
@@ -18,6 +19,12 @@ export const Modal: React.FC<ModalProps> = ({
     children,
     size = 'md',
 }) => {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     // Close on escape key
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -35,6 +42,8 @@ export const Modal: React.FC<ModalProps> = ({
         };
     }, [isOpen, onClose]);
 
+    if (!mounted) return null;
+
     const sizeStyles = {
         sm: 'max-w-sm',
         md: 'max-w-md',
@@ -42,17 +51,17 @@ export const Modal: React.FC<ModalProps> = ({
         full: 'max-w-full mx-4',
     };
 
-    return (
+    const modalContent = (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/60 backdrop-blur-md"
                     />
 
                     {/* Modal Content */}
@@ -61,25 +70,25 @@ export const Modal: React.FC<ModalProps> = ({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className={`relative w-full ${sizeStyles[size]} bg-card rounded-2xl shadow-2xl overflow-hidden border border-card-border`}
+                        className={`relative w-full ${sizeStyles[size]} bg-card rounded-3xl shadow-2xl overflow-hidden border border-card-border/50`}
                     >
                         {/* Header */}
                         {title && (
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-card-border">
-                                <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+                            <div className="flex items-center justify-between px-8 py-6 border-b border-card-border/30">
+                                <h2 className="text-2xl font-black text-foreground uppercase tracking-tighter italic">{title}</h2>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-all"
                                 >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             </div>
                         )}
 
                         {/* Body */}
-                        <div className="p-6">
+                        <div className="p-8">
                             {children}
                         </div>
                     </motion.div>
@@ -87,4 +96,6 @@ export const Modal: React.FC<ModalProps> = ({
             )}
         </AnimatePresence>
     );
+
+    return createPortal(modalContent, document.body);
 };

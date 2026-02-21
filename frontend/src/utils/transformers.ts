@@ -16,7 +16,7 @@ export function transformBackendUser(backendUser: BackendUser | UserResponse): U
         phone: backendUser.phone_number || '',
         avatar: backendUser.avatar_url,
         role: 'role' in backendUser ? backendUser.role as 'passenger' | 'driver' : undefined,
-        rating: 0, // Default, should come from driver/passenger profile
+        rating: (backendUser as UserResponse).rating || 0,
         totalTrips: (backendUser as UserResponse).total_trips || 0,
         verified: backendUser.is_verified,
         joinedDate: backendUser.created_at,

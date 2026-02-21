@@ -83,8 +83,18 @@ export const tripsAPI = {
         return response.data;
     },
 
+    getDriverTrips: async (): Promise<TripResponse[]> => {
+        const response = await api.get<TripResponse[]>('/rides/driver-trips');
+        return response.data;
+    },
+
     cancelTrip: async (tripId: string): Promise<{ message: string }> => {
         const response = await api.post(`/rides/${tripId}/cancel`);
+        return response.data;
+    },
+
+    getDriverEarnings: async (): Promise<any> => {
+        const response = await api.get('/rides/driver-earnings');
         return response.data;
     },
 };
@@ -108,6 +118,11 @@ export const bidsAPI = {
 
     counterBid: async (bidId: string, data: BidRequest): Promise<BidResponse> => {
         const response = await api.post<BidResponse>(`/bids/${bidId}/counter`, data);
+        return response.data;
+    },
+
+    getMyBids: async (): Promise<import('@/types/api').DriverBidWithTrip[]> => {
+        const response = await api.get<import('@/types/api').DriverBidWithTrip[]>('/bids/my-bids');
         return response.data;
     },
 };

@@ -17,16 +17,16 @@ export function transformTripResponse(trip: TripResponse): Trip {
     return {
         id: trip.id,
         from: {
-            name: trip.from_address,
-            address: trip.from_address,
-            lat: 0, // TODO: Backend should return coordinates
-            lng: 0
+            name: trip.origin_address,
+            address: trip.origin_address,
+            lat: trip.origin_lat,
+            lng: trip.origin_lng
         },
         to: {
-            name: trip.to_address,
-            address: trip.to_address,
-            lat: 0,
-            lng: 0
+            name: trip.dest_address,
+            address: trip.dest_address,
+            lat: trip.dest_lat,
+            lng: trip.dest_lng
         },
         date,
         time,
@@ -36,10 +36,10 @@ export function transformTripResponse(trip: TripResponse): Trip {
         status: trip.status as 'upcoming' | 'active' | 'completed' | 'cancelled',
         driver: {
             id: trip.driver_id || 'unknown',
-            name: trip.driver_name || 'Driver',
+            name: trip.driver_name || 'Finding Driver...',
             role: 'driver',
-            rating: trip.driver_rating || 4.8,
-            verified: true,
+            rating: trip.driver_rating || 0,
+            verified: !!trip.driver_name,
             avatar: trip.driver_avatar || '',
             totalTrips: 0,
             phone: '',
@@ -50,7 +50,8 @@ export function transformTripResponse(trip: TripResponse): Trip {
         distance: '0 km', // Placeholder
         duration: '0 min', // Placeholder
         vehicleType: 'Sedan', // Placeholder
-        vehicleNumber: 'Pending' // Placeholder
+        vehicleNumber: 'Pending', // Placeholder
+        bidCount: trip.bid_count || 0
     };
 }
 

@@ -93,7 +93,7 @@ export const Select: React.FC<SelectProps> = ({
                                         }}
                                         className={`
                       w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors
-                      ${value === option.value ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-foreground hover:bg-muted'}
+                      ${value === option.value ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-foreground hover:bg-muted'}
                     `}
                                     >
                                         {option.icon}

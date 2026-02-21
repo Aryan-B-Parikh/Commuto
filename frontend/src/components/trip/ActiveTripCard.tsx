@@ -41,7 +41,7 @@ export function ActiveTripCard({
                         <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="10" className="text-muted/20" />
                         <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="10" strokeDasharray="200" strokeDashoffset="100" strokeLinecap="round" className="animate-[spin_3s_linear_infinite]" />
                     </svg>
-                    <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                    <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-indigo-600">
                         50%
                     </div>
                 </div>

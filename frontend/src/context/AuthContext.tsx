@@ -29,7 +29,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [role, setRoleState] = useState<UserRole>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Load user from token on mount
     useEffect(() => {
@@ -42,7 +42,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
                 if (token) {
                     try {
-                        setIsLoading(true);
                         const userData = await authAPI.getCurrentUser();
                         const frontendUser = transformBackendUser(userData);
                         setUser(frontendUser);
@@ -53,10 +52,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                             console.error('Failed to load user:', error);
                         }
                         localStorage.removeItem('auth_token');
-                    } finally {
-                        setIsLoading(false);
                     }
                 }
+                setIsLoading(false);
             }
         };
         loadUser();

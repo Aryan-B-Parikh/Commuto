@@ -13,26 +13,8 @@
   --card-border: #e2e8f0;
   --sidebar-bg: #ffffff;
   --sidebar-border: #e2e8f0;
-  --sidebar-width: 260px;
+  --sidebar-width: 240px;
   --accent-glow: rgba(79, 70, 229, 0.12);
-}
-
-.dark {
-  /* "Attractive Dark Theme" Variables */
-  --background: #020617;
-  --foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --primary: #6366f1;
-  --primary-hover: #818cf8;
-  --secondary: #60a5fa;
-  --card-bg: #0f172a;
-  --card-border: #1e293b;
-  --sidebar-bg: #020617;
-  --sidebar-border: #1e293b;
-
-  /* Additional Dark Accents */
-  --accent-glow: rgba(99, 102, 241, 0.15);
 }
 
 @theme inline {
@@ -65,10 +47,6 @@
   border-radius: 3px;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
-}
-
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
@@ -87,10 +65,6 @@ body {
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
-.dark .card-shadow {
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
-}
-
 .dashboard-grid {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
@@ -105,23 +79,12 @@ body {
   border: 1px solid var(--card-border);
 }
 
-.dark .glass {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
 .floating-glass {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-}
-
-.dark .floating-glass {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* Glow Utilities */
@@ -134,17 +97,8 @@ body {
   border-color: rgba(79, 70, 229, 0.15);
 }
 
-.dark .hover-glow:hover {
-  box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.3);
-}
-
 .active-glow {
   box-shadow: 0 0 15px -2px rgba(79, 70, 229, 0.12);
-}
-
-.dark .active-glow {
-  box-shadow: 0 0 20px -5px rgba(99, 102, 241, 0.4);
 }
 
 /* Transitions */

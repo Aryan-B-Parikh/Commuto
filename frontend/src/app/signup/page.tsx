@@ -85,11 +85,15 @@ export default function SignupPage() {
 
         if (loggedInUser) {
             showToast('success', 'Account created successfully!');
-            // Redirect based on role from the user object
-            if (loggedInUser.role === 'driver') {
+            // Use role from the logged-in user object for more reliable redirection
+            const userRole = loggedInUser.role;
+            if (userRole === 'driver') {
                 router.push('/driver/dashboard');
-            } else {
+            } else if (userRole === 'passenger') {
                 router.push('/passenger/dashboard');
+            } else {
+                // Fallback to the context role if user object role is somehow missing
+                router.push(`/${role}/dashboard`);
             }
         } else {
             showToast('error', 'Signup failed. Please try again.');

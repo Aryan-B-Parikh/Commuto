@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
@@ -86,8 +85,8 @@ export function TopBar({
                         </div>
                         <input
                             type="text"
-                            className="block w-72 pl-12 pr-12 py-2.5 border border-card-border/50 rounded-xl leading-5 bg-muted/30 focus:bg-card focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 sm:text-sm text-foreground placeholder:text-muted-foreground/50 font-medium"
-                            placeholder="Find drivers, routes..."
+                            className="block w-80 pl-11 pr-12 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/50 transition-all duration-200 sm:text-sm text-slate-900 placeholder:text-slate-400 font-medium"
+                            placeholder="Search routes or drivers..."
                         />
                         <div className="absolute inset-y-0 right-3 flex items-center">
                             <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 border border-card-border rounded-lg text-[10px] font-bold text-muted-foreground bg-muted/50">
@@ -96,7 +95,6 @@ export function TopBar({
                         </div>
                     </div>
 
-                    <ThemeToggle />
 
                     {/* Notifications */}
                     <div className="relative">
@@ -160,7 +158,7 @@ export function TopBar({
                                         {user?.name?.charAt(0).toUpperCase() || 'U'}
                                     </div>
                                 )}
-                                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full" />
+                                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
                             </div>
                             <div className="hidden sm:flex flex-col items-start pr-3">
                                 <span className="text-xs font-black text-foreground uppercase tracking-tight line-clamp-1">{user?.name}</span>

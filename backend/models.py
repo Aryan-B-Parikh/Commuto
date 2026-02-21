@@ -19,6 +19,8 @@ class Gender(str, enum.Enum):
 
 class TripStatus(str, enum.Enum):
     PENDING = "pending"
+    BID_ACCEPTED = "bid_accepted"
+    DRIVER_ASSIGNED = "driver_assigned"
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
@@ -293,4 +295,18 @@ class Transaction(Base):
     
     # Relationships
     wallet = relationship("Wallet", back_populates="transactions")
+
+# LiveLocation Model (for real-time tracking, latest only)
+class LiveLocation(Base):
+    __tablename__ = "live_locations"
+    
+    trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"), primary_key=True)
+    latitude = Column(Numeric, nullable=False)
+    longitude = Column(Numeric, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    trip = relationship("Trip", back_populates="live_location_data")
+
+Trip.live_location_data = relationship("LiveLocation", back_populates="trip", uselist=False)
 

@@ -78,10 +78,10 @@ export default function ProfilePage() {
                                 <img
                                     src={user.avatar}
                                     alt={user.name}
-                                    className="w-24 h-24 rounded-3xl mx-auto border-4 border-card-border dark:border-slate-800 shadow-xl object-cover relative z-10"
+                                    className="w-24 h-24 rounded-3xl mx-auto border-4 border-card-border shadow-xl object-cover relative z-10"
                                 />
                             ) : (
-                                <div className="w-24 h-24 rounded-3xl mx-auto border-4 border-card-border dark:border-slate-800 shadow-xl bg-muted flex items-center justify-center text-muted-foreground text-3xl font-bold relative z-10">
+                                <div className="w-24 h-24 rounded-3xl mx-auto border-4 border-card-border shadow-xl bg-muted flex items-center justify-center text-muted-foreground text-3xl font-bold relative z-10">
                                     {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                                 </div>
                             )}
@@ -179,8 +179,8 @@ export default function ProfilePage() {
             {/* Logout Modal */}
             <Modal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} title="Log Out">
                 <div className="flex flex-col items-center py-6">
-                    <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-3xl mb-6">👋</div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-8 text-center font-medium">Are you sure you want to end your session?</p>
+                    <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-3xl mb-6">👋</div>
+                    <p className="text-gray-600 mb-8 text-center font-medium">Are you sure you want to end your session?</p>
                     <div className="flex gap-4 w-full">
                         <Button variant="outline" fullWidth onClick={() => setShowLogoutModal(false)} className="h-12 font-bold uppercase tracking-widest">Stay Here</Button>
                         <Button variant="danger" fullWidth onClick={handleLogout} className="h-12 font-bold uppercase tracking-widest shadow-lg shadow-red-500/20 text-white bg-red-600 border-none">Log Out</Button>

@@ -71,7 +71,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Send Money" size="sm">
             <div className="space-y-6">
-                <div className="bg-indigo-50 dark:bg-slate-800 p-4 rounded-xl">
+                <div className="bg-indigo-50 p-4 rounded-xl">
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Available Balance</p>
                     <p className="text-2xl font-black text-indigo-600">₹{balance.toLocaleString('en-IN')}</p>
                 </div>

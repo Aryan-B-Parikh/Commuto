@@ -1,121 +1,231 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { MapContainer } from '@/components/trip/MapContainer';
-import { PassengerList } from '@/components/trip/PassengerList';
-import { ProgressBar } from '@/components/ui/ProgressBar';
-import { Button } from '@/components/ui/Button';
+import {
+    Navigation,
+    CheckCircle,
+    Car,
+    Flag,
+    Phone,
+    MessageSquare,
+    MapPin,
+    Clock,
+    User
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { RoleGuard } from '@/components/auth/RoleGuard';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card } from '@/components/ui/Card';
-import { Modal } from '@/components/ui/Modal';
-import { useToast } from '@/hooks/useToast';
-import { mockTrips } from '@/data/trips';
+import { Button } from '@/components/ui/Button';
+import { useTripWebSocket } from '@/hooks/useTripWebSocket';
+import { tripsAPI } from '@/services/api';
+import { TripResponse } from '@/types/api';
+import { calculateDistance } from '@/utils/geoUtils';
+import dynamic from 'next/dynamic';
+
+const TripMap = dynamic(() => import('@/components/map/TripMap'), {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-slate-100 animate-pulse flex items-center justify-center">Loading Navigation...</div>
+});
 
 export default function DriverLivePage() {
+    const { user } = useAuth();
     const router = useRouter();
-    const { showToast } = useToast();
-    const [progress, setProgress] = useState(0);
-    const [showEndModal, setShowEndModal] = useState(false);
+    const [trip, setTrip] = useState<TripResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const trip = mockTrips[0];
-
-    if (!trip) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <Card className="text-center py-12">
-                    <h3 className="font-semibold text-gray-900 mb-2">No Active Trip</h3>
-                    <p className="text-gray-500 mb-6">You don't have an active trip.</p>
-                    <Button onClick={() => router.push('/driver/dashboard')}>Go to Dashboard</Button>
-                </Card>
-            </div>
-        );
-    }
-
+    // 1. Fetch active trip for driver
     useEffect(() => {
-        const interval = setInterval(() => {
-            setProgress(prev => prev >= 100 ? 100 : prev + 2);
-        }, 1000);
-        return () => clearInterval(interval);
-    }, []);
+        const fetchActiveTrip = async () => {
+            try {
+                const trips = await tripsAPI.getDriverTrips();
+                const active = trips.find(t => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
+                if (active) {
+                    setTrip(active);
+                } else {
+                    router.push('/driver/dashboard');
+                }
+            } catch (error) {
+                console.error('Failed to fetch active driver trip:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
+        fetchActiveTrip();
+    }, [router]);
+
+    // 2. WebSocket for broadcasting
+    const {
+        isConnected,
+        sendLocation,
+        updateStatus,
+        tripStatus
+    } = useTripWebSocket(trip?.id || null);
+
+    // Sync status locally
     useEffect(() => {
-        if (progress >= 100) {
-            showToast('success', 'Trip completed! Earnings added.');
-            setTimeout(() => router.push('/driver/earnings'), 2000);
+        if (tripStatus && trip && trip.status !== tripStatus) {
+            setTrip({ ...trip, status: tripStatus } as TripResponse);
+            if (tripStatus === 'completed') {
+                setTimeout(() => router.push('/driver/dashboard'), 3000);
+            }
         }
-    }, [progress, router, showToast]);
+    }, [tripStatus, trip, router]);
 
-    const handleEndTrip = () => {
-        showToast('success', 'Trip ended. Earnings calculated.');
-        router.push('/driver/earnings');
-    };
+    // 3. Simulated Location Broadcaster (GPS Tracker)
+    useEffect(() => {
+        if (isConnected && trip?.status === 'active') {
+            console.log("Starting location broadcaster...");
+
+            // Initial seed position
+            let currentLat = Number(trip.origin_lat);
+            let currentLng = Number(trip.origin_lng);
+            const targetLat = Number(trip.dest_lat);
+            const targetLng = Number(trip.dest_lng);
+
+            locationIntervalRef.current = setInterval(() => {
+                // Move towards destination slowly for simulation
+                currentLat += (targetLat - currentLat) * 0.05;
+                currentLng += (targetLng - currentLng) * 0.05;
+
+                sendLocation(currentLat, currentLng);
+            }, 5000); // Send every 5 seconds
+        }
+
+        return () => {
+            if (locationIntervalRef.current) {
+                clearInterval(locationIntervalRef.current);
+            }
+        };
+    }, [isConnected, trip, sendLocation]);
+
+    const passengerPos = useMemo(() => {
+        if (!trip) return undefined;
+        return [Number(trip.origin_lat), Number(trip.origin_lng)] as [number, number];
+    }, [trip]);
+
+    const destinationPos = useMemo(() => {
+        if (!trip) return undefined;
+        return [Number(trip.dest_lat), Number(trip.dest_lng)] as [number, number];
+    }, [trip]);
+
+    if (isLoading) return <div className="p-8 text-center">Locating Trip...</div>;
+    if (!trip) return null;
+
+    const currentStatus = trip.status;
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="relative h-[55vh]">
-                <MapContainer className="h-full" showRoute />
+        <RoleGuard allowedRoles={['driver']}>
+            <DashboardLayout userType="driver" title="Live Navigation">
+                <div className="relative h-[calc(100vh-180px)] -mt-4 -mx-8 overflow-hidden">
+                    <TripMap
+                        passengerPos={passengerPos}
+                        destinationPos={destinationPos}
+                        center={currentStatus === 'active' ? undefined : passengerPos}
+                    />
 
-                <div className="absolute top-4 left-4 right-4">
-                    <Card variant="glass" padding="sm">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4" />
-                                </svg>
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm text-gray-500">Driving to</p>
-                                <p className="font-semibold text-gray-900 truncate">{trip.to.name}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-sm text-gray-500">ETA</p>
-                                <p className="font-semibold text-green-600">{trip.duration}</p>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            </div>
-
-            <div className="-mt-8 relative z-10 bg-white rounded-t-3xl shadow-xl px-4 py-6 min-h-[45vh]">
-                <div className="mb-6">
-                    <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Trip Progress</span>
-                        <span className="text-sm font-semibold text-green-600">{progress}%</span>
+                    {/* Floating Passenger Info Header */}
+                    <div className="absolute top-6 left-6 right-6 z-10">
+                        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="max-w-xl mx-auto">
+                            <Card className="p-4 border-none shadow-2xl bg-slate-900/95 backdrop-blur-md text-white flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-indigo-400 border border-slate-700">
+                                        <User size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-white leading-none">
+                                            Pickup: {trip.origin_address.split(',')[0]}
+                                        </h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                Passenger Assigned
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button size="sm" variant="ghost" className="rounded-xl hover:bg-white/10 text-white px-2 h-10 w-10">
+                                        <Phone size={20} />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="rounded-xl hover:bg-white/10 text-white px-2 h-10 w-10">
+                                        <MessageSquare size={20} />
+                                    </Button>
+                                </div>
+                            </Card>
+                        </motion.div>
                     </div>
-                    <ProgressBar progress={progress} variant={progress === 100 ? 'success' : 'default'} size="lg" />
-                </div>
 
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    <Card padding="sm" className="text-center">
-                        <p className="text-lg font-bold text-gray-900">{trip.distance}</p>
-                        <p className="text-xs text-gray-500">Distance</p>
-                    </Card>
-                    <Card padding="sm" className="text-center">
-                        <p className="text-lg font-bold text-gray-900">{trip.passengers.length}</p>
-                        <p className="text-xs text-gray-500">Passengers</p>
-                    </Card>
-                    <Card padding="sm" className="text-center">
-                        <p className="text-lg font-bold text-green-600">${trip.pricePerSeat * trip.passengers.length}</p>
-                        <p className="text-xs text-gray-500">Earnings</p>
-                    </Card>
-                </div>
+                    {/* Bottom Controls */}
+                    <div className="absolute bottom-6 left-6 right-6 z-10 flex justify-center">
+                        <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="w-full max-w-4xl">
+                            <Card className="shadow-2xl border-none p-6 bg-white/95 backdrop-blur-md">
+                                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                                    <div className="flex items-center gap-6">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Destination</p>
+                                            <div className="flex items-center gap-2">
+                                                <MapPin size={16} className="text-red-500" />
+                                                <p className="font-bold text-slate-900">{trip.dest_address.split(',')[0]}</p>
+                                            </div>
+                                        </div>
+                                        <div className="w-px h-10 bg-slate-100" />
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Distance</p>
+                                            <div className="flex items-center gap-2">
+                                                <Navigation size={16} className="text-indigo-500 font-bold" />
+                                                <p className="font-bold text-slate-900 tracking-tight">
+                                                    {calculateDistance(
+                                                        { lat: trip.origin_lat, lng: trip.origin_lng },
+                                                        { lat: trip.dest_lat, lng: trip.dest_lng }
+                                                    ).toFixed(1)} km
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                <div className="mb-6">
-                    <h3 className="font-semibold text-gray-900 mb-3">Passengers</h3>
-                    <PassengerList driver={trip.driver} passengers={trip.passengers} />
+                                    <div className="flex items-center gap-3 w-full md:w-auto">
+                                        {currentStatus === 'bid_accepted' && (
+                                            <Button
+                                                className="flex-1 md:flex-none h-14 bg-indigo-600 hover:bg-indigo-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-indigo-100"
+                                                onClick={() => updateStatus('driver_assigned')}
+                                            >
+                                                I Have Arrived
+                                            </Button>
+                                        )}
+                                        {currentStatus === 'driver_assigned' && (
+                                            <Button
+                                                className="flex-1 md:flex-none h-14 bg-emerald-600 hover:bg-emerald-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-emerald-100 flex items-center gap-2"
+                                                onClick={() => updateStatus('active')}
+                                            >
+                                                <Car size={18} />
+                                                Start Trip
+                                            </Button>
+                                        )}
+                                        {currentStatus === 'active' && (
+                                            <Button
+                                                className="flex-1 md:flex-none h-14 bg-slate-900 hover:bg-black text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-slate-200 flex items-center gap-2"
+                                                onClick={() => updateStatus('completed')}
+                                            >
+                                                <CheckCircle size={18} />
+                                                Complete Trip
+                                            </Button>
+                                        )}
+                                        {currentStatus === 'completed' && (
+                                            <div className="flex items-center gap-2 text-emerald-600 font-bold uppercase tracking-widest text-xs bg-emerald-50 px-6 py-4 rounded-2xl border border-emerald-100 animate-pulse">
+                                                <Flag size={16} /> Trip Finished
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </Card>
+                        </motion.div>
+                    </div>
                 </div>
-
-                <Button variant="danger" fullWidth onClick={() => setShowEndModal(true)}>End Trip</Button>
-            </div>
-
-            <Modal isOpen={showEndModal} onClose={() => setShowEndModal(false)} title="End Trip">
-                <p className="text-gray-600 mb-6 text-center">End this trip and calculate earnings?</p>
-                <div className="flex gap-3">
-                    <Button variant="outline" fullWidth onClick={() => setShowEndModal(false)}>Continue</Button>
-                    <Button variant="primary" fullWidth onClick={handleEndTrip}>End Trip</Button>
-                </div>
-            </Modal>
-        </div>
+            </DashboardLayout>
+        </RoleGuard>
     );
 }

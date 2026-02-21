@@ -88,7 +88,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
     return (
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto pb-32">
             {/* Header & Avatar */}
-            <div className="mb-8 text-center bg-gradient-to-b from-indigo-50/50 dark:from-indigo-900/10 to-transparent pt-8 pb-4 rounded-3xl">
+            <div className="mb-8 text-center bg-gradient-to-b from-indigo-50/50 to-transparent pt-8 pb-4 rounded-3xl">
                 <ProfileImageUpload
                     currentImageUrl={formData.avatar}
                     onImageChange={(url) => handleSharedChange({ avatar: url })}
@@ -102,10 +102,10 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
                                     initial={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.8 }}
-                                    className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-full border border-amber-100 dark:border-amber-800"
+                                    className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-full border border-amber-100"
                                 >
                                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-tight">Unsaved Changes</span>
+                                    <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">Unsaved Changes</span>
                                 </motion.div>
                             )}
                         </AnimatePresence>

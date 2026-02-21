@@ -40,6 +40,10 @@ class TripResponse(BaseModel):
     driver_id: Optional[UUID] = None
     origin_address: str
     dest_address: str
+    origin_lat: float
+    origin_lng: float
+    dest_lat: float
+    dest_lng: float
     from_address: Optional[str] = None  # backward compat
     to_address: Optional[str] = None    # backward compat
     start_time: datetime
@@ -54,6 +58,7 @@ class TripResponse(BaseModel):
     driver_name: Optional[str] = None
     driver_rating: Optional[float] = None
     driver_avatar: Optional[str] = None
+    bid_count: int = 0
     
     class Config:
         from_attributes = True
@@ -88,6 +93,26 @@ class BidResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class DriverBidWithTrip(BaseModel):
+    id: UUID
+    trip_id: UUID
+    driver_id: UUID
+    bid_amount: float
+    status: str
+    created_at: datetime
+    # Trip details
+    origin_address: str
+    dest_address: str
+    origin_lat: float
+    origin_lng: float
+    dest_lat: float
+    dest_lng: float
+    trip_status: str
+    start_time: datetime
+    total_seats: int
+    price_per_seat: Optional[float] = None
 
 
 class BidWithDriver(BaseModel):

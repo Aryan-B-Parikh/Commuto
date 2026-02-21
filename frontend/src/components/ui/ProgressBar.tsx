@@ -43,7 +43,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
                     <span className="text-sm font-semibold text-foreground">{clampedProgress}%</span>
                 </div>
             )}
-            <div className={`w-full bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden ${sizeStyles[size]}`}>
+            <div className={`w-full bg-gray-200 rounded-full overflow-hidden ${sizeStyles[size]}`}>
                 <motion.div
                     className={`h-full rounded-full ${variantStyles[variant]}`}
                     initial={animated ? { width: 0 } : { width: `${clampedProgress}%` }}
