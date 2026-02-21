@@ -75,3 +75,16 @@ Includes models for:
 - Trips
 - Bids
 - ActiveRides (OTP management)
+
+## Rate limiting
+
+The backend includes a small in-memory rate limiter used by some route
+decorators. This is intended as a lightweight protection mechanism for
+development and single-process deployments. For production, prefer a
+centralized store (e.g. Redis) so limits are enforced across all
+instances/workers.
+
+Notes for testing:
+- The test suite isolates rate limiting by clearing the in-memory
+	limiter state in the `TestClient` fixture (`backend/tests/conftest.py`).
+	This keeps tests deterministic and avoids cross-test interference.
