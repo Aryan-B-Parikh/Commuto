@@ -37,11 +37,11 @@ export function ActiveTripCard({
                     <h3 className="text-lg font-bold text-foreground mt-1">{status}</h3>
                 </div>
                 <div className="relative w-10 h-10">
-                    <svg className="w-10 h-10 text-emerald-500" viewBox="0 0 100 100">
+                    <svg className="w-10 h-10 text-indigo-500" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="10" className="text-muted/20" />
                         <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="10" strokeDasharray="200" strokeDashoffset="100" strokeLinecap="round" className="animate-[spin_3s_linear_infinite]" />
                     </svg>
-                    <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
                         50%
                     </div>
                 </div>
@@ -50,7 +50,7 @@ export function ActiveTripCard({
             {/* Route */}
             <div className="space-y-4 mb-6">
                 <div className="flex items-start gap-3">
-                    <div className="mt-1 w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" />
+                    <div className="mt-1 w-2 h-2 rounded-full bg-indigo-500 ring-4 ring-indigo-500/10" />
                     <div>
                         <p className="text-xs text-muted-foreground">Pickup</p>
                         <p className="text-sm font-medium text-foreground truncate">{pickup}</p>

@@ -66,7 +66,7 @@ export default function GroupedRoutesDashboard() {
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-bold text-foreground">Nearby Trips</h2>
-                        <button onClick={fetchRoutes} className="text-sm text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
+                        <button onClick={fetchRoutes} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
                             Refresh List
                         </button>
                     </div>
@@ -96,7 +96,7 @@ export default function GroupedRoutesDashboard() {
                                             <div className="flex justify-between items-start mb-6">
                                                 <div className="space-y-3 flex-1">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                                                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
                                                         <p className="text-foreground font-bold truncate">{route.from.name}</p>
                                                     </div>
                                                     <div className="flex items-center gap-3">
@@ -105,7 +105,7 @@ export default function GroupedRoutesDashboard() {
                                                     </div>
                                                 </div>
                                                 <div className="text-right pl-4">
-                                                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 block">${bidAmounts[route.id] || 25}</span>
+                                                    <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 block">${bidAmounts[route.id] || 25}</span>
                                                     <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Suggested Bid</span>
                                                 </div>
                                             </div>
@@ -135,13 +135,13 @@ export default function GroupedRoutesDashboard() {
                                                         min="5"
                                                         value={bidAmounts[route.id] || 25}
                                                         onChange={(e) => updateBidAmount(route.id, parseFloat(e.target.value))}
-                                                        className="w-full h-14 px-4 bg-muted border border-card-border rounded-xl text-lg font-bold text-foreground focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all placeholder:text-muted-foreground"
+                                                        className="w-full h-14 px-4 bg-muted border border-card-border rounded-xl text-lg font-bold text-foreground focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-muted-foreground"
                                                         placeholder="Your Bid"
                                                     />
                                                 </div>
                                                 <Button
                                                     variant="primary"
-                                                    className="px-8 h-14 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/30 text-lg"
+                                                    className="px-8 h-14 bg-indigo-500 hover:bg-indigo-600 shadow-lg shadow-indigo-500/30 text-lg"
                                                     onClick={() => handlePlaceBid(route.id)}
                                                 >
                                                     Place Bid
@@ -169,17 +169,17 @@ export default function GroupedRoutesDashboard() {
                                 <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">Routes Found</span>
                                 <span className="text-lg font-black text-blue-700 dark:text-blue-300">{routes.length}</span>
                             </div>
-                            <div className="flex justify-between items-center p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-                                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Avg. Bid</span>
-                                <span className="text-lg font-black text-emerald-700 dark:text-emerald-300">$35.00</span>
+                            <div className="flex justify-between items-center p-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
+                                <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Avg. Bid</span>
+                                <span className="text-lg font-black text-indigo-700 dark:text-indigo-300">$35.00</span>
                             </div>
                         </div>
                     </Card>
 
-                    <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-2xl text-white shadow-lg shadow-emerald-500/20 overflow-hidden relative group">
+                    <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-6 rounded-2xl text-white shadow-lg shadow-indigo-500/20 overflow-hidden relative group">
                         <div className="relative z-10">
                             <h4 className="font-black text-xl mb-1 italic tracking-tighter">DRIVER PRO TIP</h4>
-                            <p className="text-sm text-emerald-50/80 leading-snug">Higher ratings increase your chances of being selected by passengers. Keep up the great work!</p>
+                            <p className="text-sm text-indigo-50/80 leading-snug">Higher ratings increase your chances of being selected by passengers. Keep up the great work!</p>
                         </div>
                         <div className="absolute -right-4 -bottom-4 text-6xl opacity-10 group-hover:scale-110 transition-transform">🌟</div>
                     </div>

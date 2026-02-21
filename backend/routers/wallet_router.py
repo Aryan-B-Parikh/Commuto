@@ -80,7 +80,7 @@ def create_add_money_order(
         order_data = {
             "amount": amount_paise,
             "currency": "INR",
-            "receipt": f"wallet_{current_user.id}",
+            "receipt": f"w_{str(current_user.id)[:30]}",
             "notes": {
                 "user_id": str(current_user.id),
                 "purpose": "wallet_topup"
@@ -108,7 +108,7 @@ def create_add_money_order(
             "order_id": order["id"],
             "amount": amount_paise,
             "currency": "INR",
-            "key_id": key_id
+            "key": key_id
         }
         
     except Exception as e:
@@ -177,6 +177,7 @@ def verify_payment(
         logger.info(f"Payment verified. Wallet credited: ₹{transaction.amount} for user {current_user.id}")
         
         return {
+            "status": "success",
             "message": "Payment verified successfully",
             "new_balance": float(wallet.balance),
             "amount_credited": float(transaction.amount)
@@ -240,4 +241,92 @@ def pay_from_wallet(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Payment failed"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Payment failed"
+        )
+
+
+@router.post("/transfer")
+@rate_limit(max_requests=10, window_seconds=60, key_suffix="wallet_transfer")
+def transfer_money(
+    request: Request,
+    transfer_data: schemas.TransferRequest,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Transfer money to another user by email"""
+    from decimal import Decimal
+    
+    # 1. Validate self-transfer
+    if transfer_data.recipient_email == current_user.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot transfer to yourself"
+        )
+    
+    # 2. Find recipient
+    recipient = db.query(models.User).filter(models.User.email == transfer_data.recipient_email).first()
+    if not recipient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipient not found"
+        )
+    
+    # 3. Check sender balance
+    sender_wallet = get_or_create_wallet(current_user.id, db)
+    
+    if Decimal(str(sender_wallet.balance)) < Decimal(str(transfer_data.amount)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Insufficient wallet balance"
+        )
+    
+    try:
+        # 4. Perform Transfer (Atomic)
+        recipient_wallet = get_or_create_wallet(recipient.id, db)
+        
+        # Update balances
+        amount_decimal = Decimal(str(transfer_data.amount))
+        sender_wallet.balance = Decimal(str(sender_wallet.balance)) - amount_decimal
+        recipient_wallet.balance = Decimal(str(recipient_wallet.balance)) + amount_decimal
+        
+        # Create Sender Transaction (Debit)
+        sender_tx = models.Transaction(
+            wallet_id=sender_wallet.id,
+            amount=transfer_data.amount,
+            type="payment",  # Debit
+            description=f"Sent to {recipient.full_name}",
+            status="completed"
+        )
+        
+        # Create Recipient Transaction (Credit)
+        recipient_tx = models.Transaction(
+            wallet_id=recipient_wallet.id,
+            amount=transfer_data.amount,
+            type="credit",   # Credit
+            description=f"Received from {current_user.full_name}",
+            status="completed"
+        )
+        
+        db.add(sender_tx)
+        db.add(recipient_tx)
+        db.commit()
+        
+        logger.info(f"Transfer successful: ₹{transfer_data.amount} from {current_user.email} to {recipient.email}")
+        
+        return {
+            "message": "Transfer successful",
+            "new_balance": float(sender_wallet.balance),
+            "amount": transfer_data.amount,
+            "recipient": recipient.full_name
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error processing transfer: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Transfer failed"
         )

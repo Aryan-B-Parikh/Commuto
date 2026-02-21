@@ -88,7 +88,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
     return (
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto pb-32">
             {/* Header & Avatar */}
-            <div className="mb-8 text-center bg-gradient-to-b from-emerald-50/50 dark:from-emerald-900/10 to-transparent pt-8 pb-4 rounded-3xl">
+            <div className="mb-8 text-center bg-gradient-to-b from-indigo-50/50 dark:from-indigo-900/10 to-transparent pt-8 pb-4 rounded-3xl">
                 <ProfileImageUpload
                     currentImageUrl={formData.avatar}
                     onImageChange={(url) => handleSharedChange({ avatar: url })}
@@ -233,7 +233,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
             pointer-events-auto h-16 px-10 rounded-full shadow-2xl flex items-center gap-3 font-bold text-lg transition-all
             ${showSuccess
                             ? 'bg-green-500 text-white'
-                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200/50'}
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200/50'}
 
             disabled:opacity-70 disabled:cursor-not-allowed
           `}

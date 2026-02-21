@@ -56,7 +56,13 @@ export default function EditProfilePage() {
                 licenseNumber: '',
                 insuranceStatus: 'active',
                 registrationUrl: ''
-            } : undefined
+            } : undefined,
+            // Passenger specific fields
+            savedPlaces: [],
+            paymentMethods: [],
+            travelPreferences: [],
+            preferredPickupLocations: [],
+            accessibilityNeeds: false
         };
 
         setCurrentData(profileData as any);
@@ -85,7 +91,7 @@ export default function EditProfilePage() {
     if (authLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <div className="animate-spin h-8 w-8 text-emerald-600" />
+                <div className="animate-spin h-8 w-8 text-indigo-600" />
             </div>
         );
     }
@@ -96,7 +102,7 @@ export default function EditProfilePage() {
                 <div className="flex items-center mb-8">
                     <button
                         onClick={() => window.history.back()}
-                        className="p-3 bg-card border border-card-border rounded-2xl text-muted-foreground hover:text-emerald-600 shadow-sm transition-all"
+                        className="p-3 bg-card border border-card-border rounded-2xl text-muted-foreground hover:text-indigo-600 shadow-sm transition-all"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -107,7 +113,7 @@ export default function EditProfilePage() {
                 <section className="mb-8">
                     <div className="flex items-center gap-3">
                         <h2 className="text-3xl font-extrabold text-foreground tracking-tight">Edit Profile</h2>
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${role === 'driver' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${role === 'driver' ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-100 text-indigo-700'
                             }`}>
                             {role}
                         </span>

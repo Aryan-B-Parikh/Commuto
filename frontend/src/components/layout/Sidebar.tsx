@@ -36,11 +36,11 @@ const SidebarItem = ({ icon, label, href, isActive, isMini }: SidebarItemProps) 
                 whileTap={{ scale: 0.98 }}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 cursor-pointer mb-1 mx-2 relative group
           ${isActive
-                        ? 'bg-emerald-500/10 text-emerald-500 font-bold active-glow shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)]'
+                        ? 'bg-indigo-500/10 text-indigo-600 font-bold active-glow shadow-[0_0_15px_-3px_rgba(99,102,241,0.3)]'
                         : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground hover-glow'
                     } ${isMini ? 'justify-center px-2 mx-auto w-12' : ''}`}
             >
-                <div className={`transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 ${isActive ? 'scale-110 text-emerald-500' : 'text-muted-foreground'}`}>
+                <div className={`transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 ${isActive ? 'scale-110 text-indigo-600' : 'text-muted-foreground'}`}>
                     {icon}
                 </div>
                 {!isMini && <span className="text-sm font-medium tracking-tight">{label}</span>}
@@ -48,7 +48,7 @@ const SidebarItem = ({ icon, label, href, isActive, isMini }: SidebarItemProps) 
                 {isActive && (
                     <motion.div
                         layoutId="active-pill"
-                        className={`absolute left-0 w-1 bg-emerald-500 rounded-r-md ${isMini ? 'h-6 top-3' : 'h-8 top-2.5'}`}
+                        className={`absolute left-0 w-1 bg-indigo-500 rounded-r-md ${isMini ? 'h-6 top-3' : 'h-8 top-2.5'}`}
                     />
                 )}
 
@@ -103,7 +103,7 @@ export function Sidebar({
             <div className={`p-6 flex items-center gap-3 transition-all duration-500 ${isMini ? 'justify-center px-2' : ''}`}>
                 <div
                     onClick={onToggleMini}
-                    className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-[0_8px_30px_rgb(16,185,129,0.3)] transform hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer group/logo"
+                    className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-[0_8px_30px_rgb(99,102,241,0.3)] transform hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer group/logo"
                 >
                     <Car size={28} strokeWidth={2.5} className="group-hover:rotate-12 transition-transform" />
                 </div>
@@ -114,7 +114,7 @@ export function Sidebar({
                         className="flex flex-col"
                     >
                         <span className="text-xl font-black tracking-tighter text-foreground leading-none">COMMUTO</span>
-                        <span className="text-[10px] font-bold text-emerald-500 tracking-[0.2em] mt-0.5">PLATFORM</span>
+                        <span className="text-[10px] font-bold text-indigo-500 tracking-[0.2em] mt-0.5">PLATFORM</span>
                     </motion.div>
                 )}
             </div>
@@ -143,11 +143,11 @@ export function Sidebar({
                 <div className={`flex items-center gap-3 p-2 rounded-2xl hover:bg-card hover:shadow-lg border border-transparent hover:border-card-border/50 transition-all group cursor-pointer ${isMini ? 'justify-center p-1' : ''}`}>
                     {user?.avatar ? (
                         <div className="relative">
-                            <img src={user.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-emerald-500/20" alt="Avatar" />
-                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full" />
+                            <img src={user.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-indigo-500/20" alt="Avatar" />
+                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-indigo-500 border-2 border-card rounded-full" />
                         </div>
                     ) : (
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-sm group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-inner">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-black text-sm group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-inner">
                             {user?.name?.charAt(0).toUpperCase() || <User size={18} />}
                         </div>
                     )}
@@ -157,7 +157,7 @@ export function Sidebar({
                                 {user?.name || 'User Name'}
                             </p>
                             <p className="text-[10px] text-muted-foreground font-bold truncate uppercase tracking-wider mt-0.5 flex items-center gap-1">
-                                <span className="w-1 h-1 bg-emerald-500 rounded-full" />
+                                <span className="w-1 h-1 bg-indigo-500 rounded-full" />
                                 {userType}
                             </p>
                         </div>

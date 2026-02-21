@@ -96,10 +96,10 @@ export const OTPInput: React.FC<OTPInputProps> = ({
             transition-all duration-200
             focus:outline-none
             ${error
-                            ? 'border-red-500 bg-red-50 text-red-600'
+                            ? 'border-red-500 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400'
                             : focused
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-foreground'
+                                : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 text-foreground'
                         }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}

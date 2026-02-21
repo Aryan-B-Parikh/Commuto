@@ -33,7 +33,7 @@ export default function DriverHistoryPage() {
                             >
                                 <Card hoverable className="border-none shadow-sm dark:glass px-6 py-5">
                                     <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex flex-col items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                        <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400">
                                             <span className="text-xs font-black leading-none">{formatDate(trip.date).split(' ')[0]}</span>
                                             <span className="text-xl font-black">{formatDate(trip.date).split(' ')[1]}</span>
                                         </div>
@@ -43,7 +43,7 @@ export default function DriverHistoryPage() {
                                                 <h3 className="font-bold text-gray-900 dark:text-white truncate">
                                                     {trip.from.name} <span className="text-gray-400 font-medium mx-1">→</span> {trip.to.name}
                                                 </h3>
-                                                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                                                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
                                                     +{formatCurrency(trip.pricePerSeat * trip.passengers.length)}
                                                 </span>
                                             </div>
@@ -78,13 +78,13 @@ export default function DriverHistoryPage() {
                 {/* Right Column: Lifetime Stats */}
                 <div className="space-y-6">
                     <Card className="dark:glass overflow-hidden relative">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-600" />
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-600" />
                         <h3 className="text-lg font-bold text-foreground mb-6">Driver Overview</h3>
 
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600">💰</div>
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600">💰</div>
                                     <p className="text-sm font-bold text-gray-500 uppercase">Total Earned</p>
                                 </div>
                                 <p className="text-xl font-black text-foreground">{formatCurrency(4862)}</p>
@@ -108,15 +108,15 @@ export default function DriverHistoryPage() {
                         </div>
 
                         <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
-                            <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] mb-2">Top Performance</p>
+                            <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] mb-2">Top Performance</p>
                             <p className="text-xs text-gray-500 leading-relaxed px-4">You are in the top 5% of drivers in your region this month. Keep it up!</p>
                         </div>
                     </Card>
 
-                    <div className="bg-gradient-to-br from-emerald-500 to-teal-700 p-6 rounded-2xl text-white shadow-lg overflow-hidden relative group">
+                    <div className="bg-gradient-to-br from-indigo-500 to-blue-700 p-6 rounded-2xl text-white shadow-lg overflow-hidden relative group">
                         <div className="relative z-10">
-                            <h4 className="font-black text-xl mb-1 italic tracking-tighter uppercase underline decoration-emerald-300">New Achievement</h4>
-                            <p className="text-sm text-emerald-50 leading-snug">Elite Navigator: You've completed 50 rides without a single cancellation!</p>
+                            <h4 className="font-black text-xl mb-1 italic tracking-tighter uppercase underline decoration-indigo-300">New Achievement</h4>
+                            <p className="text-sm text-indigo-50 leading-snug">Elite Navigator: You've completed 50 rides without a single cancellation!</p>
                         </div>
                         <div className="absolute -right-4 -bottom-4 text-7xl opacity-10 group-hover:scale-110 transition-transform">🏆</div>
                     </div>

@@ -26,7 +26,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
                 className="w-full flex items-center justify-between p-5 hover:bg-muted transition-colors text-left"
             >
                 <div className="flex items-center gap-3">
-                    {icon && <div className="text-emerald-600">{icon}</div>}
+                    {icon && <div className="text-indigo-600">{icon}</div>}
                     <h2 className="text-lg font-semibold text-foreground">{title}</h2>
                 </div>
                 <svg

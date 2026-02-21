@@ -25,7 +25,10 @@ axiosRetry(api, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 api.interceptors.response.use(
     response => response,
     error => {
-        console.error('API Error:', error.response?.data || error.message);
+        // Don't log 401 errors to console as they involve expected auth flows
+        if (error.response?.status !== 401) {
+            console.error('API Error:', error.response?.data || error.message);
+        }
         return Promise.reject(error);
     }
 );
@@ -120,6 +123,61 @@ export const otpAPI = {
         const response = await api.post(`/rides/${tripId}/complete`);
         return response.data;
     },
+};
+
+// Wallet APIs
+export const walletAPI = {
+    getWallet: async (): Promise<{ balance: number; currency: string }> => {
+        const response = await api.get('/wallet');
+        return response.data;
+    },
+
+    getTransactions: async (): Promise<any[]> => {
+        const response = await api.get('/wallet/transactions');
+        return response.data;
+    },
+
+    addMoney: async (amount: number): Promise<{
+        order_id: string;
+        amount: number;
+        currency: string;
+        key: string;
+    }> => {
+        const response = await api.post('/wallet/add-money', { amount });
+        return response.data;
+    },
+
+    verifyPayment: async (paymentData: any): Promise<{ status: string; new_balance: number }> => {
+        const response = await api.post('/wallet/verify-payment', paymentData);
+        return response.data;
+    },
+
+    transfer: async (data: { recipient_email: string; amount: number; note?: string }): Promise<any> => {
+        const response = await api.post('/wallet/transfer', data);
+        return response.data;
+    }
+};
+
+// Payment Methods APIs
+export const paymentMethodsAPI = {
+    getMethods: async (): Promise<any[]> => {
+        const response = await api.get('/auth/payment-methods');
+        return response.data;
+    },
+
+    addMethod: async (data: { type: string; provider: string; last4: string; is_default?: boolean }): Promise<any> => {
+        const response = await api.post('/auth/payment-methods', data);
+        return response.data;
+    },
+
+    deleteMethod: async (id: string): Promise<void> => {
+        await api.delete(`/auth/payment-methods/${id}`);
+    },
+
+    setDefault: async (id: string): Promise<any> => {
+        const response = await api.patch(`/auth/payment-methods/${id}/default`);
+        return response.data;
+    }
 };
 
 export default api;

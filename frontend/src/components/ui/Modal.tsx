@@ -61,15 +61,15 @@ export const Modal: React.FC<ModalProps> = ({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className={`relative w-full ${sizeStyles[size]} bg-white rounded-2xl shadow-2xl overflow-hidden`}
+                        className={`relative w-full ${sizeStyles[size]} bg-card rounded-2xl shadow-2xl overflow-hidden border border-card-border`}
                     >
                         {/* Header */}
                         {title && (
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                                <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-card-border">
+                                <h2 className="text-xl font-semibold text-foreground">{title}</h2>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                 >
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

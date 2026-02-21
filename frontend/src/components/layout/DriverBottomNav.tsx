@@ -39,7 +39,7 @@ export function DriverBottomNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 pb-safe z-50">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 pb-safe z-50">
             <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -52,13 +52,13 @@ export function DriverBottomNav() {
                         >
                             <motion.div
                                 whileTap={{ scale: 0.9 }}
-                                className={`flex flex-col items-center ${isActive ? 'text-green-600' : 'text-gray-400'
+                                className={`flex flex-col items-center ${isActive ? 'text-indigo-600' : 'text-gray-400'
                                     }`}
                             >
                                 {isActive && (
                                     <motion.div
                                         layoutId="driver-nav-indicator"
-                                        className="absolute -top-0.5 w-12 h-1 bg-green-600 rounded-full"
+                                        className="absolute -top-0.5 w-12 h-1 bg-indigo-600 rounded-full"
                                         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                                     />
                                 )}

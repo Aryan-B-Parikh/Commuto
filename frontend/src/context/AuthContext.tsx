@@ -47,8 +47,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                         const frontendUser = transformBackendUser(userData);
                         setUser(frontendUser);
                         setRoleState(userData.role as UserRole);
-                    } catch (error) {
-                        console.error('Failed to load user:', error);
+                    } catch (error: any) {
+                        // Only log real errors, not expected 401s (expired session)
+                        if (error.response?.status !== 401) {
+                            console.error('Failed to load user:', error);
+                        }
                         localStorage.removeItem('auth_token');
                     } finally {
                         setIsLoading(false);

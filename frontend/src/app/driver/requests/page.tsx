@@ -73,16 +73,16 @@ export default function DriverRequestsPage() {
                                 >
                                     <Card className="">
                                         <div className="flex items-start gap-4 mb-6">
-                                            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-xl shadow-inner">
+                                            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-black text-xl shadow-inner">
                                                 {request.seats_requested}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-bold text-foreground text-lg line-clamp-1">Request {request.id.substring(0, 8).toUpperCase()}</h3>
-                                                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Seats Requested: {request.seats_requested}</p>
+                                                <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Seats Requested: {request.seats_requested}</p>
 
                                                 <div className="mt-4 space-y-2">
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                                                        <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
                                                         <span className="truncate">{request.origin_address}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -97,7 +97,7 @@ export default function DriverRequestsPage() {
                                         </div>
                                         <div className="flex gap-3">
                                             <Button variant="outline" fullWidth onClick={() => handleAction(request.id, 'reject')} className="font-bold uppercase tracking-widest text-xs">Ignore</Button>
-                                            <Button variant="primary" fullWidth className="bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 font-bold uppercase tracking-widest text-xs border-none" onClick={() => handleAction(request.id, 'approve')}>Accept Request</Button>
+                                            <Button variant="primary" fullWidth className="bg-indigo-500 hover:bg-indigo-600 shadow-lg shadow-indigo-500/20 font-bold uppercase tracking-widest text-xs border-none" onClick={() => handleAction(request.id, 'approve')}>Accept Request</Button>
                                         </div>
                                     </Card>
                                 </motion.div>
@@ -106,8 +106,8 @@ export default function DriverRequestsPage() {
                     ) : (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                             <Card className="text-center py-20">
-                                <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mx-auto mb-6">
-                                    <svg className="w-10 h-10 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <div className="w-20 h-20 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mx-auto mb-6">
+                                    <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>

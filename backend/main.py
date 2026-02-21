@@ -23,7 +23,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Commuto API", version="1.0.0")
 
 # CORS Configuration from environment
-allow_origins = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000").split(",")
+allow_origins = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
 allow_origins = [origin.strip() for origin in allow_origins]
 
 app.add_middleware(

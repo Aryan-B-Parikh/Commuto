@@ -58,7 +58,7 @@ export default function PassengerLivePage() {
                         <div className="absolute top-4 left-4 right-4">
                             <Card variant="glass" padding="sm" className="bg-white/80 dark:bg-black/80 backdrop-blur-md">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                    <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                         </svg>
@@ -69,7 +69,7 @@ export default function PassengerLivePage() {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xs text-gray-500 dark:text-gray-400">ETA</p>
-                                        <p className="font-semibold text-emerald-600 dark:text-emerald-400">{trip.duration}</p>
+                                        <p className="font-semibold text-indigo-600 dark:text-indigo-400">{trip.duration}</p>
                                     </div>
                                 </div>
                             </Card>
@@ -89,7 +89,7 @@ export default function PassengerLivePage() {
                         <div className="mb-4">
                             <div className="flex justify-between mb-2">
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Trip Progress</span>
-                                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{progress}%</span>
+                                <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{progress}%</span>
                             </div>
                             <ProgressBar progress={progress} variant={progress === 100 ? 'success' : 'default'} size="lg" />
                         </div>
@@ -104,7 +104,7 @@ export default function PassengerLivePage() {
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Duration</p>
                             </div>
                             <div className="text-center p-3 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-gray-800">
-                                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">${trip.pricePerSeat}</p>
+                                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">${trip.pricePerSeat}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Fare</p>
                             </div>
                         </div>
@@ -114,13 +114,13 @@ export default function PassengerLivePage() {
                 <div className="space-y-6">
                     <Card padding="md" className="dark:glass">
                         <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">👤</span>
+                            <span className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">👤</span>
                             Your Driver
                         </h3>
                         <PassengerList driver={trip.driver} passengers={[]} />
                         <div className="mt-6 flex gap-3">
                             <Button variant="outline" fullWidth onClick={() => showToast('info', 'Calling driver...')}>Call Driver</Button>
-                            <Button variant="primary" fullWidth className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" onClick={() => showToast('info', 'Starting chat...')}>Message</Button>
+                            <Button variant="primary" fullWidth className="bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/20" onClick={() => showToast('info', 'Starting chat...')}>Message</Button>
                         </div>
                     </Card>
 

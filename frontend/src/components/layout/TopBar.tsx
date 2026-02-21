@@ -51,7 +51,7 @@ export function TopBar({
                     <div className="flex items-center bg-muted/50 rounded-xl p-1 border border-card-border/50">
                         <button
                             onClick={onToggleSidebar}
-                            className="p-2 text-muted-foreground hover:text-emerald-500 hover:bg-card rounded-lg transition-all md:hidden"
+                            className="p-2 text-muted-foreground hover:text-indigo-500 hover:bg-card rounded-lg transition-all md:hidden"
                         >
                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
@@ -59,7 +59,7 @@ export function TopBar({
                         </button>
                         <button
                             onClick={onToggleMini}
-                            className="p-2 text-muted-foreground hover:text-emerald-500 hover:bg-card rounded-lg transition-all hidden md:block"
+                            className="p-2 text-muted-foreground hover:text-indigo-500 hover:bg-card rounded-lg transition-all hidden md:block"
                         >
                             <svg className={`h-5 w-5 transition-transform duration-500 ${isSidebarMini ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
@@ -70,7 +70,7 @@ export function TopBar({
                     <div className="flex flex-col">
                         <h1 className="text-xl font-black text-foreground tracking-tight leading-none uppercase italic">{title}</h1>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{role} Session Active</p>
                         </div>
                     </div>
@@ -80,13 +80,13 @@ export function TopBar({
                     {/* Search Bar - Advanced Design */}
                     <div className="relative group hidden lg:block">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <svg className="h-4 w-4 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-4 w-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
                         <input
                             type="text"
-                            className="block w-72 pl-12 pr-12 py-2.5 border border-card-border/50 rounded-xl leading-5 bg-muted/30 focus:bg-card focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all duration-300 sm:text-sm text-foreground placeholder:text-muted-foreground/50 font-medium"
+                            className="block w-72 pl-12 pr-12 py-2.5 border border-card-border/50 rounded-xl leading-5 bg-muted/30 focus:bg-card focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 sm:text-sm text-foreground placeholder:text-muted-foreground/50 font-medium"
                             placeholder="Find drivers, routes..."
                         />
                         <div className="absolute inset-y-0 right-3 flex items-center">
@@ -103,8 +103,8 @@ export function TopBar({
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
                             className={`p-2.5 rounded-xl transition-all relative border border-transparent ${showNotifications
-                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                                : 'text-muted-foreground hover:bg-muted/80 hover:text-emerald-500 border-card-border/50'
+                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                                : 'text-muted-foreground hover:bg-muted/80 hover:text-indigo-500 border-card-border/50'
                                 }`}
                         >
                             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-card ring-2 ring-red-500/20"></span>
@@ -125,7 +125,7 @@ export function TopBar({
                                     <div className="space-y-4">
                                         {[1, 2].map((i) => (
                                             <div key={i} className="flex gap-3 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer group">
-                                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xs group-hover:bg-emerald-500 group-hover:text-white transition-colors">🚀</div>
+                                                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-xs group-hover:bg-indigo-500 group-hover:text-white transition-colors">🚀</div>
                                                 <div>
                                                     <p className="text-xs font-bold text-foreground leading-tight">New route available from Delhi Central</p>
                                                     <p className="text-[10px] text-muted-foreground mt-1">2 minutes ago</p>
@@ -133,7 +133,7 @@ export function TopBar({
                                             </div>
                                         ))}
                                     </div>
-                                    <button className="w-full mt-4 p-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:bg-emerald-500/5 rounded-lg transition-colors">Clear All History</button>
+                                    <button className="w-full mt-4 p-2 text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:bg-indigo-500/5 rounded-lg transition-colors">Clear All History</button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -153,10 +153,10 @@ export function TopBar({
                                     <img
                                         src={user.avatar}
                                         alt={user.name}
-                                        className="w-10 h-10 rounded-xl object-cover ring-2 ring-emerald-500/20"
+                                        className="w-10 h-10 rounded-xl object-cover ring-2 ring-indigo-500/20"
                                     />
                                 ) : (
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-inner">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-inner">
                                         {user?.name?.charAt(0).toUpperCase() || 'U'}
                                     </div>
                                 )}
@@ -184,7 +184,7 @@ export function TopBar({
                                     <Link
                                         href="/profile"
                                         onClick={() => setIsDropdownOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-emerald-500/5 hover:text-emerald-500 rounded-xl transition-all group"
+                                        className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-indigo-500/5 hover:text-indigo-500 rounded-xl transition-all group"
                                     >
                                         <span className="text-lg group-hover:rotate-12 transition-transform">💎</span>
                                         <span className="font-bold tracking-tight">Personal Profile</span>

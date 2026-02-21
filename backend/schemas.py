@@ -151,7 +151,7 @@ class RazorpayOrderResponse(BaseModel):
     order_id: str
     amount: int  # in paise
     currency: str
-    key_id: str
+    key: str
 
 class VerifyPaymentRequest(BaseModel):
     razorpay_order_id: str
@@ -168,3 +168,8 @@ class TransactionResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+class TransferRequest(BaseModel):
+    recipient_email: EmailStr
+    amount: float = Field(gt=0, le=50000)
+    note: Optional[str] = None

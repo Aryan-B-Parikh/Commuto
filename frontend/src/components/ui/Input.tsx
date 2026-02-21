@@ -25,7 +25,7 @@ export const Input: React.FC<InputProps> = ({
             </label>
             <div className="relative group">
                 {icon && (
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-emerald-600 transition-colors">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-600 transition-colors">
                         {icon}
                     </div>
                 )}
@@ -35,7 +35,7 @@ export const Input: React.FC<InputProps> = ({
             ${icon ? 'pl-11' : 'pl-4'}
             ${error
                             ? 'border-red-300 ring-2 ring-red-50/50 focus:border-red-500'
-                            : 'border-card-border hover:border-muted-foreground/30 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50/50'}
+                            : 'border-card-border hover:border-muted-foreground/30 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50'}
             text-foreground placeholder:text-muted-foreground
           `}
                     {...props}
