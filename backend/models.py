@@ -132,6 +132,7 @@ class Trip(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     driver_id = Column(UUID(as_uuid=True), ForeignKey("drivers.user_id"), nullable=True)
     vehicle_id = Column(UUID(as_uuid=True), ForeignKey("vehicles.id"), nullable=True)
+    creator_passenger_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     
     origin_address = Column(Text, nullable=False)
     origin_lat = Column(Numeric, nullable=False)
@@ -172,7 +173,19 @@ class Trip(Base):
     bookings = relationship("Booking", back_populates="trip", cascade="all, delete-orphan")
     bids = relationship("TripBid", back_populates="trip", cascade="all, delete-orphan")
     locations = relationship("TripLocation", back_populates="trip", cascade="all, delete-orphan")
-    cancelled_by_user = relationship("User", foreign_keys=[cancelled_by])
+    cancelled_by_user = relationship("User", foreign_keys=[cancelled_by], overlaps="cancelled_by_user")
+    creator_passenger = relationship("User", foreign_keys=[creator_passenger_id])
+    passengers = relationship("User", secondary="trip_passengers", backref="joined_shared_trips")
+
+# TripPassenger Association Table
+class TripPassenger(Base):
+    __tablename__ = "trip_passengers"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"), nullable=False)
+    passenger_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    joined_at = Column(DateTime, default=datetime.utcnow)
+    seats_booked = Column(Integer, default=1)
 
 # Booking Model
 class Booking(Base):

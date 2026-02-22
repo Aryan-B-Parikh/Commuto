@@ -4,6 +4,8 @@ export function useTripWebSocket(tripId: string | null) {
     const [isConnected, setIsConnected] = useState(false);
     const [lastLocation, setLastLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [tripStatus, setTripStatus] = useState<string | null>(null);
+    const [availableSeats, setAvailableSeats] = useState<number | null>(null);
+    const [newPassenger, setNewPassenger] = useState<any | null>(null);
     const socketRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -33,6 +35,11 @@ export function useTripWebSocket(tripId: string | null) {
                     setLastLocation({ lat: message.lat, lng: message.lng });
                 } else if (message.type === 'trip_status_update') {
                     setTripStatus(message.status);
+                } else if (message.type === 'seat_update') {
+                    setAvailableSeats(message.available_seats);
+                    if (message.passenger) {
+                        setNewPassenger(message.passenger);
+                    }
                 }
             } catch (error) {
                 console.error('Failed to parse trip WS message:', error);
@@ -97,6 +104,8 @@ export function useTripWebSocket(tripId: string | null) {
         isConnected,
         lastLocation,
         tripStatus,
+        availableSeats,
+        newPassenger,
         sendLocation,
         updateStatus
     };

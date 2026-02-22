@@ -55,22 +55,6 @@ export interface UserResponse {
 }
 
 // Trip Types matching backend
-export interface TripRequest {
-    from_location: {
-        address: string;
-        lat: number;
-        lng: number;
-    };
-    to_location: {
-        address: string;
-        lat: number;
-        lng: number;
-    };
-    date: string;  // YYYY-MM-DD
-    time: string;  // HH:MM
-    seats_requested: number;
-}
-
 export interface TripResponse {
     id: string;
     driver_id?: string;
@@ -82,7 +66,9 @@ export interface TripResponse {
     seats_requested?: number;
     total_seats: number;
     available_seats: number;
-    price_per_seat: number;
+    creator_passenger_id?: string;
+    shared_ride?: boolean;
+    price_per_seat?: number;
     status: string;
     created_at: string;
     driver_name?: string;
@@ -128,3 +114,9 @@ export interface DriverBidWithTrip {
     total_seats: number;
     price_per_seat?: number;
 }
+
+export interface ActionResponse {
+    message: string;
+    success?: boolean;
+}
+

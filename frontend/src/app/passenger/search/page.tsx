@@ -41,8 +41,8 @@ export default function PassengerSearchPage() {
 
     const filteredTrips = trips.filter(trip => {
         const matchesSearch = !searchQuery ||
-            trip.from_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            trip.to_address.toLowerCase().includes(searchQuery.toLowerCase());
+            trip.from_address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            trip.to_address?.toLowerCase().includes(searchQuery.toLowerCase());
         // Note: filterDate matching would need date parsing from start_time
         return matchesSearch && trip.available_seats > 0;
     });

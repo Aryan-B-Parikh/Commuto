@@ -61,35 +61,3 @@ export function transformTripResponse(trip: TripResponse): Trip {
 export function transformTripResponses(trips: TripResponse[]): Trip[] {
     return trips.map(transformTripResponse);
 }
-
-/**
- * Transform frontend Trip creation data to backend TripRequest
- * Used when creating a new trip
- */
-export function prepareTripForBackend(
-    formData: {
-        pickup: string;
-        destination: string;
-        date: string;
-        time: string;
-        passengers: string;
-    },
-    fromCoords?: { lat: number; lng: number },
-    toCoords?: { lat: number; lng: number }
-) {
-    return {
-        from_location: {
-            address: formData.pickup,
-            lat: fromCoords ? fromCoords.lat : 0,
-            lng: fromCoords ? fromCoords.lng : 0
-        },
-        to_location: {
-            address: formData.destination,
-            lat: toCoords ? toCoords.lat : 0,
-            lng: toCoords ? toCoords.lng : 0
-        },
-        date: formData.date,
-        time: formData.time,
-        seats_requested: parseInt(formData.passengers)
-    };
-}

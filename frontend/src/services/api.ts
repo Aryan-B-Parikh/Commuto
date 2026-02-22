@@ -5,7 +5,6 @@ import type {
     LoginRequest,
     AuthResponse,
     UserResponse,
-    TripRequest,
     TripResponse,
     BidRequest,
     BidResponse
@@ -68,11 +67,6 @@ export const authAPI = {
 
 // Trips APIs
 export const tripsAPI = {
-    createTrip: async (data: TripRequest): Promise<TripResponse> => {
-        const response = await api.post<TripResponse>('/rides/request', data);
-        return response.data;
-    },
-
     getOpenRides: async (): Promise<TripResponse[]> => {
         const response = await api.get<TripResponse[]>('/rides/open');
         return response.data;
@@ -95,6 +89,31 @@ export const tripsAPI = {
 
     getDriverEarnings: async (): Promise<any> => {
         const response = await api.get('/rides/driver-earnings');
+        return response.data;
+    },
+
+    createSharedRide: async (data: any): Promise<TripResponse> => {
+        const response = await api.post<TripResponse>('/rides/create-shared', data);
+        return response.data;
+    },
+
+    getAvailableRides: async (): Promise<TripResponse[]> => {
+        const response = await api.get<TripResponse[]>('/rides/available');
+        return response.data;
+    },
+
+    getTripDetails: async (tripId: string): Promise<any> => {
+        const response = await api.get(`/rides/${tripId}/details`);
+        return response.data;
+    },
+
+    joinRide: async (tripId: string): Promise<any> => {
+        const response = await api.post(`/rides/${tripId}/join`);
+        return response.data;
+    },
+
+    leaveRide: async (tripId: string): Promise<any> => {
+        const response = await api.post(`/rides/${tripId}/leave`);
         return response.data;
     },
 };

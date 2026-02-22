@@ -10,6 +10,7 @@ import { tripsAPI } from '@/services/api';
 import { transformTripResponses } from '@/utils/tripTransformers';
 import { formatDate, formatCurrency } from '@/utils/formatters';
 import { ActionResponse } from '@/types/api';
+import { Trip } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { calculateDistance, estimateCO2Saved } from '@/utils/geoUtils';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -39,7 +40,7 @@ export default function PassengerHistoryPage() {
 
     // Calculate Dynamic Stats
     const stats = completedTrips.reduce((acc, trip) => {
-        const distance = calculateDistance(trip.from, trip.to);
+        const distance = calculateDistance(trip.from as any, trip.to as any);
         const co2 = estimateCO2Saved(distance);
 
         return {
@@ -129,7 +130,7 @@ export default function PassengerHistoryPage() {
                                     <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-6 text-3xl">📭</div>
                                     <h3 className="text-xl font-bold text-gray-900 mb-2">No trips yet</h3>
                                     <p className="text-gray-500">Your ride history will appear here once you take your first ride.</p>
-                                    <Link href="/passenger/create" className="inline-block mt-8">
+                                    <Link href="/passenger/ride-sharing" className="inline-block mt-8">
                                         <Button variant="primary" className="px-8">Book a Ride</Button>
                                     </Link>
                                 </Card>

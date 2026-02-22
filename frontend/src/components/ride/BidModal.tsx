@@ -9,6 +9,7 @@ import { bidsAPI } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { TripResponse } from '@/types/api';
 import { Car, DollarSign, MessageSquare, Clock } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatters';
 
 interface BidModalProps {
     isOpen: boolean;
@@ -22,6 +23,12 @@ export const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, trip, onBid
     const [message, setMessage] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { showToast } = useToast() as any;
+
+    React.useEffect(() => {
+        if (trip && trip.creator_passenger_id && trip.price_per_seat) {
+            setAmount((trip.price_per_seat * (trip.total_seats - trip.available_seats)).toString());
+        }
+    }, [trip]);
 
     if (!trip) return null;
 
@@ -71,8 +78,13 @@ export const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, trip, onBid
                         </div>
                         <div className="flex items-center gap-4 mt-3 pt-3 border-t border-card-border/20 text-indigo-600 font-bold uppercase tracking-widest text-[9px]">
                             <span className="flex items-center gap-1"><Clock size={10} /> {new Date(trip.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            <span className="flex items-center gap-1">👥 {trip.seats_requested} Seats</span>
+                            <span className="flex items-center gap-1">👥 {trip.creator_passenger_id ? (trip.total_seats - trip.available_seats) : (trip.seats_requested || 1)} Seats</span>
                         </div>
+                        {trip.creator_passenger_id && trip.price_per_seat && (
+                            <div className="mt-3 px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest text-center">
+                                Shared Ride • Fixed Price Suggested: {formatCurrency(trip.price_per_seat * (trip.total_seats - trip.available_seats))}
+                            </div>
+                        )}
                     </div>
                 </div>
 

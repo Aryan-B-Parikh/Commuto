@@ -11,6 +11,8 @@ from uuid import UUID
 from typing import List, Optional
 from datetime import datetime, timedelta
 import logging
+from websocket_manager import manager
+from fastapi import BackgroundTasks
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
@@ -72,22 +74,19 @@ def get_driver_earnings(
         "recent_trips": recent,
     }
 
-
-@router.post("/request", response_model=trip_schemas.TripResponse, status_code=status.HTTP_201_CREATED)
-@rate_limit(max_requests=5, window_seconds=60, key_suffix="create_trip")
-def create_ride_request(
+@router.post("/create-shared", response_model=trip_schemas.TripResponse, status_code=status.HTTP_201_CREATED)
+@rate_limit(max_requests=5, window_seconds=60, key_suffix="create_shared_trip")
+async def create_shared_ride(
     request: Request,
-    trip_data: trip_schemas.TripCreate,
+    trip_data: trip_schemas.SharedTripCreate,
     current_user: models.User = Depends(auth.require_role(["passenger"])),
     db: Session = Depends(get_db)
 ):
-    """Create a ride request with rate limiting (5 per minute)"""
+    """Create a public shared ride that others can join"""
     
-    # Parse date and time into datetime
+    # Parse date and time
     try:
-        # Combine date and time
         dt_str = f"{trip_data.date} {trip_data.time}"
-        # Try different formats as browsers can be inconsistent
         for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d %I:%M %p"]:
             try:
                 start_time = datetime.strptime(dt_str, fmt)
@@ -95,25 +94,22 @@ def create_ride_request(
             except ValueError:
                 continue
         else:
-            # If loop finishes without break, raise error
             raise ValueError("Invalid format")
-            
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid date/time format. Use YYYY-MM-DD and HH:MM"
+            detail="Invalid date/time format"
         )
     
-    # Validate start time is in the future
     if start_time < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Trip start time must be in the future"
         )
     
-    # Create new trip with UUID and updated schema
     new_trip = models.Trip(
         id=uuid.uuid4(),
+        creator_passenger_id=current_user.id,
         origin_address=trip_data.from_location.address,
         origin_lat=trip_data.from_location.lat,
         origin_lng=trip_data.from_location.lng,
@@ -121,45 +117,231 @@ def create_ride_request(
         dest_lat=trip_data.to_location.lat,
         dest_lng=trip_data.to_location.lng,
         start_time=start_time,
-        total_seats=trip_data.seats_requested,
-        available_seats=trip_data.seats_requested,
-        price_per_seat=0,  # Will be set when bid is accepted
+        total_seats=trip_data.total_seats,
+        available_seats=trip_data.total_seats - 1, # Creator occupies 1 seat
+        price_per_seat=trip_data.price_per_seat,
         status="pending",
         version=0
     )
     
-    # Create booking for the passenger
+    # Creator is the first passenger
     booking = models.Booking(
         id=uuid.uuid4(),
         trip_id=new_trip.id,
         passenger_id=current_user.id,
-        seats_booked=trip_data.seats_requested,
-        total_price=0,
-        status="pending",
+        seats_booked=1,
+        total_price=trip_data.price_per_seat,
+        status="confirmed",
         payment_status="pending"
+    )
+    
+    # Also add to TripPassenger table
+    trip_passenger = models.TripPassenger(
+        id=uuid.uuid4(),
+        trip_id=new_trip.id,
+        passenger_id=current_user.id,
+        seats_booked=1
     )
     
     try:
         db.add(new_trip)
         db.add(booking)
+        db.add(trip_passenger)
         db.commit()
         db.refresh(new_trip)
         
-        # Add backward-compat fields
-        new_trip.seats_requested = trip_data.seats_requested
-        new_trip.from_address = new_trip.origin_address
-        new_trip.to_address = new_trip.dest_address
-        
-        logger.info(f"Trip created: {new_trip.id} by passenger {current_user.id}")
+        # Broadcast to all drivers that a new ride is available
+        await manager.send_to_drivers({
+            "type": "new_ride_available",
+            "trip": {
+                "id": str(new_trip.id),
+                "origin": new_trip.origin_address,
+                "destination": new_trip.dest_address,
+                "start_time": new_trip.start_time.isoformat(),
+                "total_seats": new_trip.total_seats,
+                "available_seats": new_trip.available_seats
+            }
+        })
         
         return new_trip
     except Exception as e:
         db.rollback()
-        logger.error(f"Error creating trip: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create trip"
+        logger.error(f"Error creating shared trip: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create shared trip")
+
+
+@router.get("/available", response_model=List[trip_schemas.TripResponse])
+def get_available_rides(
+    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all public shared rides that have available seats"""
+    rides = db.query(models.Trip).filter(
+        models.Trip.creator_passenger_id != None,
+        models.Trip.status == "pending",
+        models.Trip.available_seats > 0
+    ).all()
+    
+    for ride in rides:
+        ride.from_address = ride.origin_address
+        ride.to_address = ride.dest_address
+    return rides
+
+
+@router.get("/{trip_id}/details", response_model=trip_schemas.TripWithPassengers)
+def get_trip_details(
+    trip_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """Get detailed info about a trip including passengers"""
+    trip = db.query(models.Trip).filter(models.Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Sort out backwards compat fields
+    trip.from_address = trip.origin_address
+    trip.to_address = trip.dest_address
+    
+    # Populate creator manually if needed
+    if trip.creator_passenger_id:
+        creator_user = db.query(models.User).filter(models.User.id == trip.creator_passenger_id).first()
+        trip.creator = creator_user
+
+    return trip
+
+
+@router.post("/{trip_id}/join", status_code=status.HTTP_200_OK)
+async def join_ride(
+    trip_id: UUID,
+    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    db: Session = Depends(get_db)
+):
+    """Join a public shared ride"""
+    try:
+        db.begin_nested()
+        trip = db.query(models.Trip).filter(models.Trip.id == trip_id).with_for_update().first()
+        
+        if not trip:
+            raise HTTPException(status_code=404, detail="Trip not found")
+        
+        if trip.available_seats <= 0:
+            raise HTTPException(status_code=400, detail="Ride is full")
+        
+        # Check if already joined
+        existing = db.query(models.TripPassenger).filter(
+            models.TripPassenger.trip_id == trip_id,
+            models.TripPassenger.passenger_id == current_user.id
+        ).first()
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Already joined this ride")
+        
+        # Add passenger
+        tp = models.TripPassenger(
+            id=uuid.uuid4(),
+            trip_id=trip_id,
+            passenger_id=current_user.id,
+            seats_booked=1
         )
+        
+        # Create booking record
+        booking = models.Booking(
+            id=uuid.uuid4(),
+            trip_id=trip_id,
+            passenger_id=current_user.id,
+            seats_booked=1,
+            total_price=trip.price_per_seat,
+            status="confirmed",
+            payment_status="pending"
+        )
+        
+        # Update trip
+        trip.available_seats -= 1
+        trip.version += 1
+        
+        db.add(tp)
+        db.add(booking)
+        db.commit()
+        
+        # Broadcast seat update to all in the trip
+        await manager.broadcast_to_trip(str(trip_id), {
+            "type": "seat_update",
+            "trip_id": str(trip_id),
+            "available_seats": trip.available_seats,
+            "passenger": {
+                "id": str(current_user.id),
+                "full_name": current_user.full_name,
+                "avatar_url": current_user.avatar_url
+            }
+        })
+        
+        return {"message": "Successfully joined ride", "available_seats": trip.available_seats}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error joining trip: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to join ride")
+
+
+@router.post("/{trip_id}/leave", status_code=status.HTTP_200_OK)
+async def leave_ride(
+    trip_id: UUID,
+    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    db: Session = Depends(get_db)
+):
+    """Leave a joined shared ride"""
+    try:
+        db.begin_nested()
+        trip = db.query(models.Trip).filter(models.Trip.id == trip_id).with_for_update().first()
+        
+        if not trip:
+            raise HTTPException(status_code=404, detail="Trip not found")
+            
+        # Creator cannot "leave" (they must cancel)
+        if trip.creator_passenger_id == current_user.id:
+            raise HTTPException(status_code=400, detail="Creator cannot leave. Use cancel instead.")
+        
+        # Check if joined
+        tp = db.query(models.TripPassenger).filter(
+            models.TripPassenger.trip_id == trip_id,
+            models.TripPassenger.passenger_id == current_user.id
+        ).first()
+        
+        if not tp:
+            raise HTTPException(status_code=400, detail="Not a passenger in this ride")
+        
+        # Remove booking
+        db.query(models.Booking).filter(
+            models.Booking.trip_id == trip_id,
+            models.Booking.passenger_id == current_user.id
+        ).delete()
+        
+        # Remove TripPassenger
+        db.delete(tp)
+        
+        # Update trip
+        trip.available_seats += 1
+        trip.version += 1
+        
+        db.commit()
+        
+        # Broadcast seat update
+        await manager.broadcast_to_trip(str(trip_id), {
+            "type": "seat_update",
+            "trip_id": str(trip_id),
+            "available_seats": trip.available_seats,
+            "left_user_id": str(current_user.id)
+        })
+        
+        return {"message": "Successfully left ride", "available_seats": trip.available_seats}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error leaving trip: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to leave ride")
 
 
 @router.get("/my-trips", response_model=List[trip_schemas.TripResponse])

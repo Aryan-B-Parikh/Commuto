@@ -80,7 +80,7 @@ export function Sidebar({
 
     const passengerLinks = [
         { label: 'Overview', href: '/passenger/dashboard', icon: <LayoutDashboard size={22} strokeWidth={2.5} /> },
-        { label: 'Book a Ride', href: '/passenger/create', icon: <Car size={22} strokeWidth={2.5} /> },
+        { label: 'Book a Ride', href: '/passenger/ride-sharing', icon: <Car size={22} strokeWidth={2.5} /> },
         { label: 'My Trips', href: '/passenger/history', icon: <Clock size={22} strokeWidth={2.5} /> },
         { label: 'Active Trips', href: '/passenger/live', icon: <MapPin size={22} strokeWidth={2.5} /> },
         { label: 'Wallet', href: '/passenger/wallet', icon: <Wallet size={22} strokeWidth={2.5} /> },

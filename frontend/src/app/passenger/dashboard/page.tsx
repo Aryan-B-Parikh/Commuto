@@ -184,7 +184,7 @@ export default function PassengerDashboard() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Link href="/passenger/create" className="group h-full">
+                                <Link href="/passenger/ride-sharing" className="group h-full">
                                     <Card className="bg-indigo-600 border-none p-8 h-full flex flex-col justify-between relative overflow-hidden group-hover:shadow-2xl group-hover:shadow-indigo-500/30 transition-all cursor-pointer">
                                         <div className="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-125 transition-transform" />
 

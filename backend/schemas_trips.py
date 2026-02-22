@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 
@@ -27,17 +27,20 @@ class LocationResponse(BaseModel):
 
 
 # Trip Schemas
-class TripCreate(BaseModel):
+class SharedTripCreate(BaseModel):
     from_location: LocationCreate
     to_location: LocationCreate
     date: str
     time: str
-    seats_requested: int = Field(ge=1, le=4)
+    total_seats: int = Field(ge=1, le=8)
+    price_per_seat: float = Field(gt=0)
+    notes: Optional[str] = None
 
 
 class TripResponse(BaseModel):
     id: UUID
     driver_id: Optional[UUID] = None
+    creator_passenger_id: Optional[UUID] = None
     origin_address: str
     dest_address: str
     origin_lat: float
@@ -150,3 +153,15 @@ class TripCompleteResponse(BaseModel):
     message: str
     trip_id: str
     completed_at: datetime
+
+class PassengerShortInfo(BaseModel):
+    id: UUID
+    full_name: str
+    avatar_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class TripWithPassengers(TripResponse):
+    passengers: List[PassengerShortInfo] = []
+    creator: Optional[PassengerShortInfo] = None
