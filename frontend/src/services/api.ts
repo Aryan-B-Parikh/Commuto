@@ -7,7 +7,9 @@ import type {
     UserResponse,
     TripResponse,
     BidRequest,
-    BidResponse
+    BidResponse,
+    TripPaymentOrderResponse,
+    TripPaymentVerifyRequest
 } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -26,7 +28,12 @@ api.interceptors.response.use(
     error => {
         // Don't log 401 errors to console as they involve expected auth flows
         if (error.response?.status !== 401) {
-            console.error('API Error:', error.response?.data || error.message);
+            console.error('API Error:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message,
+                url: error.config?.url
+            });
         }
         return Promise.reject(error);
     }
@@ -114,6 +121,18 @@ export const tripsAPI = {
 
     leaveRide: async (tripId: string): Promise<any> => {
         const response = await api.post(`/rides/${tripId}/leave`);
+        return response.data;
+    },
+
+    createTripPaymentOrder: async (tripId: string, bookingId: string): Promise<TripPaymentOrderResponse> => {
+        const response = await api.post<TripPaymentOrderResponse>(`/rides/${tripId}/pay-order`, null, {
+            params: { booking_id: bookingId }
+        });
+        return response.data;
+    },
+
+    verifyTripPayment: async (data: TripPaymentVerifyRequest): Promise<any> => {
+        const response = await api.post('/rides/verify-trip-payment', data);
         return response.data;
     },
 };

@@ -173,3 +173,19 @@ class TransferRequest(BaseModel):
     recipient_email: EmailStr
     amount: float = Field(gt=0, le=50000)
     note: Optional[str] = None
+
+# Trip Payment Schemas
+class TripPaymentOrderResponse(BaseModel):
+    order_id: str
+    amount: int  # in paise
+    currency: str
+    key: str
+    trip_id: UUID
+    booking_id: UUID
+
+class TripPaymentVerifyRequest(BaseModel):
+    trip_id: UUID
+    booking_id: UUID
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str

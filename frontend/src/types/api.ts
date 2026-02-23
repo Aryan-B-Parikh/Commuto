@@ -80,6 +80,8 @@ export interface TripResponse {
     dest_lng: number;
     vehicle_details?: string;
     bid_count?: number;
+    booking_total_price?: number;
+    booking_payment_status?: string;
 }
 
 export interface BidRequest {
@@ -120,3 +122,19 @@ export interface ActionResponse {
     success?: boolean;
 }
 
+export interface TripPaymentOrderResponse {
+    order_id: string;
+    amount: number;
+    currency: string;
+    key: string;
+    trip_id: string;
+    booking_id: string;
+}
+
+export interface TripPaymentVerifyRequest {
+    trip_id: string;
+    booking_id: string;
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+}

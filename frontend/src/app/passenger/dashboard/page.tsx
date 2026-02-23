@@ -33,19 +33,13 @@ export default function PassengerDashboard() {
     const { user } = useAuth();
     const [trips, setTrips] = useState<TripResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [walletBalance, setWalletBalance] = useState<number>(0);
     const { showToast } = useToast() as any;
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [tripsData, walletData] = await Promise.all([
-                    tripsAPI.getMyTrips(),
-                    walletAPI.getWallet()
-                ]);
-
+                const tripsData = await tripsAPI.getMyTrips();
                 setTrips(tripsData);
-                setWalletBalance(walletData.balance);
 
                 // Auto-navigation logic: check for active/assigned trips
                 const activeTrip = tripsData.find(t => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
@@ -87,12 +81,20 @@ export default function PassengerDashboard() {
             return acc + estimateCO2Saved(dist);
         }, 0);
 
+        const totalSpent = completedTrips.reduce((acc, trip) => {
+            // Only count if the payment for this specific booking is completed
+            if (trip.booking_payment_status === 'completed') {
+                return acc + (trip.booking_total_price || 0);
+            }
+            return acc;
+        }, 0);
+
         return [
             { label: 'Total Trips', value: trips.length.toString(), icon: <Car size={20} />, color: 'bg-blue-50 text-blue-600', trend: 'Lifetime' },
             { label: 'Carbon Saved', value: `${co2.toFixed(1)}kg`, icon: <Leaf size={20} />, color: 'bg-emerald-50 text-emerald-600', trend: 'Shared' },
-            { label: 'Wallet Balance', value: `₹${walletBalance.toFixed(2)}`, icon: <Wallet size={20} />, color: 'bg-indigo-50 text-indigo-600', trend: 'Safe' },
+            { label: 'Total Spent', value: `₹${totalSpent.toFixed(2)}`, icon: <Wallet size={20} />, color: 'bg-indigo-50 text-indigo-600', trend: 'Safe' },
         ];
-    }, [trips, walletBalance]);
+    }, [trips]);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -206,7 +208,6 @@ export default function PassengerDashboard() {
 
                                 <div className="grid grid-cols-1 gap-4">
                                     {[
-                                        { label: 'My Wallet', desc: 'Secure payments & history', href: '/passenger/wallet', icon: <Wallet size={24} />, color: 'blue' },
                                         { label: 'Active Trips', desc: 'Real-time GPS tracking', href: '/passenger/live', icon: <MapPin size={24} />, color: 'indigo' },
                                     ].map((action, i) => (
                                         <Link key={i} href={action.href}>

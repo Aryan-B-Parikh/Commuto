@@ -34,15 +34,21 @@ export const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, trip, onBid
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!amount || isNaN(Number(amount))) {
+        const bidAmount = Number(amount);
+        if (!amount || isNaN(bidAmount)) {
             showToast('error', 'Please enter a valid amount');
+            return;
+        }
+
+        if (bidAmount <= 0) {
+            showToast('error', 'Bid amount must be greater than zero');
             return;
         }
 
         setIsSubmitting(true);
         try {
             await bidsAPI.placeBid(trip.id, {
-                amount: Number(amount),
+                amount: bidAmount,
                 message: message.trim() || undefined
             });
             showToast('success', 'Bid placed successfully!');
@@ -50,7 +56,22 @@ export const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, trip, onBid
             onClose();
         } catch (error: any) {
             console.error('Failed to place bid:', error);
-            showToast('error', error.response?.data?.detail || 'Failed to place bid');
+
+            // Extract meaningful error message
+            let errorMessage = 'Failed to place bid';
+            const detail = error.response?.data?.detail;
+
+            if (detail) {
+                if (Array.isArray(detail)) {
+                    errorMessage = detail.join(', ');
+                } else if (typeof detail === 'string') {
+                    errorMessage = detail;
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            showToast('error', errorMessage);
         } finally {
             setIsSubmitting(false);
         }

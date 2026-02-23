@@ -31,15 +31,17 @@ const TripMap = dynamic(() => import('@/components/map/TripMap'), {
 });
 
 export default function DriverLivePage() {
-    const { user } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const router = useRouter();
     const [trip, setTrip] = useState<TripResponse | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isFetchingTrip, setIsFetchingTrip] = useState(true);
     const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // 1. Fetch active trip for driver
     useEffect(() => {
         const fetchActiveTrip = async () => {
+            if (isAuthLoading || !user) return;
+
             try {
                 const trips = await tripsAPI.getDriverTrips();
                 const active = trips.find(t => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
@@ -48,15 +50,18 @@ export default function DriverLivePage() {
                 } else {
                     router.push('/driver/dashboard');
                 }
-            } catch (error) {
-                console.error('Failed to fetch active driver trip:', error);
+            } catch (error: any) {
+                // If 401, we let the RoleGuard handle the redirect
+                if (error.response?.status !== 401) {
+                    console.error('Failed to fetch active driver trip:', error);
+                }
             } finally {
-                setIsLoading(false);
+                setIsFetchingTrip(false);
             }
         };
 
         fetchActiveTrip();
-    }, [router]);
+    }, [router, user, isAuthLoading]);
 
     // 2. WebSocket for broadcasting
     const {
@@ -113,7 +118,7 @@ export default function DriverLivePage() {
         return [Number(trip.dest_lat), Number(trip.dest_lng)] as [number, number];
     }, [trip]);
 
-    if (isLoading) return <div className="p-8 text-center">Locating Trip...</div>;
+    if (isFetchingTrip) return <div className="p-8 text-center">Locating Trip...</div>;
     if (!trip) return null;
 
     const currentStatus = trip.status;

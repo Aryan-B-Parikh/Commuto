@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -52,6 +53,27 @@ async def error_handling_middleware(request: Request, call_next):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Internal server error", "type": "internal_error"}
         )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic validation errors and return a consistent format"""
+    errors = exc.errors()
+    # Format the error message to be more readable for the frontend
+    # Pydantic errors are often deeply nested; we simplify it here
+    detail = []
+    for error in errors:
+        loc = ".".join([str(p) for p in error.get("loc", [])])
+        msg = error.get("msg", "Validation error")
+        detail.append(f"{loc}: {msg}")
+    
+    logger.warning(f"Validation error: {detail}")
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": detail if len(detail) > 1 else detail[0] if detail else "Validation failed",
+            "type": "validation_error"
+        }
+    )
 
 # Include routers
 app.include_router(auth_router.router)

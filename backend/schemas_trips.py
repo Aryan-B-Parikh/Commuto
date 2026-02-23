@@ -63,6 +63,10 @@ class TripResponse(BaseModel):
     driver_avatar: Optional[str] = None
     bid_count: int = 0
     
+    # User's booking info (if applicable)
+    booking_total_price: Optional[float] = None
+    booking_payment_status: Optional[str] = None
+    
     class Config:
         from_attributes = True
 
@@ -162,6 +166,14 @@ class PassengerShortInfo(BaseModel):
     class Config:
         from_attributes = True
 
+class BookingShortInfo(BaseModel):
+    id: UUID
+    payment_status: str
+
+    class Config:
+        from_attributes = True
+
 class TripWithPassengers(TripResponse):
     passengers: List[PassengerShortInfo] = []
     creator: Optional[PassengerShortInfo] = None
+    user_booking: Optional[BookingShortInfo] = None

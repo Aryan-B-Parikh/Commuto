@@ -13,6 +13,10 @@ from datetime import datetime, timedelta
 import logging
 from websocket_manager import manager
 from fastapi import BackgroundTasks
+import os
+import hmac
+import hashlib
+import schemas
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
@@ -192,9 +196,10 @@ def get_available_rides(
 @router.get("/{trip_id}/details", response_model=trip_schemas.TripWithPassengers)
 def get_trip_details(
     trip_id: UUID,
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get detailed info about a trip including passengers"""
+    """Get detailed info about a trip including passengers and current user's booking"""
     trip = db.query(models.Trip).filter(models.Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -207,6 +212,14 @@ def get_trip_details(
     if trip.creator_passenger_id:
         creator_user = db.query(models.User).filter(models.User.id == trip.creator_passenger_id).first()
         trip.creator = creator_user
+
+    # Find the current user's booking for this trip
+    user_booking = db.query(models.Booking).filter(
+        models.Booking.trip_id == trip_id,
+        models.Booking.passenger_id == current_user.id
+    ).first()
+    
+    trip.user_booking = user_booking
 
     return trip
 
@@ -361,7 +374,19 @@ def get_my_trips(
     ).order_by(models.Trip.created_at.desc()).all()
     
     for trip in trips:
-        trip.seats_requested = trip.total_seats
+        # Get user's specific booking for this trip
+        booking = db.query(models.Booking).filter(
+            models.Booking.trip_id == trip.id,
+            models.Booking.passenger_id == current_user.id
+        ).first()
+        
+        if booking:
+            trip.booking_total_price = float(booking.total_price)
+            trip.booking_payment_status = booking.payment_status
+            trip.seats_requested = booking.seats_booked
+        else:
+            trip.seats_requested = trip.total_seats
+            
         trip.from_address = trip.origin_address
         trip.to_address = trip.dest_address
         
@@ -646,3 +671,150 @@ def get_trip_locations(
     ).order_by(models.TripLocation.timestamp.desc()).limit(100).all()
     
     return locations
+
+
+@router.post("/{trip_id}/pay-order", response_model=schemas.TripPaymentOrderResponse)
+@rate_limit(max_requests=10, window_seconds=60, key_suffix="trip_pay_order")
+def create_trip_payment_order(
+    request: Request,
+    trip_id: UUID,
+    booking_id: UUID,
+    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    db: Session = Depends(get_db)
+):
+    """Create a Razorpay order for a specific trip booking"""
+    import razorpay
+    
+    key_id = os.getenv("RAZORPAY_KEY_ID")
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+    
+    if not key_id or not key_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Payment service not configured"
+        )
+    
+    # Verify booking exists and belongs to user
+    booking = db.query(models.Booking).filter(
+        models.Booking.id == booking_id,
+        models.Booking.trip_id == trip_id,
+        models.Booking.passenger_id == current_user.id
+    ).first()
+    
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    if booking.payment_status == "completed":
+        raise HTTPException(status_code=400, detail="Booking already paid")
+
+    try:
+        client = razorpay.Client(auth=(key_id, key_secret))
+        
+        amount_paise = int(booking.total_price * 100)
+        
+        order_data = {
+            "amount": amount_paise,
+            "currency": "INR",
+            "receipt": f"t_{str(trip_id)[:20]}_{str(booking_id)[:10]}",
+            "notes": {
+                "trip_id": str(trip_id),
+                "booking_id": str(booking_id),
+                "passenger_id": str(current_user.id),
+                "purpose": "trip_payment"
+            }
+        }
+        
+        order = client.order.create(data=order_data)
+        
+        # Store order ID in booking (if we had a field, otherwise we can just return it)
+        # Assuming we might want to track this. For now just return it.
+        
+        return {
+            "order_id": order["id"],
+            "amount": amount_paise,
+            "currency": "INR",
+            "key": key_id,
+            "trip_id": trip_id,
+            "booking_id": booking_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating Razorpay trip order: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create payment order")
+
+
+@router.post("/verify-trip-payment")
+@rate_limit(max_requests=10, window_seconds=60, key_suffix="verify_trip_payment")
+def verify_trip_payment(
+    request: Request,
+    payment_data: schemas.TripPaymentVerifyRequest,
+    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    db: Session = Depends(get_db)
+):
+    """Verify Razorpay payment for a trip and credit the driver"""
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+    
+    if not key_secret:
+        raise HTTPException(status_code=503, detail="Payment service not configured")
+    
+    try:
+        # 1. Verify signature
+        message = f"{payment_data.razorpay_order_id}|{payment_data.razorpay_payment_id}"
+        expected_signature = hmac.new(
+            key_secret.encode(),
+            message.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        if expected_signature != payment_data.razorpay_signature:
+            raise HTTPException(status_code=400, detail="Invalid payment signature")
+        
+        # 2. Get booking and trip
+        booking = db.query(models.Booking).filter(
+            models.Booking.id == payment_data.booking_id,
+            models.Booking.passenger_id == current_user.id
+        ).first()
+        
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+        
+        trip = db.query(models.Trip).filter(models.Trip.id == booking.trip_id).first()
+        if not trip:
+            raise HTTPException(status_code=404, detail="Trip not found")
+
+        # 3. Update status
+        booking.payment_status = "completed"
+        
+        # 4. Credit Driver Wallet
+        if trip.driver_id:
+            from routers.wallet_router import get_or_create_wallet
+            from decimal import Decimal
+            
+            driver_wallet = get_or_create_wallet(trip.driver_id, db)
+            amount = Decimal(str(booking.total_price))
+            driver_wallet.balance += amount
+            
+            # Create earning transaction for driver
+            transaction = models.Transaction(
+                wallet_id=driver_wallet.id,
+                amount=amount,
+                type="credit",
+                description=f"Earning from Trip: {trip.origin_address.split(',')[0]} to {trip.dest_address.split(',')[0]}",
+                status="completed",
+                razorpay_order_id=payment_data.razorpay_order_id,
+                razorpay_payment_id=payment_data.razorpay_payment_id
+            )
+            db.add(transaction)
+        
+        db.commit()
+        
+        logger.info(f"Trip payment verified: {payment_data.booking_id}. Driver {trip.driver_id} credited.")
+        
+        return {"status": "success", "message": "Payment verified and driver credited"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error verifying trip payment: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to verify payment")

@@ -83,7 +83,6 @@ export function Sidebar({
         { label: 'Book a Ride', href: '/passenger/ride-sharing', icon: <Car size={22} strokeWidth={2.5} /> },
         { label: 'My Trips', href: '/passenger/history', icon: <Clock size={22} strokeWidth={2.5} /> },
         { label: 'Active Trips', href: '/passenger/live', icon: <MapPin size={22} strokeWidth={2.5} /> },
-        { label: 'Wallet', href: '/passenger/wallet', icon: <Wallet size={22} strokeWidth={2.5} /> },
         { label: 'Settings', href: '/profile', icon: <Settings size={22} strokeWidth={2.5} /> },
     ];
 

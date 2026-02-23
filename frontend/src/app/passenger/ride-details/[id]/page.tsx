@@ -15,6 +15,7 @@ import { formatCurrency } from '@/utils/formatters';
 import dynamic from 'next/dynamic';
 
 const MapWidget = dynamic(() => import('@/components/map/MapWidget').then(mod => mod.MapWidget), { ssr: false });
+import { TripPaymentModal } from '@/components/ride/TripPaymentModal';
 
 export default function RideDetailsPage() {
     const params = useParams();
@@ -26,6 +27,7 @@ export default function RideDetailsPage() {
     const [trip, setTrip] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isJoining, setIsJoining] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const { isConnected, availableSeats, newPassenger } = useTripWebSocket(tripId);
 
@@ -181,9 +183,27 @@ export default function RideDetailsPage() {
 
                             <div className="space-y-4">
                                 {isMember ? (
-                                    <Button className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 font-bold text-lg rounded-2xl cursor-default">
-                                        Joined Successfully
-                                    </Button>
+                                    <div className="space-y-3">
+                                        <Button className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 font-bold text-lg rounded-2xl cursor-default">
+                                            Joined Successfully
+                                        </Button>
+
+                                        {trip.user_booking?.payment_status === 'pending' && (
+                                            <Button
+                                                onClick={() => setIsPaymentModalOpen(true)}
+                                                className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-black italic tracking-widest uppercase rounded-xl shadow-lg shadow-indigo-200"
+                                            >
+                                                💳 Pay {formatCurrency(trip.price_per_seat)} Now
+                                            </Button>
+                                        )}
+
+                                        {trip.user_booking?.payment_status === 'completed' && (
+                                            <div className="flex items-center justify-center gap-2 p-3 bg-green-50 rounded-xl border border-green-100">
+                                                <Shield className="w-4 h-4 text-green-600" />
+                                                <span className="text-xs font-black text-green-700 uppercase tracking-widest">Payment Completed</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 ) : (
                                     <Button
                                         onClick={handleJoin}
@@ -261,6 +281,21 @@ export default function RideDetailsPage() {
 
                 </div>
             </div>
+
+            {trip.user_booking && (
+                <TripPaymentModal
+                    isOpen={isPaymentModalOpen}
+                    onClose={() => setIsPaymentModalOpen(false)}
+                    tripId={tripId}
+                    bookingId={trip.user_booking.id}
+                    amount={trip.price_per_seat}
+                    tripName={trip.dest_address.split(',')[0]}
+                    onSuccess={async () => {
+                        const updated = await tripsAPI.getTripDetails(tripId);
+                        setTrip(updated);
+                    }}
+                />
+            )}
         </DashboardLayout>
     );
 }
