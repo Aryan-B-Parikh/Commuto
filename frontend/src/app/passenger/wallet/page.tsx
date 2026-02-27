@@ -18,7 +18,7 @@ import { RoleGuard } from '@/components/auth/RoleGuard';
 export default function WalletPage() {
     const { user } = useAuth();
     const { showToast } = useToast() as any;
-    const [balance, setBalance] = useState({ amount: 0 });
+    const [balance, setBalance] = useState({ balance: 0, currency: 'USD' });
     const [transactions, setTransactions] = useState<any[]>([]);
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,7 +63,7 @@ export default function WalletPage() {
                                         <div>
                                             <p className="text-indigo-100 text-xs font-black uppercase tracking-widest mb-2 opacity-80">Total Available Balance</p>
                                             <h2 className="text-6xl font-black text-white italic tracking-tighter leading-none">
-                                                {formatCurrency(balance.amount)}
+                                                {formatCurrency(balance.balance)}
                                             </h2>
                                         </div>
                                         <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl border border-white/20">
@@ -94,14 +94,14 @@ export default function WalletPage() {
                         {/* Payment Methods */}
                         <section>
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-black text-gray-900 italic tracking-tighter uppercase flex items-center gap-3 flex-1">
+                                <h3 className="text-xl font-black text-[#F9FAFB] italic tracking-tighter uppercase flex items-center gap-3 flex-1">
                                     Payment Methods
-                                    <span className="h-0.5 flex-1 bg-gray-100" />
+                                    <span className="h-0.5 flex-1 bg-[#1E293B]" />
                                 </h3>
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-xs font-bold text-indigo-500 uppercase tracking-widest"
+                                    className="text-xs font-bold text-indigo-400 uppercase tracking-widest"
                                     onClick={() => setIsAddCardOpen(true)}
                                 >
                                     + Add New
@@ -119,24 +119,24 @@ export default function WalletPage() {
                                         <Card hoverable className="border-none shadow-sm px-6 py-5 relative group border-2 border-transparent hover:border-indigo-500/20">
                                             <div className="flex justify-between items-start">
                                                 <div className="flex gap-4">
-                                                    <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center font-bold text-xs uppercase">
+                                                    <div className="w-12 h-8 bg-[#1E293B] rounded flex items-center justify-center font-bold text-xs uppercase text-[#9CA3AF]">
                                                         {method.brand || 'CARD'}
                                                     </div>
                                                     <div>
-                                                        <p className="font-black text-gray-900 tracking-widest">•••• {method.last4}</p>
-                                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Expires {method.expiry || 'MM/YY'}</p>
+                                                        <p className="font-black text-[#F9FAFB] tracking-widest">•••• {method.last4}</p>
+                                                        <p className="text-[10px] text-[#6B7280] font-bold uppercase tracking-widest">Expires {method.expiry || 'MM/YY'}</p>
                                                     </div>
                                                 </div>
                                                 {method.is_default && (
-                                                    <span className="text-[8px] font-black bg-green-500/10 text-green-600 px-2 py-1 rounded-full uppercase tracking-tighter">Primary</span>
+                                                    <span className="text-[8px] font-black bg-green-500/10 text-green-400 px-2 py-1 rounded-full uppercase tracking-tighter">Primary</span>
                                                 )}
                                             </div>
                                         </Card>
                                     </motion.div>
                                 ))}
                                 {paymentMethods.length === 0 && (
-                                    <div className="col-span-full py-10 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-                                        <p className="text-sm text-gray-500 font-medium">No payment methods added yet.</p>
+                                    <div className="col-span-full py-10 text-center border-2 border-dashed border-[#1E293B] rounded-2xl">
+                                        <p className="text-sm text-[#6B7280] font-medium">No payment methods added yet.</p>
                                     </div>
                                 )}
                             </div>
@@ -145,13 +145,13 @@ export default function WalletPage() {
 
                     {/* Right Column - Transaction History */}
                     <div className="space-y-6">
-                        <h3 className="text-xl font-black text-gray-900 italic tracking-tighter uppercase flex items-center gap-3">
+                        <h3 className="text-xl font-black text-[#F9FAFB] italic tracking-tighter uppercase flex items-center gap-3">
                             Activity
-                            <span className="h-0.5 flex-1 bg-gray-100" />
+                            <span className="h-0.5 flex-1 bg-[#1E293B]" />
                         </h3>
 
                         <Card className="border-none shadow-sm p-0 overflow-hidden">
-                            <div className="divide-y divide-gray-100">
+                            <div className="divide-y divide-[#1E293B]">
                                 {transactions.length > 0 ? (
                                     transactions.map((tx, i) => (
                                         <motion.div
@@ -159,19 +159,19 @@ export default function WalletPage() {
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             transition={{ delay: i * 0.05 }}
-                                            className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                            className="px-6 py-4 flex items-center justify-between hover:bg-[#1E293B]/50 transition-colors"
                                         >
                                             <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${tx.type === 'credit' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${tx.type === 'credit' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
                                                     }`}>
                                                     {tx.type === 'credit' ? '↓' : '↑'}
                                                 </div>
                                                 <div>
-                                                    <p className="font-black text-gray-900 text-sm italic tracking-tighter">{tx.description || tx.type}</p>
-                                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{new Date(tx.created_at).toLocaleDateString()}</p>
+                                                    <p className="font-black text-[#F9FAFB] text-sm italic tracking-tighter">{tx.description || tx.type}</p>
+                                                    <p className="text-[10px] text-[#6B7280] font-bold uppercase tracking-widest">{new Date(tx.created_at).toLocaleDateString()}</p>
                                                 </div>
                                             </div>
-                                            <p className={`font-black italic tracking-tighter ${tx.type === 'credit' ? 'text-green-600' : 'text-gray-900'
+                                            <p className={`font-black italic tracking-tighter ${tx.type === 'credit' ? 'text-green-400' : 'text-[#F9FAFB]'
                                                 }`}>
                                                 {tx.type === 'credit' ? '+' : '-'}{formatCurrency(tx.amount)}
                                             </p>
@@ -179,7 +179,7 @@ export default function WalletPage() {
                                     ))
                                 ) : (
                                     <div className="py-20 text-center px-6">
-                                        <p className="text-sm text-gray-500 font-medium">No recent transactions to show.</p>
+                                        <p className="text-sm text-[#6B7280] font-medium">No recent transactions to show.</p>
                                     </div>
                                 )}
                             </div>
@@ -202,7 +202,7 @@ export default function WalletPage() {
                     isOpen={isSendMoneyOpen}
                     onClose={() => setIsSendMoneyOpen(false)}
                     onSuccess={fetchWalletData}
-                    balance={balance.amount}
+                    balance={balance.balance}
                 />
             </DashboardLayout>
         </RoleGuard>

@@ -35,10 +35,8 @@ export const TripPaymentModal: React.FC<TripPaymentModalProps> = ({
         setIsLoading(true);
 
         try {
-            // 1. Create Order on Backend for the specific trip booking
             const order = await tripsAPI.createTripPaymentOrder(tripId, bookingId);
 
-            // 2. Open Razorpay Checkout
             const options = {
                 key: order.key,
                 amount: order.amount,
@@ -48,7 +46,6 @@ export const TripPaymentModal: React.FC<TripPaymentModalProps> = ({
                 order_id: order.order_id,
                 handler: async function (response: any) {
                     try {
-                        // 3. Verify Payment on Backend
                         const result = await tripsAPI.verifyTripPayment({
                             trip_id: tripId,
                             booking_id: bookingId,
@@ -93,33 +90,33 @@ export const TripPaymentModal: React.FC<TripPaymentModalProps> = ({
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Complete Ride Payment" size="sm">
             <div className="space-y-6">
-                <div className="text-center p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-1">Amount to Pay</p>
-                    <h2 className="text-4xl font-black text-slate-900 italic tracking-tighter">
+                <div className="text-center p-6 bg-[#1E293B] rounded-2xl border border-[#374151]">
+                    <p className="text-[#6B7280] font-bold uppercase tracking-widest text-xs mb-1">Amount to Pay</p>
+                    <h2 className="text-4xl font-black text-[#F9FAFB] italic tracking-tighter">
                         {formatCurrency(amount)}
                     </h2>
-                    <p className="text-xs text-slate-400 font-medium mt-2">
-                        For your ride to <span className="text-slate-600 font-bold">{tripName}</span>
+                    <p className="text-xs text-[#6B7280] font-medium mt-2">
+                        For your ride to <span className="text-[#9CA3AF] font-bold">{tripName}</span>
                     </p>
                 </div>
 
                 <div className="space-y-3">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+                    <p className="text-[10px] text-[#6B7280] font-bold uppercase tracking-widest text-center">
                         Securely pay via UPI, GPay, or Card
                     </p>
                     <Button
                         onClick={handlePayment}
                         disabled={isLoading}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 h-14 text-lg font-black italic tracking-widest uppercase shadow-xl shadow-indigo-100"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 h-14 text-lg font-black italic tracking-widest uppercase shadow-xl shadow-indigo-500/20"
                     >
                         {isLoading ? 'Processing...' : `Pay ${formatCurrency(amount)} Now`}
                     </Button>
                 </div>
 
                 <div className="flex items-center justify-center gap-2 opacity-40">
-                    <div className="w-16 h-px bg-slate-400" />
-                    <span className="text-[8px] font-bold uppercase tracking-widest">Razorpay Secure</span>
-                    <div className="w-16 h-px bg-slate-400" />
+                    <div className="w-16 h-px bg-[#374151]" />
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-[#6B7280]">Razorpay Secure</span>
+                    <div className="w-16 h-px bg-[#374151]" />
                 </div>
             </div>
         </Modal>

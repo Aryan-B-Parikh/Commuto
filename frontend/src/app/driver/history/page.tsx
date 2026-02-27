@@ -10,15 +10,7 @@ import { tripsAPI } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { calculateDistance } from '@/utils/geoUtils';
 import { TripResponse } from '@/types/api';
-import {
-    Car,
-    Loader2,
-    Inbox,
-    TrendingUp,
-    Navigation,
-    Calendar,
-    Users,
-} from 'lucide-react';
+import { Car, Loader2, Inbox, TrendingUp, Navigation, Calendar, Users } from 'lucide-react';
 
 export default function DriverHistoryPage() {
     const { showToast } = useToast() as any;
@@ -55,8 +47,8 @@ export default function DriverHistoryPage() {
             <RoleGuard allowedRoles={['driver']}>
                 <DashboardLayout userType="driver" title="Ride History">
                     <div className="flex flex-col items-center justify-center py-32">
-                        <Loader2 size={32} className="animate-spin text-indigo-500 mb-4" />
-                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Loading history...</p>
+                        <Loader2 size={32} className="animate-spin text-indigo-400 mb-4" />
+                        <p className="text-sm font-bold text-[#9CA3AF] uppercase tracking-widest">Loading history...</p>
                     </div>
                 </DashboardLayout>
             </RoleGuard>
@@ -70,9 +62,9 @@ export default function DriverHistoryPage() {
                     {/* Left Column: History Items */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-foreground">Past Missions</h2>
+                            <h2 className="text-xl font-bold text-[#F9FAFB]">Past Missions</h2>
                             <div className="flex gap-2">
-                                <span className="text-sm font-bold text-blue-600 px-3 py-1 bg-blue-50 rounded-full">{completedTrips.length} Rides</span>
+                                <span className="text-sm font-bold text-blue-400 px-3 py-1 bg-blue-500/10 rounded-full">{completedTrips.length} Rides</span>
                             </div>
                         </div>
 
@@ -95,7 +87,7 @@ export default function DriverHistoryPage() {
                                         >
                                             <Card hoverable className="border-none shadow-sm px-6 py-5">
                                                 <div className="flex items-center gap-6">
-                                                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex flex-col items-center justify-center text-indigo-600">
+                                                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex flex-col items-center justify-center text-indigo-400">
                                                         <span className="text-[10px] font-black leading-none uppercase">
                                                             {tripDate.toLocaleDateString('en-GB', { month: 'short' })}
                                                         </span>
@@ -104,25 +96,25 @@ export default function DriverHistoryPage() {
 
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center justify-between mb-2">
-                                                            <h3 className="font-bold text-foreground truncate text-sm">
-                                                                {trip.origin_address} <span className="text-muted-foreground font-medium mx-1">→</span> {trip.dest_address}
+                                                            <h3 className="font-bold text-[#F9FAFB] truncate text-sm">
+                                                                {trip.origin_address} <span className="text-[#9CA3AF] font-medium mx-1">→</span> {trip.dest_address}
                                                             </h3>
-                                                            <span className="text-xl font-black text-emerald-600 shrink-0 ml-3">
+                                                            <span className="text-xl font-black text-emerald-400 shrink-0 ml-3">
                                                                 +{formatCurrency(earning)}
                                                             </span>
                                                         </div>
 
-                                                        <div className="flex items-center gap-4 text-muted-foreground">
+                                                        <div className="flex items-center gap-4 text-[#9CA3AF]">
                                                             <div className="flex items-center gap-1.5">
-                                                                <Navigation size={12} className="text-indigo-500" />
+                                                                <Navigation size={12} className="text-indigo-400" />
                                                                 <span className="text-[10px] font-bold uppercase tracking-widest">{dist} km</span>
                                                             </div>
                                                             <div className="flex items-center gap-1.5">
-                                                                <Users size={12} className="text-indigo-500" />
+                                                                <Users size={12} className="text-indigo-400" />
                                                                 <span className="text-[10px] font-bold uppercase tracking-widest">{trip.total_seats} seats</span>
                                                             </div>
                                                             <div className="flex items-center gap-1.5">
-                                                                <Calendar size={12} className="text-indigo-500" />
+                                                                <Calendar size={12} className="text-indigo-400" />
                                                                 <span className="text-[10px] font-bold uppercase tracking-widest">
                                                                     {tripDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                                                 </span>
@@ -137,11 +129,11 @@ export default function DriverHistoryPage() {
                             </div>
                         ) : (
                             <Card className="text-center py-20 border-none shadow-sm">
-                                <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+                                <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-4">
                                     <Inbox size={28} className="text-indigo-400" />
                                 </div>
-                                <h3 className="text-lg font-bold text-foreground mb-1">No rides yet</h3>
-                                <p className="text-sm text-muted-foreground">Complete trips to see your ride history here.</p>
+                                <h3 className="text-lg font-bold text-[#F9FAFB] mb-1">No rides yet</h3>
+                                <p className="text-sm text-[#9CA3AF]">Complete trips to see your ride history here.</p>
                             </Card>
                         )}
                     </div>
@@ -150,37 +142,37 @@ export default function DriverHistoryPage() {
                     <div className="space-y-6">
                         <Card className="overflow-hidden relative border-none shadow-sm">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-600" />
-                            <h3 className="text-lg font-bold text-foreground mb-6">Driver Overview</h3>
+                            <h3 className="text-lg font-bold text-[#F9FAFB] mb-6">Driver Overview</h3>
 
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                                             <TrendingUp size={18} />
                                         </div>
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Earned</p>
+                                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Total Earned</p>
                                     </div>
-                                    <p className="text-xl font-black text-foreground">{formatCurrency(earnings?.total || 0)}</p>
+                                    <p className="text-xl font-black text-[#F9FAFB]">{formatCurrency(earnings?.total || 0)}</p>
                                 </div>
 
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                                             <Car size={18} />
                                         </div>
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Trips</p>
+                                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Total Trips</p>
                                     </div>
-                                    <p className="text-xl font-black text-foreground">{earnings?.total_trips || 0}</p>
+                                    <p className="text-xl font-black text-[#F9FAFB]">{earnings?.total_trips || 0}</p>
                                 </div>
 
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                                             <Navigation size={18} />
                                         </div>
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg / Trip</p>
+                                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Avg / Trip</p>
                                     </div>
-                                    <p className="text-xl font-black text-foreground">{formatCurrency(earnings?.avg_per_trip || 0)}</p>
+                                    <p className="text-xl font-black text-[#F9FAFB]">{formatCurrency(earnings?.avg_per_trip || 0)}</p>
                                 </div>
                             </div>
                         </Card>

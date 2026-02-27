@@ -14,10 +14,10 @@ export const PassengerSelector: React.FC<PassengerSelectorProps> = ({ value, onC
 
     return (
         <div className="space-y-3">
-            <label className="text-xs font-black text-muted-foreground uppercase tracking-widest pl-1">
+            <label className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest pl-1">
                 Number of Passengers
             </label>
-            <div className="flex p-1.5 bg-muted/30 border border-card-border/50 rounded-2xl gap-1.5 overflow-hidden">
+            <div className="flex p-1.5 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-2xl gap-1.5 overflow-hidden">
                 {options.map((num) => {
                     const isActive = value === num;
                     return (
@@ -34,7 +34,7 @@ export const PassengerSelector: React.FC<PassengerSelectorProps> = ({ value, onC
                                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                                 />
                             )}
-                            <div className={`relative z-10 flex items-center justify-center gap-1.5 transition-all duration-300 ${isActive ? 'text-white scale-110' : 'text-muted-foreground hover:text-foreground'
+                            <div className={`relative z-10 flex items-center justify-center gap-1.5 transition-all duration-300 ${isActive ? 'text-white scale-110' : 'text-[#9CA3AF] hover:text-[#F9FAFB]'
                                 }`}>
                                 <User className={`w-4 h-4 ${isActive ? 'fill-white/20' : ''}`} />
                                 <span className="font-black text-sm">{num}</span>

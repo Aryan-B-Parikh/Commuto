@@ -29,21 +29,21 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     };
 
     const variantStyles = {
-        default: 'bg-blue-500',
-        success: 'bg-green-500',
-        warning: 'bg-yellow-500',
-        danger: 'bg-red-500',
+        default: 'bg-gradient-to-r from-indigo-500 to-indigo-400',
+        success: 'bg-gradient-to-r from-emerald-500 to-emerald-400',
+        warning: 'bg-gradient-to-r from-amber-500 to-amber-400',
+        danger: 'bg-gradient-to-r from-red-500 to-red-400',
     };
 
     return (
         <div className={`w-full ${className}`}>
             {showLabel && (
                 <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Progress</span>
-                    <span className="text-sm font-semibold text-foreground">{clampedProgress}%</span>
+                    <span className="text-sm font-medium text-[#9CA3AF]">Progress</span>
+                    <span className="text-sm font-semibold text-[#F9FAFB]">{clampedProgress}%</span>
                 </div>
             )}
-            <div className={`w-full bg-gray-200 rounded-full overflow-hidden ${sizeStyles[size]}`}>
+            <div className={`w-full bg-[#1E293B] rounded-full overflow-hidden ${sizeStyles[size]}`}>
                 <motion.div
                     className={`h-full rounded-full ${variantStyles[variant]}`}
                     initial={animated ? { width: 0 } : { width: `${clampedProgress}%` }}

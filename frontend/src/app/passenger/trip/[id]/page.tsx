@@ -34,7 +34,7 @@ import dynamic from 'next/dynamic';
 
 const TripMap = dynamic(() => import('@/components/map/TripMap'), {
     ssr: false,
-    loading: () => <div className="w-full h-full bg-slate-100 animate-pulse rounded-2xl" />
+    loading: () => <div className="w-full h-full bg-[#1E293B] animate-pulse rounded-2xl" />
 });
 
 export default function PassengerTripDetailsPage() {
@@ -65,7 +65,6 @@ export default function PassengerTripDetailsPage() {
                 setTrip(transformTripResponse(foundTrip));
                 setRawTrip(foundTrip);
 
-                // Fetch bids if trip is pending
                 if (foundTrip.status === 'pending') {
                     try {
                         const bidsData = await bidsAPI.getRideBids(tripId);
@@ -86,7 +85,6 @@ export default function PassengerTripDetailsPage() {
         }
     };
 
-    // Real-time bid updates
     useSocketEvent('new_bid', (data: any) => {
         console.log('New bid received:', data);
         setBids(prev => {
@@ -129,12 +127,12 @@ export default function PassengerTripDetailsPage() {
     }, [rawTrip]);
 
     const statusConfig: Record<string, { bg: string, text: string, label: string, dot: string }> = {
-        pending: { bg: 'bg-amber-50', text: 'text-amber-600', label: 'Awaiting Bids', dot: 'bg-amber-500' },
-        bid_accepted: { bg: 'bg-blue-50', text: 'text-blue-600', label: 'Driver Assigned', dot: 'bg-blue-500' },
-        driver_assigned: { bg: 'bg-indigo-50', text: 'text-indigo-600', label: 'Driver En Route', dot: 'bg-indigo-500' },
-        active: { bg: 'bg-emerald-50', text: 'text-emerald-600', label: 'In Progress', dot: 'bg-emerald-500' },
-        completed: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Completed', dot: 'bg-slate-500' },
-        cancelled: { bg: 'bg-red-50', text: 'text-red-600', label: 'Cancelled', dot: 'bg-red-500' },
+        pending: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Awaiting Bids', dot: 'bg-amber-500' },
+        bid_accepted: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Driver Assigned', dot: 'bg-blue-500' },
+        driver_assigned: { bg: 'bg-indigo-500/10', text: 'text-indigo-400', label: 'Driver En Route', dot: 'bg-indigo-500' },
+        active: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'In Progress', dot: 'bg-emerald-500' },
+        completed: { bg: 'bg-[#1E293B]', text: 'text-[#6B7280]', label: 'Completed', dot: 'bg-[#6B7280]' },
+        cancelled: { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Cancelled', dot: 'bg-red-500' },
     };
 
     const currentStatus = statusConfig[trip?.status || 'pending'] || statusConfig.pending;
@@ -152,8 +150,8 @@ export default function PassengerTripDetailsPage() {
             <RoleGuard allowedRoles={['passenger']}>
                 <DashboardLayout userType="passenger" title="Trip Details">
                     <div className="flex flex-col items-center justify-center py-32">
-                        <Loader2 size={32} className="animate-spin text-indigo-500 mb-4" />
-                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Loading trip details...</p>
+                        <Loader2 size={32} className="animate-spin text-indigo-400 mb-4" />
+                        <p className="text-sm font-bold text-[#9CA3AF] uppercase tracking-widest">Loading trip details...</p>
                     </div>
                 </DashboardLayout>
             </RoleGuard>
@@ -170,38 +168,38 @@ export default function PassengerTripDetailsPage() {
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="max-w-6xl mx-auto space-y-8 pb-12"
+                    className="max-w-6xl mx-auto space-y-6 lg:space-y-8 pb-12"
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 lg:gap-4">
                             <button
                                 onClick={() => router.back()}
-                                className="p-2.5 rounded-xl border border-card-border hover:bg-muted transition-colors"
+                                className="p-2.5 rounded-xl border border-[#1E293B] hover:bg-[#1E293B] transition-colors text-[#F9FAFB]"
                             >
                                 <ArrowLeft size={18} />
                             </button>
                             <div>
-                                <h2 className="text-2xl font-extrabold text-foreground tracking-tight">Trip Details</h2>
-                                <p className="text-sm text-muted-foreground font-medium">
+                                <h2 className="text-xl lg:text-2xl font-extrabold text-[#F9FAFB] tracking-tight">Trip Details</h2>
+                                <p className="text-sm text-[#9CA3AF] font-medium">
                                     ID: {tripId.substring(0, 8).toUpperCase()}
                                 </p>
                             </div>
                         </div>
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${currentStatus.bg}`}>
+                        <div className={`flex items-center gap-2 px-3 lg:px-4 py-1.5 lg:py-2 rounded-full ${currentStatus.bg}`}>
                             <div className={`w-2 h-2 rounded-full ${currentStatus.dot} animate-pulse`} />
-                            <span className={`text-xs font-bold uppercase tracking-widest ${currentStatus.text}`}>
+                            <span className={`text-[10px] lg:text-xs font-bold uppercase tracking-widest ${currentStatus.text}`}>
                                 {currentStatus.label}
                             </span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
                         {/* Left Column – Route & Map */}
                         <div className="lg:col-span-7 space-y-6">
                             {/* Map */}
                             <Card className="p-0 border-none shadow-lg overflow-hidden rounded-2xl">
-                                <div className="h-[350px] relative">
+                                <div className="h-[250px] lg:h-[350px] relative">
                                     <TripMap
                                         passengerPos={passengerPos}
                                         destinationPos={destinationPos}
@@ -210,66 +208,64 @@ export default function PassengerTripDetailsPage() {
                             </Card>
 
                             {/* Route Info Card */}
-                            <Card className="border-none shadow-sm p-6">
+                            <Card className="border-none shadow-sm p-5 lg:p-6">
                                 <div className="flex items-start gap-4">
-                                    {/* Route Line */}
                                     <div className="flex flex-col items-center pt-1">
-                                        <div className="w-3 h-3 rounded-full bg-indigo-500 ring-4 ring-indigo-100" />
-                                        <div className="w-0.5 h-16 bg-gradient-to-b from-indigo-300 to-red-300 my-1" />
-                                        <div className="w-3 h-3 rounded-full bg-red-500 ring-4 ring-red-100" />
+                                        <div className="w-3 h-3 rounded-full bg-indigo-500 ring-4 ring-indigo-500/20" />
+                                        <div className="w-0.5 h-16 bg-gradient-to-b from-indigo-500/30 to-red-500/30 my-1" />
+                                        <div className="w-3 h-3 rounded-full bg-red-500 ring-4 ring-red-500/20" />
                                     </div>
 
-                                    {/* Route Details */}
                                     <div className="flex-1 space-y-6">
                                         <div>
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Pickup</p>
-                                            <p className="font-bold text-foreground text-sm leading-snug">{trip.from.name}</p>
+                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Pickup</p>
+                                            <p className="font-bold text-[#F9FAFB] text-sm leading-snug">{trip.from.name}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Destination</p>
-                                            <p className="font-bold text-foreground text-sm leading-snug">{trip.to.name}</p>
+                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Destination</p>
+                                            <p className="font-bold text-[#F9FAFB] text-sm leading-snug">{trip.to.name}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Stats Strip */}
-                                <div className="mt-6 pt-5 border-t border-card-border grid grid-cols-3 gap-4">
+                                <div className="mt-6 pt-5 border-t border-[#1E293B] grid grid-cols-3 gap-4">
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
-                                            <Navigation size={14} className="text-indigo-500" />
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Distance</p>
+                                            <Navigation size={14} className="text-indigo-400" />
+                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Distance</p>
                                         </div>
-                                        <p className="text-lg font-black text-foreground">{distance} km</p>
+                                        <p className="text-lg font-black text-[#F9FAFB]">{distance} km</p>
                                     </div>
-                                    <div className="text-center border-x border-card-border">
+                                    <div className="text-center border-x border-[#1E293B]">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
-                                            <Clock size={14} className="text-indigo-500" />
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Schedule</p>
+                                            <Clock size={14} className="text-indigo-400" />
+                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Schedule</p>
                                         </div>
-                                        <p className="text-lg font-black text-foreground">{dt.time}</p>
+                                        <p className="text-lg font-black text-[#F9FAFB]">{dt.time}</p>
                                     </div>
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
-                                            <Users size={14} className="text-indigo-500" />
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Seats</p>
+                                            <Users size={14} className="text-indigo-400" />
+                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Seats</p>
                                         </div>
-                                        <p className="text-lg font-black text-foreground">{trip.totalSeats}</p>
+                                        <p className="text-lg font-black text-[#F9FAFB]">{trip.totalSeats}</p>
                                     </div>
                                 </div>
                             </Card>
 
                             {/* Date & Trip Meta */}
-                            <Card className="border-none shadow-sm p-5 flex items-center justify-between">
+                            <Card className="border-none shadow-sm p-4 lg:p-5 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-3 rounded-xl bg-indigo-50 text-indigo-500">
+                                    <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400">
                                         <Clock size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Scheduled For</p>
-                                        <p className="font-bold text-foreground text-sm">{dt.date} at {dt.time}</p>
+                                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Scheduled For</p>
+                                        <p className="font-bold text-[#F9FAFB] text-sm">{dt.date} at {dt.time}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full font-bold">
+                                <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full font-bold">
                                     <Shield size={14} />
                                     Verified Ride
                                 </div>
@@ -280,12 +276,12 @@ export default function PassengerTripDetailsPage() {
                         <div className="lg:col-span-5 space-y-6">
                             {/* Bids Header */}
                             <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-[0.15em] flex items-center gap-2">
-                                    <Zap size={14} className="text-indigo-500" />
+                                <h3 className="text-sm font-bold text-[#9CA3AF] uppercase tracking-[0.15em] flex items-center gap-2">
+                                    <Zap size={14} className="text-indigo-400" />
                                     Driver Offers
                                 </h3>
                                 {bids.length > 0 && (
-                                    <span className="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">
+                                    <span className="bg-indigo-500/15 text-indigo-400 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">
                                         {bids.length} {bids.length === 1 ? 'Offer' : 'Offers'}
                                     </span>
                                 )}
@@ -304,29 +300,27 @@ export default function PassengerTripDetailsPage() {
                                                 transition={{ delay: index * 0.08 }}
                                             >
                                                 <Card className="border-none shadow-sm hover:shadow-md transition-all p-5 relative overflow-hidden group">
-                                                    {/* Accent */}
                                                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 rounded-r-full" />
 
                                                     <div className="flex items-center gap-4 mb-4">
-                                                        {/* Driver Avatar */}
                                                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-indigo-500/20">
                                                             <Car size={22} />
                                                         </div>
                                                         <div className="flex-1">
-                                                            <h4 className="font-bold text-foreground text-sm">Driver #{bid.driver_id.toString().substring(0, 5)}</h4>
+                                                            <h4 className="font-bold text-[#F9FAFB] text-sm">Driver #{bid.driver_id.toString().substring(0, 5)}</h4>
                                                             <div className="flex items-center gap-2 mt-0.5">
-                                                                <div className="flex items-center gap-0.5 text-amber-500">
+                                                                <div className="flex items-center gap-0.5 text-amber-400">
                                                                     <Star size={12} fill="currentColor" />
                                                                     <span className="text-[10px] font-bold">4.8</span>
                                                                 </div>
-                                                                <span className="text-[10px] text-muted-foreground font-medium">• Verified</span>
+                                                                <span className="text-[10px] text-[#9CA3AF] font-medium">• Verified</span>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-2xl font-black text-indigo-600 tracking-tight">
+                                                            <p className="text-2xl font-black text-indigo-400 tracking-tight">
                                                                 {formatCurrency(bid.bid_amount)}
                                                             </p>
-                                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Per Seat</p>
+                                                            <p className="text-[10px] text-[#9CA3AF] font-bold uppercase tracking-widest">Per Seat</p>
                                                         </div>
                                                     </div>
 
@@ -348,18 +342,18 @@ export default function PassengerTripDetailsPage() {
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                         >
-                                            <Card className="border-2 border-dashed border-card-border bg-muted/20 text-center py-12 px-6">
-                                                <div className="w-16 h-16 mx-auto bg-indigo-50 rounded-2xl flex items-center justify-center mb-4">
+                                            <Card className="border-2 border-dashed border-[#1E293B] bg-[#1E293B]/20 text-center py-12 px-6">
+                                                <div className="w-16 h-16 mx-auto bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-4">
                                                     <div className="relative">
-                                                        <CircleDot size={28} className="text-indigo-500" />
+                                                        <CircleDot size={28} className="text-indigo-400" />
                                                         <div className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full animate-ping" />
                                                     </div>
                                                 </div>
-                                                <h4 className="font-bold text-foreground mb-1">Scanning for Drivers</h4>
-                                                <p className="text-sm text-muted-foreground font-medium max-w-[250px] mx-auto">
+                                                <h4 className="font-bold text-[#F9FAFB] mb-1">Scanning for Drivers</h4>
+                                                <p className="text-sm text-[#9CA3AF] font-medium max-w-[250px] mx-auto">
                                                     Your request is live. Drivers nearby will send offers shortly.
                                                 </p>
-                                                <div className="mt-6 flex items-center justify-center gap-2 text-indigo-500">
+                                                <div className="mt-6 flex items-center justify-center gap-2 text-indigo-400">
                                                     <Loader2 size={14} className="animate-spin" />
                                                     <span className="text-[10px] font-bold uppercase tracking-widest">Broadcasting...</span>
                                                 </div>
@@ -370,7 +364,7 @@ export default function PassengerTripDetailsPage() {
                             </div>
 
                             {/* Safety Card */}
-                            <Card className="border-none shadow-sm p-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden">
+                            <Card className="border-none shadow-sm p-5 bg-[#111827] text-white relative overflow-hidden border border-[#1E293B]">
                                 <div className="absolute top-0 right-0 opacity-5">
                                     <Shield size={120} />
                                 </div>
@@ -379,15 +373,15 @@ export default function PassengerTripDetailsPage() {
                                         <Shield size={16} className="text-emerald-400" />
                                         <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em]">Ride Protection</p>
                                     </div>
-                                    <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                    <p className="text-xs text-[#6B7280] leading-relaxed font-medium">
                                         Every ride includes live GPS tracking, verified driver identity, and instant SOS access for your safety.
                                     </p>
                                     <div className="mt-4 flex items-center gap-4">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">
                                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                             GPS Tracked
                                         </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">
                                             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                                             ID Verified
                                         </div>
@@ -400,7 +394,7 @@ export default function PassengerTripDetailsPage() {
                                 <Button
                                     fullWidth
                                     variant="outline"
-                                    className="h-12 rounded-xl text-xs font-bold uppercase tracking-widest border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
+                                    className="h-12 rounded-xl text-xs font-bold uppercase tracking-widest border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
                                     onClick={async () => {
                                         try {
                                             await tripsAPI.cancelTrip(tripId);

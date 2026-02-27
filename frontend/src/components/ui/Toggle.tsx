@@ -21,25 +21,23 @@ export const Toggle: React.FC<ToggleProps> = ({
     return (
         <div className={`flex items-center justify-between gap-4 py-2 ${className}`}>
             <div className="flex flex-col gap-0.5">
-                <label className="text-sm font-medium text-slate-900">{label}</label>
+                <label className="text-sm font-medium text-[#F9FAFB]">{label}</label>
                 {description && (
-                    <span className="text-xs text-slate-500 leading-relaxed">{description}</span>
+                    <span className="text-xs text-[#9CA3AF] leading-relaxed">{description}</span>
                 )}
             </div>
             <button
                 type="button"
                 onClick={() => onChange(!checked)}
                 className={`
-          relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none focus:ring-4 focus:ring-blue-100
-          ${checked ? 'bg-blue-600' : 'bg-slate-200'}
-        `}
+                    relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none focus:ring-2 focus:ring-indigo-500/30 focus:ring-offset-2 focus:ring-offset-[#0B1020]
+                    ${checked ? 'bg-indigo-500' : 'bg-[#374151]'}
+                `}
             >
                 <motion.span
                     animate={{ x: checked ? 20 : 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    className={`
-            pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0
-          `}
+                    className="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-sm ring-0"
                 />
             </button>
         </div>

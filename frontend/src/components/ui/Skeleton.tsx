@@ -15,7 +15,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     height,
     className = '',
 }) => {
-    const baseStyles = 'animate-pulse bg-gray-200';
+    const baseStyles = 'animate-shimmer rounded';
 
     const variantStyles = {
         text: 'h-4 rounded',
@@ -39,7 +39,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
 // Pre-built skeleton components
 export const SkeletonCard: React.FC = () => (
-    <div className="bg-card rounded-2xl p-5 shadow-sm border border-card-border">
+    <div className="bg-[#111827] rounded-2xl p-5 shadow-sm border border-[#1E293B]">
         <div className="flex items-center gap-3 mb-4">
             <Skeleton variant="circular" width={48} height={48} />
             <div className="flex-1">
@@ -56,11 +56,11 @@ export const SkeletonCard: React.FC = () => (
 );
 
 export const SkeletonTripCard: React.FC = () => (
-    <div className="bg-card rounded-2xl p-5 shadow-sm border border-card-border">
+    <div className="bg-[#111827] rounded-2xl p-5 shadow-sm border border-[#1E293B]">
         <div className="flex items-start gap-4 mb-4">
             <div className="flex flex-col items-center gap-1">
                 <Skeleton variant="circular" width={12} height={12} />
-                <div className="w-0.5 h-8 bg-gray-200" />
+                <div className="w-0.5 h-8 bg-[#1E293B]" />
                 <Skeleton variant="circular" width={12} height={12} />
             </div>
             <div className="flex-1">

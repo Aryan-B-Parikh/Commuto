@@ -27,7 +27,7 @@ import dynamic from 'next/dynamic';
 
 const TripMap = dynamic(() => import('@/components/map/TripMap'), {
     ssr: false,
-    loading: () => <div className="w-full h-full bg-slate-100 animate-pulse flex items-center justify-center">Loading Navigation...</div>
+    loading: () => <div className="w-full h-full bg-[#0B1020] animate-pulse flex items-center justify-center text-[#9CA3AF]">Loading Navigation...</div>
 });
 
 export default function DriverLivePage() {
@@ -37,7 +37,6 @@ export default function DriverLivePage() {
     const [isFetchingTrip, setIsFetchingTrip] = useState(true);
     const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // 1. Fetch active trip for driver
     useEffect(() => {
         const fetchActiveTrip = async () => {
             if (isAuthLoading || !user) return;
@@ -51,7 +50,6 @@ export default function DriverLivePage() {
                     router.push('/driver/dashboard');
                 }
             } catch (error: any) {
-                // If 401, we let the RoleGuard handle the redirect
                 if (error.response?.status !== 401) {
                     console.error('Failed to fetch active driver trip:', error);
                 }
@@ -63,7 +61,6 @@ export default function DriverLivePage() {
         fetchActiveTrip();
     }, [router, user, isAuthLoading]);
 
-    // 2. WebSocket for broadcasting
     const {
         isConnected,
         sendLocation,
@@ -71,7 +68,6 @@ export default function DriverLivePage() {
         tripStatus
     } = useTripWebSocket(trip?.id || null);
 
-    // Sync status locally
     useEffect(() => {
         if (tripStatus && trip && trip.status !== tripStatus) {
             setTrip({ ...trip, status: tripStatus } as TripResponse);
@@ -81,24 +77,21 @@ export default function DriverLivePage() {
         }
     }, [tripStatus, trip, router]);
 
-    // 3. Simulated Location Broadcaster (GPS Tracker)
     useEffect(() => {
         if (isConnected && trip?.status === 'active') {
             console.log("Starting location broadcaster...");
 
-            // Initial seed position
             let currentLat = Number(trip.origin_lat);
             let currentLng = Number(trip.origin_lng);
             const targetLat = Number(trip.dest_lat);
             const targetLng = Number(trip.dest_lng);
 
             locationIntervalRef.current = setInterval(() => {
-                // Move towards destination slowly for simulation
                 currentLat += (targetLat - currentLat) * 0.05;
                 currentLng += (targetLng - currentLng) * 0.05;
 
                 sendLocation(currentLat, currentLng);
-            }, 5000); // Send every 5 seconds
+            }, 5000);
         }
 
         return () => {
@@ -118,7 +111,7 @@ export default function DriverLivePage() {
         return [Number(trip.dest_lat), Number(trip.dest_lng)] as [number, number];
     }, [trip]);
 
-    if (isFetchingTrip) return <div className="p-8 text-center">Locating Trip...</div>;
+    if (isFetchingTrip) return <div className="p-8 text-center text-[#9CA3AF]">Locating Trip...</div>;
     if (!trip) return null;
 
     const currentStatus = trip.status;
@@ -136,9 +129,9 @@ export default function DriverLivePage() {
                     {/* Floating Passenger Info Header */}
                     <div className="absolute top-6 left-6 right-6 z-10">
                         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="max-w-xl mx-auto">
-                            <Card className="p-4 border-none shadow-2xl bg-slate-900/95 backdrop-blur-md text-white flex items-center justify-between">
+                            <Card className="p-4 border-none shadow-2xl bg-[#0B1020]/95 backdrop-blur-md text-white flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-indigo-400 border border-slate-700">
+                                    <div className="w-12 h-12 rounded-2xl bg-[#1E293B] flex items-center justify-center text-indigo-400 border border-[#374151]">
                                         <User size={24} />
                                     </div>
                                     <div>
@@ -146,7 +139,7 @@ export default function DriverLivePage() {
                                             Pickup: {trip.origin_address.split(',')[0]}
                                         </h4>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                            <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">
                                                 Passenger Assigned
                                             </span>
                                         </div>
@@ -167,22 +160,22 @@ export default function DriverLivePage() {
                     {/* Bottom Controls */}
                     <div className="absolute bottom-6 left-6 right-6 z-10 flex justify-center">
                         <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="w-full max-w-4xl">
-                            <Card className="shadow-2xl border-none p-6 bg-white/95 backdrop-blur-md">
+                            <Card className="shadow-2xl border-none p-6 bg-[#111827]/95 backdrop-blur-md">
                                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                                     <div className="flex items-center gap-6">
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Destination</p>
+                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Target Destination</p>
                                             <div className="flex items-center gap-2">
                                                 <MapPin size={16} className="text-red-500" />
-                                                <p className="font-bold text-slate-900">{trip.dest_address.split(',')[0]}</p>
+                                                <p className="font-bold text-[#F9FAFB]">{trip.dest_address.split(',')[0]}</p>
                                             </div>
                                         </div>
-                                        <div className="w-px h-10 bg-slate-100" />
+                                        <div className="w-px h-10 bg-[#1E293B]" />
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Distance</p>
+                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Distance</p>
                                             <div className="flex items-center gap-2">
-                                                <Navigation size={16} className="text-indigo-500 font-bold" />
-                                                <p className="font-bold text-slate-900 tracking-tight">
+                                                <Navigation size={16} className="text-indigo-400 font-bold" />
+                                                <p className="font-bold text-[#F9FAFB] tracking-tight">
                                                     {calculateDistance(
                                                         { lat: trip.origin_lat, lng: trip.origin_lng },
                                                         { lat: trip.dest_lat, lng: trip.dest_lng }
@@ -195,7 +188,7 @@ export default function DriverLivePage() {
                                     <div className="flex items-center gap-3 w-full md:w-auto">
                                         {currentStatus === 'bid_accepted' && (
                                             <Button
-                                                className="flex-1 md:flex-none h-14 bg-indigo-600 hover:bg-indigo-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-indigo-100"
+                                                className="flex-1 md:flex-none h-14 bg-indigo-600 hover:bg-indigo-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-indigo-500/20"
                                                 onClick={() => updateStatus('driver_assigned')}
                                             >
                                                 I Have Arrived
@@ -203,7 +196,7 @@ export default function DriverLivePage() {
                                         )}
                                         {currentStatus === 'driver_assigned' && (
                                             <Button
-                                                className="flex-1 md:flex-none h-14 bg-emerald-600 hover:bg-emerald-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-emerald-100 flex items-center gap-2"
+                                                className="flex-1 md:flex-none h-14 bg-emerald-600 hover:bg-emerald-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-emerald-500/20 flex items-center gap-2"
                                                 onClick={() => updateStatus('active')}
                                             >
                                                 <Car size={18} />
@@ -212,7 +205,7 @@ export default function DriverLivePage() {
                                         )}
                                         {currentStatus === 'active' && (
                                             <Button
-                                                className="flex-1 md:flex-none h-14 bg-slate-900 hover:bg-black text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-slate-200 flex items-center gap-2"
+                                                className="flex-1 md:flex-none h-14 bg-[#F9FAFB] hover:bg-white text-[#0B1020] px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2"
                                                 onClick={() => updateStatus('completed')}
                                             >
                                                 <CheckCircle size={18} />
@@ -220,7 +213,7 @@ export default function DriverLivePage() {
                                             </Button>
                                         )}
                                         {currentStatus === 'completed' && (
-                                            <div className="flex items-center gap-2 text-emerald-600 font-bold uppercase tracking-widest text-xs bg-emerald-50 px-6 py-4 rounded-2xl border border-emerald-100 animate-pulse">
+                                            <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-widest text-xs bg-emerald-500/10 px-6 py-4 rounded-2xl border border-emerald-500/20 animate-pulse">
                                                 <Flag size={16} /> Trip Finished
                                             </div>
                                         )}

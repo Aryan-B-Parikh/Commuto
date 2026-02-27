@@ -18,18 +18,18 @@ export const TextArea: React.FC<TextAreaProps> = ({
 }) => {
     return (
         <div className={`flex flex-col gap-1.5 w-full ${className}`}>
-            <label className="text-sm font-medium text-foreground ml-1">
+            <label className="text-sm font-medium text-[#9CA3AF] ml-1">
                 {label}
             </label>
             <div className="relative group">
                 <textarea
                     className={`
-            w-full bg-card border rounded-xl py-3 px-4 transition-all duration-200 outline-none min-h-[120px] resize-none
-            ${error
-                            ? 'border-red-300 ring-2 ring-red-50/50 focus:border-red-500'
-                            : 'border-card-border hover:border-muted-foreground/30 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50'}
-            text-foreground placeholder:text-muted-foreground
-          `}
+                        w-full bg-[#111827] border rounded-xl py-3 px-4 transition-all duration-200 outline-none min-h-[120px] resize-none
+                        ${error
+                            ? 'border-red-500/50 ring-2 ring-red-500/10 focus:border-red-500'
+                            : 'border-[#1E293B] hover:border-[#374151] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'}
+                        text-[#F9FAFB] placeholder:text-[#6B7280]
+                    `}
                     {...props}
                 />
             </div>
@@ -37,7 +37,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
                 <motion.p
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`text-xs ml-1 ${error ? 'text-red-500' : 'text-muted-foreground'}`}
+                    className={`text-xs ml-1 ${error ? 'text-red-400' : 'text-[#6B7280]'}`}
                 >
                     {error || helperText}
                 </motion.p>

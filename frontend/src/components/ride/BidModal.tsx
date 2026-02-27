@@ -57,7 +57,6 @@ export const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, trip, onBid
         } catch (error: any) {
             console.error('Failed to place bid:', error);
 
-            // Extract meaningful error message
             let errorMessage = 'Failed to place bid';
             const detail = error.response?.data?.detail;
 
@@ -81,28 +80,28 @@ export const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, trip, onBid
         <Modal isOpen={isOpen} onClose={onClose} title="Submit Your Bid" size="md">
             <div className="space-y-6">
                 {/* Trip Summary Card */}
-                <div className="bg-muted/50 rounded-2xl p-4 border border-card-border/30">
+                <div className="bg-[#1E293B]/50 rounded-2xl p-4 border border-[#1E293B]/30">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-lg">
+                        <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
                             <Car size={18} />
                         </div>
-                        <h4 className="font-bold text-foreground text-sm">Trip Details</h4>
+                        <h4 className="font-bold text-[#F9FAFB] text-sm">Trip Details</h4>
                     </div>
                     <div className="space-y-2 text-xs">
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                            <span className="text-muted-foreground font-medium truncate">{trip.origin_address}</span>
+                            <span className="text-[#9CA3AF] font-medium truncate">{trip.origin_address}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                            <span className="text-muted-foreground font-medium truncate">{trip.dest_address}</span>
+                            <span className="text-[#9CA3AF] font-medium truncate">{trip.dest_address}</span>
                         </div>
-                        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-card-border/20 text-indigo-600 font-bold uppercase tracking-widest text-[9px]">
+                        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#1E293B]/20 text-indigo-400 font-bold uppercase tracking-widest text-[9px]">
                             <span className="flex items-center gap-1"><Clock size={10} /> {new Date(trip.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             <span className="flex items-center gap-1">👥 {trip.creator_passenger_id ? (trip.total_seats - trip.available_seats) : (trip.seats_requested || 1)} Seats</span>
                         </div>
                         {trip.creator_passenger_id && trip.price_per_seat && (
-                            <div className="mt-3 px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest text-center">
+                            <div className="mt-3 px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-widest text-center">
                                 Shared Ride • Fixed Price Suggested: {formatCurrency(trip.price_per_seat * (trip.total_seats - trip.available_seats))}
                             </div>
                         )}
@@ -148,7 +147,7 @@ export const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, trip, onBid
                             type="submit"
                             fullWidth
                             isLoading={isSubmitting}
-                            className="bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-100 font-bold uppercase tracking-widest text-xs h-12 border-none"
+                            className="bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-500/20 font-bold uppercase tracking-widest text-xs h-12 border-none"
                         >
                             Place Bid
                         </Button>

@@ -49,7 +49,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
                         className={`${interactive ? 'cursor-pointer hover:scale-110' : 'cursor-default'} transition-transform`}
                     >
                         <svg
-                            className={`${sizeStyles[size]} ${filled || partial ? 'text-yellow-400' : 'text-gray-300'}`}
+                            className={`${sizeStyles[size]} ${filled || partial ? 'text-amber-400' : 'text-[#374151]'}`}
                             fill={filled ? 'currentColor' : partial ? 'url(#partial)' : 'none'}
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -73,7 +73,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
                 );
             })}
             {showValue && (
-                <span className={`ml-1 font-semibold text-gray-700 ${textSizeStyles[size]}`}>
+                <span className={`ml-1 font-semibold text-[#9CA3AF] ${textSizeStyles[size]}`}>
                     {rating.toFixed(1)}
                 </span>
             )}

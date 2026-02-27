@@ -29,11 +29,10 @@ export default function CreateRideForm() {
         setIsLoading(true);
 
         try {
-            // Simplified for now - in real app would geocode addresses
             const tripData = {
                 from_location: {
                     address: formData.pickup,
-                    lat: 23.0225, // Mock coords
+                    lat: 23.0225,
                     lng: 72.5714
                 },
                 to_location: {
@@ -65,7 +64,7 @@ export default function CreateRideForm() {
                 <form onSubmit={handleSubmit} className="space-y-6">
 
                     <div className="space-y-4">
-                        <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                        <label className="text-sm font-bold text-[#9CA3AF] uppercase tracking-wider ml-1">
                             Route Details
                         </label>
                         <LocationInput
@@ -86,26 +85,26 @@ export default function CreateRideForm() {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                            <label className="text-sm font-bold text-[#9CA3AF] uppercase tracking-wider ml-1">
                                 Date
                             </label>
                             <input
                                 type="date"
                                 value={formData.date}
                                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                className="w-full px-4 py-3 bg-muted/30 border border-card-border/50 rounded-xl text-foreground"
+                                className="w-full px-4 py-3 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-xl text-[#F9FAFB] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                                 required
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                            <label className="text-sm font-bold text-[#9CA3AF] uppercase tracking-wider ml-1">
                                 Time
                             </label>
                             <input
                                 type="time"
                                 value={formData.time}
                                 onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                className="w-full px-4 py-3 bg-muted/30 border border-card-border/50 rounded-xl text-foreground"
+                                className="w-full px-4 py-3 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-xl text-[#F9FAFB] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                                 required
                             />
                         </div>
@@ -113,21 +112,21 @@ export default function CreateRideForm() {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                            <label className="text-sm font-bold text-[#9CA3AF] uppercase tracking-wider ml-1">
                                 Available Seats
                             </label>
                             <select
                                 value={formData.seats}
                                 onChange={(e) => setFormData({ ...formData, seats: parseInt(e.target.value) })}
-                                className="w-full px-4 py-3 bg-muted/30 border border-card-border/50 rounded-xl text-foreground"
+                                className="w-full px-4 py-3 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-xl text-[#F9FAFB] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                             >
                                 {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                                    <option key={n} value={n}>{n} Seats</option>
+                                    <option key={n} value={n} className="bg-[#111827]">{n} Seats</option>
                                 ))}
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                            <label className="text-sm font-bold text-[#9CA3AF] uppercase tracking-wider ml-1">
                                 Price per Seat
                             </label>
                             <input
@@ -135,21 +134,21 @@ export default function CreateRideForm() {
                                 placeholder="₹ / Seat"
                                 value={formData.price}
                                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                className="w-full px-4 py-3 bg-muted/30 border border-card-border/50 rounded-xl text-foreground"
+                                className="w-full px-4 py-3 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-xl text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                                 required
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                        <label className="text-sm font-bold text-[#9CA3AF] uppercase tracking-wider ml-1">
                             Additional Notes
                         </label>
                         <textarea
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                             placeholder="Luggage details, smoking preferences, etc..."
-                            className="w-full px-4 py-3 bg-muted/30 border border-card-border/50 rounded-xl text-foreground min-h-[100px] resize-none"
+                            className="w-full px-4 py-3 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-xl text-[#F9FAFB] placeholder:text-[#6B7280] min-h-[100px] resize-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                         />
                     </div>
 

@@ -54,33 +54,38 @@ export const Modal: React.FC<ModalProps> = ({
     const modalContent = (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[9999] flex items-end lg:items-center justify-center lg:p-4">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
                     />
 
-                    {/* Modal Content */}
+                    {/* Modal Content — bottom sheet on mobile, centered on desktop */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className={`relative w-full ${sizeStyles[size]} bg-card rounded-3xl shadow-2xl overflow-hidden border border-card-border/50`}
+                        initial={{ opacity: 0, y: 100 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 100 }}
+                        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                        className={`relative w-full ${sizeStyles[size]} bg-[#111827] rounded-t-3xl lg:rounded-3xl shadow-2xl shadow-black/40 overflow-hidden border border-[#1E293B]/50 max-h-[90vh] overflow-y-auto`}
                     >
+                        {/* Drag handle (mobile) */}
+                        <div className="flex justify-center pt-3 pb-1 lg:hidden">
+                            <div className="w-10 h-1 bg-[#374151] rounded-full" />
+                        </div>
+
                         {/* Header */}
                         {title && (
-                            <div className="flex items-center justify-between px-8 py-6 border-b border-card-border/30">
-                                <h2 className="text-2xl font-black text-foreground uppercase tracking-tighter italic">{title}</h2>
+                            <div className="flex items-center justify-between px-5 lg:px-8 py-4 lg:py-6 border-b border-[#1E293B]">
+                                <h2 className="text-lg lg:text-xl font-bold text-[#F9FAFB]">{title}</h2>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-all"
+                                    className="p-2 text-[#6B7280] hover:text-[#F9FAFB] hover:bg-[#1E293B] rounded-xl transition-all"
                                 >
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
@@ -88,7 +93,7 @@ export const Modal: React.FC<ModalProps> = ({
                         )}
 
                         {/* Body */}
-                        <div className="p-8">
+                        <div className="p-5 lg:p-8">
                             {children}
                         </div>
                     </motion.div>
