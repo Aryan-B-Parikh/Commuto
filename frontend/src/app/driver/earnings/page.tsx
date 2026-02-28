@@ -231,27 +231,7 @@ export default function DriverEarningsPage() {
                             </div>
                         </div>
 
-                        {/* ── 4️⃣ Cash Out Card ── */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                        >
-                            <div className="bg-gradient-to-br from-[#1E293B] to-[#111827] rounded-2xl p-5 border border-[#374151]/50 relative overflow-hidden">
-                                <div className="absolute -right-3 -bottom-3 text-6xl opacity-10">💸</div>
-                                <div className="relative z-10">
-                                    <h4 className="text-base font-black text-[#F9FAFB] mb-1.5">Ready to Cash Out?</h4>
-                                    <p className="text-xs text-[#6B7280] leading-relaxed mb-4">
-                                        {stats.total > 0
-                                            ? `You have ${formatCurrency(stats.total)} in total earnings. Weekly settlements every Monday.`
-                                            : 'Complete trips to start earning. Weekly settlements every Monday.'}
-                                    </p>
-                                    <button className="w-full h-11 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold text-xs uppercase tracking-widest transition-all active:scale-[0.97]">
-                                        Withdraw Now
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
+
 
                     </motion.div>
                 </DashboardLayout>
@@ -389,21 +369,7 @@ export default function DriverEarningsPage() {
                                     </div>
                                 </Card>
 
-                                {/* Withdrawal Card */}
-                                <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-2xl text-white shadow-lg overflow-hidden relative group">
-                                    <div className="relative z-10">
-                                        <h4 className="font-black text-lg mb-3 tracking-tight uppercase">Ready to Cash Out?</h4>
-                                        <p className="text-sm text-slate-300 leading-snug mb-5">
-                                            {stats.total > 0
-                                                ? `You have ${formatCurrency(stats.total)} in total earnings. Weekly settlements are processed every Monday.`
-                                                : 'Complete trips to start earning. Weekly settlements are processed every Monday.'}
-                                        </p>
-                                        <Button variant="outline" className="w-full bg-white/10 border-white/20 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-widest h-12">
-                                            Withdraw Now
-                                        </Button>
-                                    </div>
-                                    <div className="absolute -right-4 -bottom-4 text-7xl opacity-10 group-hover:scale-110 transition-transform">💸</div>
-                                </div>
+
                             </div>
                         </div>
                     </motion.div>

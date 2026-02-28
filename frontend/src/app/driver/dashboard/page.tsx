@@ -174,20 +174,17 @@ export default function DriverDashboard() {
 
                         {/* Section A: Incoming Requests */}
                         {requests.length > 0 && (
-                            <div className="mb-5">
+                            <div className="mb-6">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-sm font-bold text-[#F9FAFB]">Incoming Requests</h3>
-                                        <span className="bg-red-500/15 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                                             {requests.length}
                                         </span>
                                     </div>
-                                    <Link href="/driver/requests" className="text-xs font-bold text-indigo-400">
-                                        View All
-                                    </Link>
                                 </div>
 
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     {requests.slice(0, sheetExpanded ? 5 : 2).map((request, idx) => (
                                         <motion.div
                                             key={request.id}
@@ -196,27 +193,24 @@ export default function DriverDashboard() {
                                             transition={{ delay: idx * 0.05 }}
                                         >
                                             <Link href="/driver/requests">
-                                                <div className="bg-[#0B1020] p-4 rounded-2xl border border-[#1E293B] active:scale-[0.98] transition-transform relative overflow-hidden">
-                                                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 rounded-r" />
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-sm">
-                                                            {request.seats_requested}
+                                                <div className="bg-[#111827] p-3 rounded-xl border border-[#1E293B] active:scale-[0.98] transition-transform flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-sm shrink-0">
+                                                        {request.seats_requested}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                                                            <p className="text-sm font-medium text-[#F9FAFB] truncate">{request.origin_address}</p>
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                                <MapPin size={10} className="text-indigo-400 shrink-0" />
-                                                                <p className="text-sm font-medium text-[#F9FAFB] truncate">{request.origin_address}</p>
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <Navigation size={10} className="text-red-400 shrink-0" />
-                                                                <p className="text-xs text-[#6B7280] truncate">{request.dest_address}</p>
-                                                            </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                                                            <p className="text-xs text-[#6B7280] truncate">{request.dest_address}</p>
                                                         </div>
-                                                        <div className="text-right shrink-0">
-                                                            <p className="text-xs font-bold text-[#9CA3AF]">
-                                                                {new Date(request.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </p>
-                                                        </div>
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-xs font-bold text-[#9CA3AF]">
+                                                            {new Date(request.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </Link>
@@ -240,42 +234,42 @@ export default function DriverDashboard() {
                             </div>
                         )}
 
-                        {/* Section B: Quick Stats Row — Premium Cards */}
-                        <div className="grid grid-cols-3 gap-3 mb-5">
-                            <motion.div whileTap={{ scale: 0.95 }} className="bg-gradient-to-br from-indigo-500/15 to-indigo-600/5 rounded-2xl p-4 border border-indigo-500/15 text-center">
-                                <div className="w-9 h-9 rounded-xl bg-indigo-500/15 flex items-center justify-center mx-auto mb-2">
-                                    <DollarSign size={18} className="text-indigo-400" />
-                                </div>
-                                <p className="text-xl font-black text-[#F9FAFB] leading-none">{formatCurrency(earnings?.this_month || 0)}</p>
-                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-1.5 font-bold">This Month</p>
+                        {/* Section B: Quick Stats Row — Compact Pills */}
+                        <div className="grid grid-cols-3 gap-2 mb-6">
+                            <motion.div whileTap={{ scale: 0.95 }} className="bg-[#111827] rounded-xl p-3 border border-[#1E293B] text-center flex flex-col items-center justify-center h-[76px]">
+                                <DollarSign size={16} className="text-indigo-400 mb-1" />
+                                <p className="text-sm font-black text-[#F9FAFB] leading-none mb-0.5">{formatCurrency(earnings?.this_month || 0)}</p>
+                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider font-bold">This Month</p>
                             </motion.div>
-                            <motion.div whileTap={{ scale: 0.95 }} className="bg-gradient-to-br from-blue-500/15 to-blue-600/5 rounded-2xl p-4 border border-blue-500/15 text-center">
-                                <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center mx-auto mb-2">
-                                    <Car size={18} className="text-blue-400" />
-                                </div>
-                                <p className="text-xl font-black text-[#F9FAFB] leading-none">{earnings?.total_trips || 0}</p>
-                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-1.5 font-bold">Total Trips</p>
+                            <motion.div whileTap={{ scale: 0.95 }} className="bg-[#111827] rounded-xl p-3 border border-[#1E293B] text-center flex flex-col items-center justify-center h-[76px]">
+                                <Car size={16} className="text-blue-400 mb-1" />
+                                <p className="text-sm font-black text-[#F9FAFB] leading-none mb-0.5">{earnings?.total_trips || 0}</p>
+                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider font-bold">Total Trips</p>
                             </motion.div>
-                            <motion.div whileTap={{ scale: 0.95 }} className="bg-gradient-to-br from-amber-500/15 to-amber-600/5 rounded-2xl p-4 border border-amber-500/15 text-center">
-                                <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center mx-auto mb-2">
-                                    <Star size={18} className="text-amber-400" />
-                                </div>
-                                <p className="text-xl font-black text-[#F9FAFB] leading-none">{formatCurrency(earnings?.avg_per_trip || 0)}</p>
-                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-1.5 font-bold">Avg / Trip</p>
+                            <motion.div whileTap={{ scale: 0.95 }} className="bg-[#111827] rounded-xl p-3 border border-[#1E293B] text-center flex flex-col items-center justify-center h-[76px]">
+                                <Star size={16} className="text-amber-400 mb-1" />
+                                <p className="text-sm font-black text-[#F9FAFB] leading-none mb-0.5">{formatCurrency(earnings?.avg_per_trip || 0)}</p>
+                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider font-bold">Avg / Trip</p>
                             </motion.div>
                         </div>
 
-                        {/* Section C: Quick Actions */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <Link href="/driver/requests">
-                                <button className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl text-sm active:scale-[0.97] transition-all shadow-lg shadow-indigo-500/20">
+                        {/* Section C: Primary Action Area */}
+                        <div className="flex flex-col gap-3">
+                            <Link href="/driver/requests" className="w-full">
+                                <motion.button
+                                    whileTap={{ scale: 0.98 }}
+                                    className="w-full h-[52px] bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-bold rounded-[14px] text-sm shadow-lg shadow-indigo-500/20 flex items-center justify-center"
+                                >
                                     View Requests
-                                </button>
+                                </motion.button>
                             </Link>
-                            <Link href="/driver/earnings">
-                                <button className="w-full bg-[#0B1020] hover:bg-[#1E293B] text-[#F9FAFB] font-bold py-3 rounded-xl text-sm border border-[#1E293B] active:scale-[0.97] transition-all">
+                            <Link href="/driver/earnings" className="w-full">
+                                <motion.button
+                                    whileTap={{ scale: 0.98 }}
+                                    className="w-full h-[52px] bg-[#0B1020] text-[#F9FAFB] font-bold rounded-[14px] text-sm border border-indigo-500/30 flex items-center justify-center"
+                                >
                                     Earnings
-                                </button>
+                                </motion.button>
                             </Link>
                         </div>
                     </div>

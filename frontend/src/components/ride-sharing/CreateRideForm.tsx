@@ -7,12 +7,18 @@ import { LocationInput } from '@/components/ride/LocationInput';
 import { useToast } from '@/hooks/useToast';
 import { tripsAPI } from '@/services/api';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Settings, Calendar, Clock, Users, IndianRupee, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function CreateRideForm() {
+interface CreateRideFormProps {
+    isMobile?: boolean;
+}
+
+export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
     const { showToast } = useToast() as any;
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     const [formData, setFormData] = useState({
         pickup: '',
@@ -57,6 +63,159 @@ export default function CreateRideForm() {
             setIsLoading(false);
         }
     };
+
+    if (isMobile) {
+        return (
+            <div className="flex flex-col h-full relative">
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto no-scrollbar pb-[100px]">
+                    <div className="p-4 space-y-6">
+
+                        {/* 1️⃣ Location Card */}
+                        <div className="bg-[#111827] rounded-3xl p-5 border border-[#1E293B] shadow-sm relative">
+                            {/* Visual connection line between inputs */}
+                            <div className="absolute left-[38px] top-[45px] bottom-[45px] w-[2px] bg-[#1E293B] z-0" />
+
+                            <div className="relative z-10 space-y-4">
+                                <LocationInput
+                                    type="pickup"
+                                    label=""
+                                    value={formData.pickup}
+                                    onChange={(v) => setFormData({ ...formData, pickup: v })}
+                                    placeholder="Pickup location"
+                                />
+                                <LocationInput
+                                    type="destination"
+                                    label=""
+                                    value={formData.destination}
+                                    onChange={(v) => setFormData({ ...formData, destination: v })}
+                                    placeholder="Where to?"
+                                />
+                            </div>
+                        </div>
+
+                        {/* 2️⃣ Quick Options Row (Chips) */}
+                        <div>
+                            <h3 className="text-[#F9FAFB] text-sm font-bold mb-3 px-1">Trip Details</h3>
+                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 mask-fade-edges">
+                                <div className="flex-shrink-0 relative group">
+                                    <input
+                                        type="date"
+                                        value={formData.date}
+                                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                        required
+                                    />
+                                    <div className={`bg-[#1E293B] hover:bg-[#334155] rounded-full px-4 py-2.5 flex items-center gap-2 border border-[#374151] transition-colors ${formData.date ? 'border-indigo-500/50 bg-indigo-500/10' : ''}`}>
+                                        <Calendar size={16} className={formData.date ? 'text-indigo-400' : 'text-[#9CA3AF]'} />
+                                        <span className={`text-sm font-bold whitespace-nowrap ${formData.date ? 'text-indigo-400' : 'text-[#F9FAFB]'}`}>
+                                            {formData.date ? new Date(formData.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Today'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex-shrink-0 relative group">
+                                    <input
+                                        type="time"
+                                        value={formData.time}
+                                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                        required
+                                    />
+                                    <div className={`bg-[#1E293B] hover:bg-[#334155] rounded-full px-4 py-2.5 flex items-center gap-2 border border-[#374151] transition-colors ${formData.time ? 'border-indigo-500/50 bg-indigo-500/10' : ''}`}>
+                                        <Clock size={16} className={formData.time ? 'text-indigo-400' : 'text-[#9CA3AF]'} />
+                                        <span className={`text-sm font-bold whitespace-nowrap ${formData.time ? 'text-indigo-400' : 'text-[#F9FAFB]'}`}>
+                                            {formData.time ? formData.time : 'Now'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex-shrink-0 relative group">
+                                    <select
+                                        value={formData.seats}
+                                        onChange={(e) => setFormData({ ...formData, seats: parseInt(e.target.value) })}
+                                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                    >
+                                        {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n} className="bg-[#111827] text-white">{n} Seats</option>)}
+                                    </select>
+                                    <div className="bg-[#1E293B] hover:bg-[#334155] rounded-full px-4 py-2.5 flex items-center gap-2 border border-[#374151] transition-colors">
+                                        <Users size={16} className="text-[#9CA3AF]" />
+                                        <span className="text-[#F9FAFB] text-sm font-bold whitespace-nowrap">
+                                            {formData.seats} Seats
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3️⃣ Advanced Options (Collapsible) */}
+                        <div className="bg-[#111827] rounded-3xl border border-[#1E293B] overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                className="w-full px-5 py-4 flex items-center justify-between text-[#F9FAFB] hover:bg-[#1E293B]/50 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Settings size={18} className="text-indigo-400" />
+                                    <span className="font-bold text-sm">More Options</span>
+                                </div>
+                                {showAdvanced ? <ChevronUp size={18} className="text-[#9CA3AF]" /> : <ChevronDown size={18} className="text-[#9CA3AF]" />}
+                            </button>
+
+                            <AnimatePresence>
+                                {showAdvanced && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="border-t border-[#1E293B]"
+                                    >
+                                        <div className="p-5 space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold text-[#9CA3AF] uppercase ml-1 flex items-center gap-1">
+                                                    <IndianRupee size={12} /> Price per seat
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    placeholder="₹ 0"
+                                                    value={formData.price}
+                                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-[#1E293B]/50 border border-[#374151] rounded-xl text-[#F9FAFB] focus:border-indigo-500 focus:outline-none"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold text-[#9CA3AF] uppercase ml-1 flex items-center gap-1">
+                                                    <FileText size={12} /> Notes
+                                                </label>
+                                                <textarea
+                                                    value={formData.notes}
+                                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                                    placeholder="Smoking preference, luggage space..."
+                                                    className="w-full px-4 py-3 bg-[#1E293B]/50 border border-[#374151] rounded-xl text-[#F9FAFB] focus:border-indigo-500 focus:outline-none min-h-[80px] resize-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                    </div>
+
+                    {/* 4️⃣ Fixed Bottom Action */}
+                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0B1020] via-[#0B1020]/95 to-transparent z-50">
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] transition-transform h-14 text-base font-bold shadow-lg shadow-indigo-500/20 rounded-xl"
+                        >
+                            {isLoading ? 'Creating Ride...' : 'Create Ride'}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        );
+    }
 
     return (
         <Card className="max-w-2xl mx-auto overflow-hidden">

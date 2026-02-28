@@ -11,7 +11,11 @@ import { Users, MapPin, Clock, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
-export default function AvailableRidesList() {
+interface AvailableRidesListProps {
+    isMobile?: boolean;
+}
+
+export default function AvailableRidesList({ isMobile }: AvailableRidesListProps) {
     const [rides, setRides] = useState<TripResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { showToast } = useToast() as any;
@@ -51,6 +55,54 @@ export default function AvailableRidesList() {
                 <h3 className="text-xl font-bold text-[#F9FAFB] mb-2">No rides found</h3>
                 <p className="text-[#9CA3AF]">Be the first to create a shared commute in your area!</p>
             </Card>
+        );
+    }
+
+    if (isMobile) {
+        return (
+            <div className="flex flex-col h-full bg-[#0B1020] pb-24">
+                <div className="flex-1 px-4 space-y-3">
+                    {rides.map((ride, index) => (
+                        <Link href={`/passenger/ride-details/${ride.id}`} key={ride.id} className="block">
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="bg-[#111827] rounded-2xl p-4 border border-[#1E293B] shadow-sm flex flex-col gap-2"
+                            >
+                                {/* Top Row: Route & Price */}
+                                <div className="flex justify-between items-start gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[#F9FAFB] text-sm font-bold truncate leading-tight">
+                                            {ride.origin_address.split(',')[0]} <span className="text-[#6B7280] font-normal mx-1">→</span> {ride.dest_address.split(',')[0]}
+                                        </p>
+                                    </div>
+                                    <div className="flex-shrink-0 text-right">
+                                        <p className="text-[#F9FAFB] text-[15px] font-black leading-none">
+                                            {formatCurrency(ride.price_per_seat || 0)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Second Row: Info */}
+                                <div className="flex items-center gap-3 text-xs text-[#9CA3AF] font-medium">
+                                    <div className="flex items-center gap-1 bg-[#1E293B] px-2 py-0.5 rounded-md">
+                                        <Users size={10} className="text-indigo-400" />
+                                        <span>{ride.available_seats} seats</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Clock size={12} className="text-[#6B7280]" />
+                                        <span>
+                                            {new Date(ride.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • {new Date(ride.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </Link>
+                    ))}
+                </div>
+            </div>
         );
     }
 
