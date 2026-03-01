@@ -51,7 +51,7 @@ const trustBadges = [
 
 export const Safety: React.FC = () => {
     return (
-        <section id="safety" className="py-20 lg:py-32 bg-white overflow-hidden">
+        <section id="safety" className="py-20 lg:py-32 bg-background transition-colors duration-500 overflow-hidden">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
                     {/* Content */}
@@ -60,11 +60,11 @@ export const Safety: React.FC = () => {
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
                     >
-                        <span className="text-blue-600 font-semibold text-sm uppercase tracking-wider">Safety First</span>
-                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mt-2 mb-4">
+                        <span className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-wider">Safety First</span>
+                        <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-2 mb-4">
                             Your Safety is Our Top Priority
                         </h2>
-                        <p className="text-lg text-gray-600 mb-8">
+                        <p className="text-lg text-muted-foreground mb-8">
                             We&apos;ve built multiple layers of security and verification to ensure every ride is safe and trustworthy.
                         </p>
 
@@ -79,12 +79,12 @@ export const Safety: React.FC = () => {
                                     transition={{ delay: index * 0.1 }}
                                     className="flex gap-4"
                                 >
-                                    <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
                                         {feature.icon}
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">{feature.title}</h3>
-                                        <p className="text-sm text-gray-600">{feature.description}</p>
+                                        <h3 className="font-semibold text-foreground mb-1">{feature.title}</h3>
+                                        <p className="text-sm text-muted-foreground">{feature.description}</p>
                                     </div>
                                 </motion.div>
                             ))}
@@ -95,7 +95,7 @@ export const Safety: React.FC = () => {
                             {trustBadges.map((badge) => (
                                 <div
                                     key={badge.label}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700"
+                                    className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full text-sm font-medium text-foreground border border-card-border"
                                 >
                                     <span>{badge.icon}</span>
                                     <span>{badge.label}</span>
@@ -115,7 +115,7 @@ export const Safety: React.FC = () => {
                             {/* Shield Background */}
                             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-green-500/10 rounded-3xl transform rotate-3" />
 
-                            <div className="relative bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
+                            <div className="relative bg-card rounded-3xl p-8 shadow-xl border border-card-border transition-colors">
                                 {/* Security Animation */}
                                 <div className="flex justify-center mb-8">
                                     <motion.div
@@ -132,29 +132,29 @@ export const Safety: React.FC = () => {
                                 {/* Stats */}
                                 <div className="grid grid-cols-3 gap-4 text-center">
                                     <div>
-                                        <p className="text-2xl font-bold text-gray-900">100%</p>
-                                        <p className="text-sm text-gray-500">Users Verified</p>
+                                        <p className="text-2xl font-bold text-foreground">100%</p>
+                                        <p className="text-sm text-muted-foreground">Users Verified</p>
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-gray-900">99.9%</p>
-                                        <p className="text-sm text-gray-500">Safe Rides</p>
+                                        <p className="text-2xl font-bold text-foreground">99.9%</p>
+                                        <p className="text-sm text-muted-foreground">Safe Rides</p>
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-gray-900">24/7</p>
-                                        <p className="text-sm text-gray-500">Support</p>
+                                        <p className="text-2xl font-bold text-foreground">24/7</p>
+                                        <p className="text-sm text-muted-foreground">Support</p>
                                     </div>
                                 </div>
 
                                 {/* Recent Verification */}
-                                <div className="mt-8 p-4 bg-green-50 rounded-xl flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <div className="mt-8 p-4 bg-green-500/10 rounded-xl flex items-center gap-3 border border-green-500/20">
+                                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                         </svg>
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-gray-900">All safety checks passed</p>
-                                        <p className="text-xs text-gray-500">Identity • Phone • Background verified</p>
+                                    <div className="flex-1 leading-tight">
+                                        <p className="text-sm font-medium text-foreground">All safety checks passed</p>
+                                        <p className="text-[10px] text-muted-foreground">Identity • Phone • Background verified</p>
                                     </div>
                                 </div>
                             </div>

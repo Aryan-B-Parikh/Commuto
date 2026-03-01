@@ -60,7 +60,7 @@ export const SkeletonTripCard: React.FC = () => (
         <div className="flex items-start gap-4 mb-4">
             <div className="flex flex-col items-center gap-1">
                 <Skeleton variant="circular" width={12} height={12} />
-                <div className="w-0.5 h-8 bg-[#1E293B]" />
+                <div className="w-0.5 h-8 bg-card-border" />
                 <Skeleton variant="circular" width={12} height={12} />
             </div>
             <div className="flex-1">

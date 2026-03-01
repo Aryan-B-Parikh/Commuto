@@ -9,10 +9,11 @@ import logging
 
 from database import engine, get_db, Base
 import models
-from routers import auth_router, rides_router, bids_router, otp_router, websocket_router, payment_methods_router, wallet_router, websocket_trips
-from rate_limiter import rate_limit
 
 load_dotenv()
+from rate_limiter import rate_limit
+
+from routers import auth_router, rides_router, bids_router, otp_router, websocket_router, payment_methods_router, wallet_router, websocket_trips
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -96,7 +97,7 @@ def health_check(request: Request, db: Session = Depends(get_db)):
         # Test database connection
         from sqlalchemy import text
         db.execute(text("SELECT 1"))
-        return {"status": "healthy", "database": "connected"}
+        return {"status": "healthy", "database": "connected", "api": "active"}
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         raise HTTPException(

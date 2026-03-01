@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface NavbarProps {
     variant?: 'default' | 'transparent';
@@ -21,7 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
     return (
         <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${variant === 'transparent'
             ? 'bg-transparent'
-            : 'bg-white/80 backdrop-blur-lg border-b border-gray-100 shadow-sm'
+            : 'bg-background/80 backdrop-blur-lg border-b border-card-border shadow-sm'
             }`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16 md:h-20">
@@ -32,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                             </svg>
                         </div>
-                        <span className="text-xl font-bold text-gray-900">Commuto</span>
+                        <span className="text-xl font-bold text-foreground">Commuto</span>
                     </Link>
 
                     {/* Desktop Navigation */}
@@ -41,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                             <Link
                                 key={link.href}
                                 href={link.href}
-                                className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                                className="text-muted-foreground hover:text-foreground font-medium transition-colors"
                             >
                                 {link.label}
                             </Link>
@@ -50,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
 
                     {/* Desktop Auth Buttons */}
                     <div className="hidden md:flex items-center gap-3">
+                        <ThemeToggle />
                         <Link href="/login">
                             <Button variant="ghost">Log in</Button>
                         </Link>
@@ -61,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                     {/* Mobile Menu Button */}
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="md:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                     >
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             {isMenuOpen ? (
@@ -81,7 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="md:hidden bg-white border-t border-gray-100"
+                        className="md:hidden bg-background border-t border-card-border"
                     >
                         <div className="px-4 py-4 space-y-3">
                             {navLinks.map((link) => (
@@ -89,12 +91,16 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                                     key={link.href}
                                     href={link.href}
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="block py-2 text-gray-600 hover:text-gray-900 font-medium"
+                                    className="block py-2 text-muted-foreground hover:text-foreground font-medium"
                                 >
                                     {link.label}
                                 </Link>
                             ))}
-                            <div className="pt-3 border-t border-gray-100 space-y-2">
+                            <div className="pt-3 border-t border-card-border space-y-3">
+                                <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Theme</span>
+                                    <ThemeToggle />
+                                </div>
                                 <Link href="/login" className="block">
                                     <Button variant="outline" fullWidth>Log in</Button>
                                 </Link>

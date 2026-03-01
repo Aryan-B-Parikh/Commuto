@@ -78,7 +78,7 @@ const colorClasses = {
 
 export const Features: React.FC = () => {
     return (
-        <section id="features" className="py-20 lg:py-32 bg-gray-50">
+        <section id="features" className="py-20 lg:py-32 bg-background transition-colors duration-500">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <motion.div
@@ -87,11 +87,11 @@ export const Features: React.FC = () => {
                     viewport={{ once: true }}
                     className="text-center mb-16"
                 >
-                    <span className="text-blue-600 font-semibold text-sm uppercase tracking-wider">Features</span>
-                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mt-2 mb-4">
+                    <span className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-wider">Features</span>
+                    <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-2 mb-4">
                         Everything You Need for Smart Commuting
                     </h2>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Packed with features designed to make your daily commute safer, cheaper, and more enjoyable.
                     </p>
                 </motion.div>
@@ -106,13 +106,13 @@ export const Features: React.FC = () => {
                             viewport={{ once: true }}
                             transition={{ delay: index * 0.1 }}
                             whileHover={{ y: -5 }}
-                            className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100"
+                            className="bg-card rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-card-border"
                         >
-                            <div className={`w-12 h-12 rounded-xl ${colorClasses[feature.color as keyof typeof colorClasses]} flex items-center justify-center mb-4`}>
+                            <div className={`w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4`}>
                                 {feature.icon}
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h3>
-                            <p className="text-gray-600">{feature.description}</p>
+                            <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
+                            <p className="text-muted-foreground">{feature.description}</p>
                         </motion.div>
                     ))}
                 </div>

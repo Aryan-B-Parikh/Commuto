@@ -64,10 +64,10 @@ export default function DriverDashboard() {
         <RoleGuard allowedRoles={['driver']}>
 
             {/* ====================== MOBILE LAYOUT ====================== */}
-            <div className="lg:hidden min-h-screen bg-[#0B1020] flex flex-col relative">
+            <div className="lg:hidden min-h-screen bg-background flex flex-col relative">
 
                 {/* 1️⃣ Mobile Header */}
-                <div className="sticky top-0 z-30 bg-[#0B1020] border-b border-[#1E293B] px-4 h-14 flex items-center justify-between">
+                <div className="sticky top-0 z-30 bg-background border-b border-card-border px-4 h-14 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-indigo-500/20 flex items-center justify-center">
                             <span className="text-sm font-bold text-indigo-400">
@@ -75,16 +75,16 @@ export default function DriverDashboard() {
                             </span>
                         </div>
                         <div>
-                            <p className="text-sm font-bold text-[#F9FAFB] leading-tight">
+                            <p className="text-sm font-bold text-foreground leading-tight">
                                 {user?.name ? `Hey, ${user.name.split(' ')[0]}` : 'Driver'}
                             </p>
-                            <p className="text-[10px] text-[#9CA3AF] font-medium uppercase tracking-wider">
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
                                 {isOnline ? 'Online' : 'Offline'}
                             </p>
                         </div>
                     </div>
-                    <button className="relative p-2 hover:bg-[#1E293B] rounded-xl transition-colors">
-                        <Bell size={20} className="text-[#9CA3AF]" />
+                    <button className="relative p-2 hover:bg-muted rounded-xl transition-colors">
+                        <Bell size={20} className="text-muted-foreground" />
                         {requests.length > 0 && (
                             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
                         )}
@@ -99,22 +99,22 @@ export default function DriverDashboard() {
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => setIsOnline(!isOnline)}
-                                    className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${isOnline ? 'bg-emerald-500' : 'bg-[#374151]'}`}
+                                    className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${isOnline ? 'bg-emerald-500' : 'bg-muted'}`}
                                 >
                                     <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${isOnline ? 'left-[22px]' : 'left-0.5'}`} />
                                 </button>
                                 <div>
-                                    <p className="text-xs font-bold text-[#F9FAFB]">{isOnline ? 'Online' : 'Offline'}</p>
-                                    <p className="text-[10px] text-[#6B7280]">{isOnline ? 'Accepting rides' : 'Not accepting'}</p>
+                                    <p className="text-xs font-bold text-foreground">{isOnline ? 'Online' : 'Offline'}</p>
+                                    <p className="text-[10px] text-muted-foreground/60">{isOnline ? 'Accepting rides' : 'Not accepting'}</p>
                                 </div>
                             </div>
 
                             {/* Today's Earnings */}
-                            <div className="flex items-center gap-2 bg-[#1E293B]/80 rounded-xl px-3 py-2">
+                            <div className="flex items-center gap-2 bg-muted/80 rounded-xl px-3 py-2">
                                 <DollarSign size={14} className="text-emerald-400" />
                                 <div>
                                     <p className="text-xs font-black text-emerald-400 leading-tight">{formatCurrency(earnings?.today || 0)}</p>
-                                    <p className="text-[9px] text-[#6B7280] uppercase tracking-wider">Today</p>
+                                    <p className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Today</p>
                                 </div>
                             </div>
 
@@ -122,7 +122,7 @@ export default function DriverDashboard() {
                             <div className="flex items-center gap-1.5">
                                 <span className="relative flex h-2.5 w-2.5">
                                     {isOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />}
-                                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isOnline ? 'bg-emerald-500' : 'bg-[#374151]'}`} />
+                                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isOnline ? 'bg-emerald-500' : 'bg-muted'}`} />
                                 </span>
                             </div>
                         </div>
@@ -152,7 +152,7 @@ export default function DriverDashboard() {
 
                 {/* 4️⃣ Mobile Bottom Sheet */}
                 <motion.div
-                    className="fixed bottom-0 left-0 right-0 z-20 bg-[#111827] rounded-t-3xl shadow-[0_-8px_32px_rgba(0,0,0,0.5)] border-t border-[#1E293B]"
+                    className="fixed bottom-0 left-0 right-0 z-20 bg-card rounded-t-3xl shadow-[0_-8px_32px_rgba(0,0,0,0.5)] border-t border-card-border"
                     animate={{
                         height: sheetExpanded ? '70vh' : requests.length > 0 ? '280px' : '220px',
                     }}
@@ -163,10 +163,10 @@ export default function DriverDashboard() {
                         onClick={() => setSheetExpanded(!sheetExpanded)}
                         className="w-full flex flex-col items-center pt-3 pb-2"
                     >
-                        <div className="w-10 h-1 rounded-full bg-[#374151] mb-1" />
+                        <div className="w-10 h-1 rounded-full bg-muted mb-1" />
                         <ChevronUp
                             size={16}
-                            className={`text-[#6B7280] transition-transform duration-200 ${sheetExpanded ? 'rotate-180' : ''}`}
+                            className={`text-muted-foreground/60 transition-transform duration-200 ${sheetExpanded ? 'rotate-180' : ''}`}
                         />
                     </button>
 
@@ -177,7 +177,7 @@ export default function DriverDashboard() {
                             <div className="mb-5">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-bold text-[#F9FAFB]">Incoming Requests</h3>
+                                        <h3 className="text-sm font-bold text-foreground">Incoming Requests</h3>
                                         <span className="bg-red-500/15 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                             {requests.length}
                                         </span>
@@ -196,7 +196,7 @@ export default function DriverDashboard() {
                                             transition={{ delay: idx * 0.05 }}
                                         >
                                             <Link href="/driver/requests">
-                                                <div className="bg-[#0B1020] p-4 rounded-2xl border border-[#1E293B] active:scale-[0.98] transition-transform relative overflow-hidden">
+                                                <div className="bg-background p-4 rounded-2xl border border-card-border active:scale-[0.98] transition-transform relative overflow-hidden">
                                                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 rounded-r" />
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-sm">
@@ -205,15 +205,15 @@ export default function DriverDashboard() {
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-1.5 mb-0.5">
                                                                 <MapPin size={10} className="text-indigo-400 shrink-0" />
-                                                                <p className="text-sm font-medium text-[#F9FAFB] truncate">{request.origin_address}</p>
+                                                                <p className="text-sm font-medium text-foreground truncate">{request.origin_address}</p>
                                                             </div>
                                                             <div className="flex items-center gap-1.5">
                                                                 <Navigation size={10} className="text-red-400 shrink-0" />
-                                                                <p className="text-xs text-[#6B7280] truncate">{request.dest_address}</p>
+                                                                <p className="text-xs text-muted-foreground/60 truncate">{request.dest_address}</p>
                                                             </div>
                                                         </div>
                                                         <div className="text-right shrink-0">
-                                                            <p className="text-xs font-bold text-[#9CA3AF]">
+                                                            <p className="text-xs font-bold text-muted-foreground">
                                                                 {new Date(request.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </p>
                                                         </div>
@@ -229,14 +229,14 @@ export default function DriverDashboard() {
                         {isLoading && (
                             <div className="space-y-3 mb-5">
                                 {[1, 2].map(i => (
-                                    <div key={i} className="h-16 bg-[#0B1020] animate-pulse rounded-2xl border border-[#1E293B]" />
+                                    <div key={i} className="h-16 bg-background animate-pulse rounded-2xl border border-card-border" />
                                 ))}
                             </div>
                         )}
 
                         {!isLoading && requests.length === 0 && (
                             <div className="text-center py-6 mb-4">
-                                <p className="text-[#6B7280] text-sm">No incoming requests right now</p>
+                                <p className="text-muted-foreground/60 text-sm">No incoming requests right now</p>
                             </div>
                         )}
 
@@ -246,22 +246,22 @@ export default function DriverDashboard() {
                                 <div className="w-9 h-9 rounded-xl bg-indigo-500/15 flex items-center justify-center mx-auto mb-2">
                                     <DollarSign size={18} className="text-indigo-400" />
                                 </div>
-                                <p className="text-xl font-black text-[#F9FAFB] leading-none">{formatCurrency(earnings?.this_month || 0)}</p>
-                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-1.5 font-bold">This Month</p>
+                                <p className="text-xl font-black text-foreground leading-none">{formatCurrency(earnings?.this_month || 0)}</p>
+                                <p className="text-[9px] text-muted-foreground/60 uppercase tracking-wider mt-1.5 font-bold">This Month</p>
                             </motion.div>
                             <motion.div whileTap={{ scale: 0.95 }} className="bg-gradient-to-br from-blue-500/15 to-blue-600/5 rounded-2xl p-4 border border-blue-500/15 text-center">
                                 <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center mx-auto mb-2">
                                     <Car size={18} className="text-blue-400" />
                                 </div>
-                                <p className="text-xl font-black text-[#F9FAFB] leading-none">{earnings?.total_trips || 0}</p>
-                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-1.5 font-bold">Total Trips</p>
+                                <p className="text-xl font-black text-foreground leading-none">{earnings?.total_trips || 0}</p>
+                                <p className="text-[9px] text-muted-foreground/60 uppercase tracking-wider mt-1.5 font-bold">Total Trips</p>
                             </motion.div>
                             <motion.div whileTap={{ scale: 0.95 }} className="bg-gradient-to-br from-amber-500/15 to-amber-600/5 rounded-2xl p-4 border border-amber-500/15 text-center">
                                 <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center mx-auto mb-2">
                                     <Star size={18} className="text-amber-400" />
                                 </div>
-                                <p className="text-xl font-black text-[#F9FAFB] leading-none">{formatCurrency(earnings?.avg_per_trip || 0)}</p>
-                                <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-1.5 font-bold">Avg / Trip</p>
+                                <p className="text-xl font-black text-foreground leading-none">{formatCurrency(earnings?.avg_per_trip || 0)}</p>
+                                <p className="text-[9px] text-muted-foreground/60 uppercase tracking-wider mt-1.5 font-bold">Avg / Trip</p>
                             </motion.div>
                         </div>
 
@@ -327,14 +327,14 @@ export default function DriverDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                         {/* Main Map Area */}
-                        <div className="lg:col-span-2 h-[500px] rounded-2xl overflow-hidden border border-[#1E293B] shadow-sm relative z-0">
-                            <div className="absolute top-4 left-4 z-[10] bg-[#111827]/90 backdrop-blur-md px-4 py-2 rounded-xl border border-[#1E293B] shadow-sm">
+                        <div className="lg:col-span-2 h-[500px] rounded-2xl overflow-hidden border border-card-border shadow-sm relative z-0">
+                            <div className="absolute top-4 left-4 z-[10] bg-card/90 backdrop-blur-md px-4 py-2 rounded-xl border border-card-border shadow-sm">
                                 <div className="flex items-center gap-2">
                                     <span className="relative flex h-3 w-3">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
                                     </span>
-                                    <span className="text-sm font-semibold text-[#F9FAFB]">You are Online</span>
+                                    <span className="text-sm font-semibold text-foreground">You are Online</span>
                                 </div>
                             </div>
 
@@ -354,7 +354,7 @@ export default function DriverDashboard() {
                         {/* Requests Side Panel */}
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-lg font-bold text-[#F9FAFB]">Incoming Requests</h2>
+                                <h2 className="text-lg font-bold text-foreground">Incoming Requests</h2>
                                 {requests.length > 0 && (
                                     <span className="bg-red-500/15 text-red-400 text-xs font-bold px-2 py-1 rounded-full">
                                         {requests.length} New
@@ -365,11 +365,11 @@ export default function DriverDashboard() {
                             <div className="space-y-4">
                                 {isLoading ? (
                                     [1, 2].map(i => (
-                                        <div key={i} className="h-[200px] w-full bg-[#111827]/50 animate-pulse rounded-2xl border border-[#1E293B]" />
+                                        <div key={i} className="h-[200px] w-full bg-card/50 animate-pulse rounded-2xl border border-card-border" />
                                     ))
                                 ) : requests.length > 0 ? (
                                     requests.slice(0, 3).map((request) => (
-                                        <div key={request.id} className="bg-[#111827] p-5 rounded-2xl border border-[#1E293B] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                                        <div key={request.id} className="bg-card p-5 rounded-2xl border border-card-border shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                                             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
 
                                             <div className="flex justify-between items-start mb-3">
@@ -378,11 +378,11 @@ export default function DriverDashboard() {
                                                         {request.seats_requested}
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-[#F9FAFB]">Passenger ID: {request.id.substring(0, 5)}</p>
-                                                        <p className="text-xs text-[#9CA3AF]">Pending Approval</p>
+                                                        <p className="font-bold text-foreground">Passenger ID: {request.id.substring(0, 5)}</p>
+                                                        <p className="text-xs text-muted-foreground">Pending Approval</p>
                                                     </div>
                                                 </div>
-                                                <span className="text-xs font-bold text-[#9CA3AF]">
+                                                <span className="text-xs font-bold text-muted-foreground">
                                                     {new Date(request.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
@@ -390,11 +390,11 @@ export default function DriverDashboard() {
                                             <div className="space-y-3 mb-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                                    <p className="text-sm text-[#9CA3AF] truncate">{request.origin_address}</p>
+                                                    <p className="text-sm text-muted-foreground truncate">{request.origin_address}</p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                                    <p className="text-sm text-[#9CA3AF] truncate">{request.dest_address}</p>
+                                                    <p className="text-sm text-muted-foreground truncate">{request.dest_address}</p>
                                                 </div>
                                             </div>
 
@@ -408,8 +408,8 @@ export default function DriverDashboard() {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="text-center py-10 bg-[#1E293B]/10 rounded-2xl border-2 border-dashed border-[#1E293B]">
-                                        <p className="text-[#9CA3AF] text-sm">No incoming requests</p>
+                                    <div className="text-center py-10 bg-muted/10 rounded-2xl border-2 border-dashed border-card-border">
+                                        <p className="text-muted-foreground text-sm">No incoming requests</p>
                                     </div>
                                 )}
 

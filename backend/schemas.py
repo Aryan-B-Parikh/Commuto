@@ -21,6 +21,10 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class GoogleAuthRequest(BaseModel):
+    token: str
+    role: Optional[str] = None
+
 class Token(BaseModel):
     access_token: str
     token_type: str

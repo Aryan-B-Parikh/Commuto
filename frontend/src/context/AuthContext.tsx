@@ -15,6 +15,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (email: string, password: string) => Promise<User | null>;
     register: (data: RegisterRequest) => Promise<User | null>;
+    googleLogin: (credential: string, role?: string) => Promise<User | null>;
     logout: () => void;
     setRole: (role: UserRole) => void;
     refreshUser: () => Promise<void>;
@@ -113,6 +114,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }, [login]);
 
+    // Google Login
+    const googleLogin = useCallback(async (credential: string, role?: string): Promise<User | null> => {
+        setIsLoading(true);
+        try {
+            const authResponse = await authAPI.googleLogin(credential, role);
+            localStorage.setItem('auth_token', authResponse.access_token);
+
+            // Fetch user data
+            const userData = await authAPI.getCurrentUser();
+            const frontendUser = transformBackendUser(userData);
+
+            setUser(frontendUser);
+            setRole(userData.role as UserRole);
+            setIsLoading(false);
+            return frontendUser;
+        } catch (error) {
+            console.error('Google login failed:', error);
+            setIsLoading(false);
+            return null;
+        }
+    }, [setRole]);
+
     // Refresh user data
     const refreshUser = useCallback(async () => {
         try {
@@ -142,6 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 isLoading,
                 login,
                 register,
+                googleLogin,
                 logout,
                 setRole,
                 refreshUser,
