@@ -21,6 +21,15 @@ MIGRATIONS = [
     # --- Passenger table: accessibility ---
     "ALTER TABLE passengers ADD COLUMN IF NOT EXISTS accessibility_needs BOOLEAN DEFAULT FALSE",
     
+    # --- Trip table: passenger notes ---
+    "ALTER TABLE trips ADD COLUMN IF NOT EXISTS notes TEXT",
+    
+    # --- TripBid table: driver message ---
+    "ALTER TABLE trip_bids ADD COLUMN IF NOT EXISTS message VARCHAR(500)",
+    
+    # --- Booking table: per-passenger notes ---
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS notes TEXT",
+    
     # --- New tables (create_all handles these, but let's be explicit) ---
     """CREATE TABLE IF NOT EXISTS payment_methods (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

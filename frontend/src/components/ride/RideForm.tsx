@@ -127,8 +127,12 @@ export const RideForm: React.FC<RideFormProps> = ({
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         placeholder="Any specific requests for the driver? (Optional)"
+                        maxLength={500}
                         className="w-full px-5 py-4 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-2xl text-[#F9FAFB] min-h-[120px] focus:bg-[#111827] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none font-medium resize-none placeholder:text-[#6B7280]/50"
                     />
+                    {formData.notes && (
+                        <p className="text-[10px] text-[#6B7280] text-right mt-1">{formData.notes.length}/500</p>
+                    )}
                 </div>
 
                 {/* CTA Section */}

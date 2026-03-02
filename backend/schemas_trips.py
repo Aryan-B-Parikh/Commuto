@@ -37,6 +37,10 @@ class SharedTripCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class PassengerNote(BaseModel):
+    passenger_name: str
+    notes: str
+
 class TripResponse(BaseModel):
     id: UUID
     driver_id: Optional[UUID] = None
@@ -55,6 +59,7 @@ class TripResponse(BaseModel):
     available_seats: int
     price_per_seat: Optional[float] = None
     status: str
+    notes: Optional[str] = None
     created_at: datetime
     
     # Driver Details
@@ -66,6 +71,9 @@ class TripResponse(BaseModel):
     # User's booking info (if applicable)
     booking_total_price: Optional[float] = None
     booking_payment_status: Optional[str] = None
+    
+    # All passenger notes for this trip
+    passenger_notes: List[PassengerNote] = []
     
     class Config:
         from_attributes = True
@@ -94,6 +102,7 @@ class BidResponse(BaseModel):
     driver_id: UUID
     bid_amount: float
     status: str
+    message: Optional[str] = None
     created_at: datetime
     is_counter_bid: Optional[bool] = False
     parent_bid_id: Optional[UUID] = None
@@ -120,6 +129,8 @@ class DriverBidWithTrip(BaseModel):
     start_time: datetime
     total_seats: int
     price_per_seat: Optional[float] = None
+    notes: Optional[str] = None
+    passenger_notes: List[PassengerNote] = []
 
 
 class BidWithDriver(BaseModel):
@@ -128,6 +139,7 @@ class BidWithDriver(BaseModel):
     driver_id: UUID
     bid_amount: float
     status: str
+    message: Optional[str] = None
     created_at: datetime
     is_counter_bid: Optional[bool] = False
     parent_bid_id: Optional[UUID] = None
@@ -162,6 +174,7 @@ class PassengerShortInfo(BaseModel):
     id: UUID
     full_name: str
     avatar_url: Optional[str] = None
+    notes: Optional[str] = None
 
     class Config:
         from_attributes = True

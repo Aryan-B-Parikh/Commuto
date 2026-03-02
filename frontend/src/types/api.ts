@@ -82,6 +82,8 @@ export interface TripResponse {
     bid_count?: number;
     booking_total_price?: number;
     booking_payment_status?: string;
+    notes?: string;
+    passenger_notes?: { passenger_name: string; notes: string }[];
 }
 
 export interface BidRequest {
@@ -115,6 +117,8 @@ export interface DriverBidWithTrip {
     start_time: string;
     total_seats: number;
     price_per_seat?: number;
+    notes?: string;
+    passenger_notes?: { passenger_name: string; notes: string }[];
 }
 
 export interface ActionResponse {

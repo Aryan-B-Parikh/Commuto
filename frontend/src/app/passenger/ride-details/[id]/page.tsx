@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { tripsAPI } from '@/services/api';
+import { tripsAPI, bidsAPI } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useTripWebSocket } from '@/hooks/useTripWebSocket';
-import { MapPin, Users, Clock, Shield, ArrowLeft, MessageCircle, ChevronRight, UserPlus, CheckCircle2 } from 'lucide-react';
+import { MapPin, Users, Clock, Shield, ArrowLeft, MessageCircle, MessageSquare, ChevronRight, UserPlus, CheckCircle2, DollarSign, Star, LogOut } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import dynamic from 'next/dynamic';
@@ -29,6 +29,10 @@ export default function RideDetailsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isJoining, setIsJoining] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [joinNotes, setJoinNotes] = useState('');
+    const [bids, setBids] = useState<any[]>([]);
+    const [acceptingBidId, setAcceptingBidId] = useState<string | null>(null);
+    const [isLeaving, setIsLeaving] = useState(false);
 
     const { isConnected, availableSeats, newPassenger } = useTripWebSocket(tripId);
 
@@ -71,7 +75,7 @@ export default function RideDetailsPage() {
     const handleJoin = async () => {
         setIsJoining(true);
         try {
-            await tripsAPI.joinRide(tripId);
+            await tripsAPI.joinRide(tripId, joinNotes.trim() || undefined);
             showToast('success', 'Joined ride successfully!');
             const updatedData = await tripsAPI.getTripDetails(tripId);
             setTrip(updatedData);
@@ -86,6 +90,45 @@ export default function RideDetailsPage() {
     if (!trip) return null;
 
     const isMember = trip.passengers.some((p: any) => p.id === user?.id) || trip.creator_passenger_id === user?.id;
+    const isCreator = trip.creator_passenger_id === user?.id;
+
+    // Fetch bids when user is a member
+    useEffect(() => {
+        if (isMember && trip?.status === 'pending') {
+            bidsAPI.getRideBids(tripId)
+                .then(data => setBids(data))
+                .catch(() => setBids([]));
+        }
+    }, [isMember, tripId, trip?.status]);
+
+    const handleAcceptBid = async (bidId: string) => {
+        setAcceptingBidId(bidId);
+        try {
+            const result = await bidsAPI.acceptBid(bidId);
+            showToast('success', `Bid accepted! OTP: ${result.otp}`);
+            const updatedData = await tripsAPI.getTripDetails(tripId);
+            setTrip(updatedData);
+            setBids([]);
+        } catch (error: any) {
+            showToast('error', error.response?.data?.detail || 'Failed to accept bid.');
+        } finally {
+            setAcceptingBidId(null);
+        }
+    };
+
+    const handleLeaveRide = async () => {
+        if (!confirm('Are you sure you want to leave this ride?')) return;
+        setIsLeaving(true);
+        try {
+            await tripsAPI.leaveRide(tripId);
+            showToast('success', 'You have left the ride.');
+            router.push('/passenger/ride-sharing');
+        } catch (error: any) {
+            showToast('error', error.response?.data?.detail || 'Failed to leave ride.');
+        } finally {
+            setIsLeaving(false);
+        }
+    };
 
     return (
         <RoleGuard allowedRoles={['passenger']}>
@@ -152,6 +195,12 @@ export default function RideDetailsPage() {
                                 <div className="flex-1">
                                     <p className="text-sm font-bold text-[#F9FAFB]">{trip.creator?.full_name || 'Creator'}</p>
                                     <p className="text-[10px] font-bold text-indigo-400 uppercase">Host</p>
+                                    {trip.passengers?.find((p: any) => p.id === trip.creator_passenger_id)?.notes && (
+                                        <div className="flex items-start gap-1.5 mt-1.5">
+                                            <MessageSquare size={10} className="text-indigo-400 mt-0.5 shrink-0" />
+                                            <p className="text-[11px] text-[#9CA3AF] leading-snug line-clamp-2">{trip.passengers.find((p: any) => p.id === trip.creator_passenger_id)?.notes}</p>
+                                        </div>
+                                    )}
                                 </div>
                                 <MessageCircle size={18} className="text-[#6B7280]" />
                             </div>
@@ -161,9 +210,15 @@ export default function RideDetailsPage() {
                                     <div className="w-10 h-10 rounded-full bg-[#374151] font-bold text-[#9CA3AF] flex items-center justify-center">
                                         {passenger.full_name?.[0]}
                                     </div>
-                                    <div>
+                                    <div className="flex-1">
                                         <p className="text-sm font-bold text-[#F9FAFB]">{passenger.full_name}</p>
                                         <p className="text-[10px] font-bold text-[#6B7280] uppercase">Passenger</p>
+                                        {passenger.notes && (
+                                            <div className="flex items-start gap-1.5 mt-1.5">
+                                                <MessageSquare size={10} className="text-indigo-400 mt-0.5 shrink-0" />
+                                                <p className="text-[11px] text-[#9CA3AF] leading-snug line-clamp-2">{passenger.notes}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -179,6 +234,50 @@ export default function RideDetailsPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Driver Bids Section (Mobile) */}
+                {isMember && bids.length > 0 && trip.status === 'pending' && (
+                    <div className="flex-1 bg-[#111827] px-5 pb-6">
+                        <h3 className="text-sm font-bold text-[#F9FAFB] mb-3 flex items-center gap-2">
+                            <DollarSign size={16} className="text-emerald-400" /> Driver Bids ({bids.length})
+                        </h3>
+                        <div className="flex flex-col gap-2">
+                            {bids.map((bid: any) => (
+                                <div key={bid.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#0B1020] border border-[#1E293B]">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                                        {bid.driver_name?.[0] || 'D'}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-[#F9FAFB]">{bid.driver_name || 'Driver'}</p>
+                                        <div className="flex items-center gap-2">
+                                            {bid.driver_rating && (
+                                                <span className="flex items-center gap-0.5 text-[10px] text-amber-400">
+                                                    <Star size={10} fill="currentColor" /> {Number(bid.driver_rating).toFixed(1)}
+                                                </span>
+                                            )}
+                                            <span className="text-lg font-black text-emerald-400">{formatCurrency(bid.bid_amount)}</span>
+                                        </div>
+                                        {bid.message && (
+                                            <div className="flex items-start gap-1.5 mt-1.5 p-2 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
+                                                <MessageSquare size={10} className="text-emerald-400 mt-0.5 shrink-0" />
+                                                <p className="text-[10px] text-[#9CA3AF] leading-tight italic line-clamp-2">{bid.message}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {trip.creator_passenger_id === user?.id && (
+                                        <button
+                                            onClick={() => handleAcceptBid(bid.id)}
+                                            disabled={acceptingBidId === bid.id}
+                                            className="px-4 h-9 bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-transform text-white font-bold text-xs rounded-lg disabled:opacity-50 shrink-0"
+                                        >
+                                            {acceptingBidId === bid.id ? '...' : 'Accept'}
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Sticky Bottom Pricing & CTA */}
                 <div className="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-[#1E293B] p-4 flex items-center justify-between z-50 pb-safe">
@@ -200,18 +299,40 @@ export default function RideDetailsPage() {
                                 <CheckCircle2 size={16} /> Paid
                             </div>
                         ) : (
-                            <div className="px-6 h-12 bg-[#1E293B] flex items-center justify-center rounded-xl text-[#9CA3AF] font-bold text-sm">
-                                Joined
+                            <div className="flex items-center gap-2">
+                                <div className="px-4 h-12 bg-[#1E293B] flex items-center justify-center rounded-xl text-[#9CA3AF] font-bold text-sm">
+                                    Joined
+                                </div>
+                                {!isCreator && (
+                                    <button
+                                        onClick={handleLeaveRide}
+                                        disabled={isLeaving}
+                                        className="px-3 h-12 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-50"
+                                    >
+                                        <LogOut size={14} />
+                                        {isLeaving ? '...' : 'Leave'}
+                                    </button>
+                                )}
                             </div>
                         )
                     ) : (
-                        <button
-                            onClick={handleJoin}
-                            disabled={isJoining || trip.available_seats === 0}
-                            className="px-8 h-12 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-transform text-white font-bold text-base rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center disabled:opacity-50 disabled:active:scale-100"
-                        >
-                            {isJoining ? 'Joining...' : trip.available_seats > 0 ? 'Join Ride' : 'Full'}
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="text"
+                                value={joinNotes}
+                                onChange={(e) => setJoinNotes(e.target.value)}
+                                placeholder="Add a note... (optional)"
+                                maxLength={500}
+                                className="flex-1 h-12 px-4 bg-[#1E293B] border border-[#374151] rounded-xl text-sm text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-indigo-500 focus:outline-none"
+                            />
+                            <button
+                                onClick={handleJoin}
+                                disabled={isJoining || trip.available_seats === 0}
+                                className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-transform text-white font-bold text-base rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center disabled:opacity-50 disabled:active:scale-100 shrink-0"
+                            >
+                                {isJoining ? 'Joining...' : trip.available_seats > 0 ? 'Join Ride' : 'Full'}
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -314,6 +435,17 @@ export default function RideDetailsPage() {
                                                     Joined Successfully
                                                 </Button>
 
+                                                {!isCreator && (
+                                                    <Button
+                                                        onClick={handleLeaveRide}
+                                                        disabled={isLeaving}
+                                                        className="w-full h-12 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold rounded-xl flex items-center justify-center gap-2"
+                                                    >
+                                                        <LogOut className="w-4 h-4" />
+                                                        {isLeaving ? 'Leaving...' : 'Leave This Ride'}
+                                                    </Button>
+                                                )}
+
                                                 {trip.user_booking?.payment_status === 'pending' && (
                                                     <Button
                                                         onClick={() => setIsPaymentModalOpen(true)}
@@ -331,13 +463,25 @@ export default function RideDetailsPage() {
                                                 )}
                                             </div>
                                         ) : (
-                                            <Button
-                                                onClick={handleJoin}
-                                                disabled={isJoining || trip.available_seats === 0}
-                                                className="w-full h-14 bg-indigo-500 hover:bg-indigo-600 font-bold text-lg rounded-2xl shadow-lg shadow-indigo-500/20"
-                                            >
-                                                {isJoining ? 'Processing...' : trip.available_seats > 0 ? 'Join This Ride' : 'Ride is Full'}
-                                            </Button>
+                                            <div className="space-y-3">
+                                                <textarea
+                                                    value={joinNotes}
+                                                    onChange={(e) => setJoinNotes(e.target.value)}
+                                                    placeholder="Add a note for the driver... (optional)"
+                                                    maxLength={500}
+                                                    className="w-full px-4 py-3 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-xl text-sm text-[#F9FAFB] placeholder:text-[#6B7280] min-h-[60px] resize-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
+                                                />
+                                                {joinNotes && (
+                                                    <p className="text-[10px] text-[#6B7280] text-right -mt-2">{joinNotes.length}/500</p>
+                                                )}
+                                                <Button
+                                                    onClick={handleJoin}
+                                                    disabled={isJoining || trip.available_seats === 0}
+                                                    className="w-full h-14 bg-indigo-500 hover:bg-indigo-600 font-bold text-lg rounded-2xl shadow-lg shadow-indigo-500/20"
+                                                >
+                                                    {isJoining ? 'Processing...' : trip.available_seats > 0 ? 'Join This Ride' : 'Ride is Full'}
+                                                </Button>
+                                            </div>
                                         )}
                                         <p className="text-[10px] text-center text-[#9CA3AF] uppercase font-bold tracking-tighter">
                                             By joining, you agree to the shared travel guidelines
@@ -366,6 +510,12 @@ export default function RideDetailsPage() {
                                                 <div>
                                                     <p className="text-sm font-bold text-[#F9FAFB]">{trip.creator?.full_name || 'Creator'}</p>
                                                     <p className="text-[10px] font-bold text-indigo-400 uppercase">Host</p>
+                                                    {trip.passengers?.find((p: any) => p.id === trip.creator_passenger_id)?.notes && (
+                                                        <div className="flex items-start gap-1.5 mt-1">
+                                                            <MessageSquare size={10} className="text-indigo-400 mt-0.5 shrink-0" />
+                                                            <p className="text-[11px] text-[#9CA3AF] leading-snug line-clamp-2">{trip.passengers.find((p: any) => p.id === trip.creator_passenger_id)?.notes}</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <MessageCircle className="w-4 h-4 text-indigo-400" />
@@ -386,6 +536,12 @@ export default function RideDetailsPage() {
                                                     <div>
                                                         <p className="text-sm font-bold text-[#F9FAFB]">{passenger.full_name}</p>
                                                         <p className="text-[10px] font-bold text-[#9CA3AF] uppercase">Passenger</p>
+                                                        {passenger.notes && (
+                                                            <div className="flex items-start gap-1.5 mt-1">
+                                                                <MessageSquare size={10} className="text-indigo-400 mt-0.5 shrink-0" />
+                                                                <p className="text-[11px] text-[#9CA3AF] leading-snug line-clamp-2">{passenger.notes}</p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <ChevronRight className="w-4 h-4 text-[#4B5563]" />
@@ -403,6 +559,62 @@ export default function RideDetailsPage() {
                                         ))}
                                     </div>
                                 </Card>
+
+                                {/* Driver Bids (Desktop) */}
+                                {isMember && bids.length > 0 && trip.status === 'pending' && (
+                                    <Card className="p-5 lg:p-6">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="font-bold text-[#F9FAFB] flex items-center gap-2">
+                                                <DollarSign className="w-5 h-5 text-emerald-400" /> Driver Bids
+                                            </h3>
+                                            <div className="px-2 py-1 bg-emerald-500/10 rounded-lg text-[10px] font-black uppercase text-emerald-400">
+                                                {bids.length} {bids.length === 1 ? 'Bid' : 'Bids'}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {bids.map((bid: any) => (
+                                                <div key={bid.id} className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/5 ring-1 ring-emerald-500/10">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                                                            {bid.driver_name?.[0] || 'D'}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-[#F9FAFB]">{bid.driver_name || 'Driver'}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                {bid.driver_rating && (
+                                                                    <span className="flex items-center gap-0.5 text-[10px] text-amber-400 font-bold">
+                                                                        <Star size={10} fill="currentColor" /> {Number(bid.driver_rating).toFixed(1)}
+                                                                    </span>
+                                                                )}
+                                                                <span className="text-xs text-[#9CA3AF]">
+                                                                    {new Date(bid.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        {bid.message && (
+                                                            <div className="mt-2 flex items-start gap-1.5 bg-emerald-500/5 rounded-xl px-2.5 py-1.5 ring-1 ring-emerald-500/10">
+                                                                <MessageSquare size={11} className="text-emerald-400 mt-0.5 shrink-0" />
+                                                                <p className="text-[10px] text-[#9CA3AF] leading-tight italic line-clamp-2">{bid.message}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <p className="text-xl font-black text-emerald-400">{formatCurrency(bid.bid_amount)}</p>
+                                                        {trip.creator_passenger_id === user?.id && (
+                                                            <Button
+                                                                onClick={() => handleAcceptBid(bid.id)}
+                                                                disabled={acceptingBidId === bid.id}
+                                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 h-9 rounded-xl"
+                                                            >
+                                                                {acceptingBidId === bid.id ? 'Accepting...' : 'Accept'}
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
                             </div>
 
                         </div>

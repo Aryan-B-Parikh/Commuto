@@ -32,6 +32,28 @@ def get_my_bids(
     ).order_by(models.TripBid.created_at.desc()).all()
     
     result = []
+    trip_ids = [trip.id for _, trip in bids]
+    
+    # Batch-fetch all booking notes with passenger names
+    booking_notes = {}
+    if trip_ids:
+        notes_rows = db.query(
+            models.Booking.trip_id,
+            models.Booking.notes,
+            models.User.full_name
+        ).join(
+            models.User, models.Booking.passenger_id == models.User.id
+        ).filter(
+            models.Booking.trip_id.in_(trip_ids),
+            models.Booking.notes != None,
+            models.Booking.notes != ""
+        ).all()
+        for tid, note, name in notes_rows:
+            booking_notes.setdefault(str(tid), []).append({
+                "passenger_name": name,
+                "notes": note
+            })
+    
     for bid, trip in bids:
         result.append({
             "id": bid.id,
@@ -50,6 +72,8 @@ def get_my_bids(
             "start_time": trip.start_time,
             "total_seats": trip.total_seats,
             "price_per_seat": trip.price_per_seat,
+            "notes": trip.notes,
+            "passenger_notes": booking_notes.get(str(trip.id), []),
         })
     
     return result
@@ -118,6 +142,7 @@ def place_bid(
         driver_id=current_user.id,
         bid_amount=bid_data.amount,
         status="pending",
+        message=bid_data.message,
         version=0
     )
     
@@ -181,12 +206,13 @@ def get_ride_bids(
             "driver_id": bid.driver_id,
             "bid_amount": bid.bid_amount,
             "status": bid.status,
+            "message": bid.message,
             "created_at": bid.created_at,
             "driver_name": user.full_name,
             "driver_rating": driver.rating,
-            "driver_avatar": user.avatar_url
-            ,"is_counter_bid": getattr(bid, "is_counter_bid", False)
-            ,"parent_bid_id": getattr(bid, "parent_bid_id", None)
+            "driver_avatar": user.avatar_url,
+            "is_counter_bid": getattr(bid, "is_counter_bid", False),
+            "parent_bid_id": getattr(bid, "parent_bid_id", None)
         })
     
     return result
@@ -223,13 +249,8 @@ def accept_bid(
             models.Trip.id == bid.trip_id
         ).with_for_update().first()
         
-        # Check if user is the passenger
-        is_passenger = db.query(models.Booking).filter(
-            models.Booking.trip_id == bid.trip_id,
-            models.Booking.passenger_id == current_user.id
-        ).first() is not None
-        
-        if not is_passenger:
+        # Check if user is the trip creator (only creator can accept bids)
+        if trip.creator_passenger_id != current_user.id:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -282,13 +303,12 @@ def accept_bid(
             other_bid.status = "rejected"
             other_bid.version += 1
         
-        # Update booking with price
-        booking = db.query(models.Booking).filter(
-            models.Booking.trip_id == trip.id,
-            models.Booking.passenger_id == current_user.id
-        ).with_for_update().first()
+        # Update ALL bookings on this trip with price and confirmed status
+        all_bookings = db.query(models.Booking).filter(
+            models.Booking.trip_id == trip.id
+        ).with_for_update().all()
         
-        if booking:
+        for booking in all_bookings:
             booking.total_price = bid.bid_amount * booking.seats_booked
             booking.status = "confirmed"
         

@@ -114,8 +114,8 @@ export const tripsAPI = {
         return response.data;
     },
 
-    joinRide: async (tripId: string): Promise<any> => {
-        const response = await api.post(`/rides/${tripId}/join`);
+    joinRide: async (tripId: string, notes?: string): Promise<any> => {
+        const response = await api.post(`/rides/${tripId}/join`, notes ? { notes } : {});
         return response.data;
     },
 

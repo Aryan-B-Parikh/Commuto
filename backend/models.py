@@ -148,6 +148,9 @@ class Trip(Base):
     total_seats = Column(Integer, nullable=False)
     available_seats = Column(Integer, nullable=False)
     
+    # Passenger notes (optional, max 500 chars enforced at schema level)
+    notes = Column(Text, nullable=True)
+    
     start_otp = Column(String(6), nullable=True)
     otp_verified = Column(Boolean, default=False)
     
@@ -200,6 +203,7 @@ class Booking(Base):
     status = Column(String(20), default="pending")
     payment_status = Column(String(20), default="pending")
     otp_verified = Column(Boolean, default=False)
+    notes = Column(Text, nullable=True)  # Per-passenger notes
     
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -217,6 +221,7 @@ class TripBid(Base):
     
     bid_amount = Column(Numeric, nullable=False)
     status = Column(String(20), default="pending")
+    message = Column(String(500), nullable=True)
     
     # Optimistic locking for concurrent bid updates
     version = Column(Integer, default=0, nullable=False)

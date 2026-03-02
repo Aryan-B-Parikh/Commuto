@@ -21,7 +21,8 @@ import {
     RefreshCw,
     Inbox,
     TrendingUp,
-    ChevronRight
+    ChevronRight,
+    MessageSquare
 } from 'lucide-react';
 
 export default function MyBidsPage() {
@@ -286,6 +287,20 @@ export default function MyBidsPage() {
                                                             </span>
                                                         </div>
                                                     </div>
+
+                                                    {/* Passenger Notes */}
+                                                    {bid.passenger_notes && bid.passenger_notes.length > 0 && (
+                                                        <div className="mt-2 space-y-1">
+                                                            {bid.passenger_notes.map((pn, idx) => (
+                                                                <div key={idx} className="flex items-start gap-2 bg-[#1E293B]/40 rounded-lg px-3 py-2 border border-[#1E293B]/30">
+                                                                    <MessageSquare size={11} className="text-indigo-400 mt-0.5 shrink-0" />
+                                                                    <p className="text-[11px] text-[#9CA3AF] line-clamp-2 leading-relaxed">
+                                                                        <span className="font-bold text-[#F9FAFB]">{pn.passenger_name}:</span> {pn.notes}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </motion.div>
                                         );
@@ -443,6 +458,20 @@ export default function MyBidsPage() {
                                                                     </span>
                                                                 </div>
                                                             </div>
+
+                                                            {/* Passenger Notes */}
+                                                            {bid.passenger_notes && bid.passenger_notes.length > 0 && (
+                                                                <div className="mt-3 space-y-1.5">
+                                                                    {bid.passenger_notes.map((pn, idx) => (
+                                                                        <div key={idx} className="flex items-start gap-2 bg-[#1E293B]/40 rounded-xl px-3 py-2.5 border border-[#1E293B]/30">
+                                                                            <MessageSquare size={12} className="text-indigo-400 mt-0.5 shrink-0" />
+                                                                            <p className="text-xs text-[#9CA3AF] line-clamp-2 leading-relaxed">
+                                                                                <span className="font-bold text-[#F9FAFB]">{pn.passenger_name}:</span> {pn.notes}
+                                                                            </p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {/* Right: Bid Amount */}

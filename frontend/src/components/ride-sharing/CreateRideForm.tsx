@@ -191,8 +191,12 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                                                     value={formData.notes}
                                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                                     placeholder="Smoking preference, luggage space..."
+                                                    maxLength={500}
                                                     className="w-full px-4 py-3 bg-[#1E293B]/50 border border-[#374151] rounded-xl text-[#F9FAFB] focus:border-indigo-500 focus:outline-none min-h-[80px] resize-none"
                                                 />
+                                                {formData.notes && (
+                                                    <p className="text-[10px] text-[#6B7280] text-right mt-1">{formData.notes.length}/500</p>
+                                                )}
                                             </div>
                                         </div>
                                     </motion.div>
@@ -307,8 +311,12 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                             placeholder="Luggage details, smoking preferences, etc..."
+                            maxLength={500}
                             className="w-full px-4 py-3 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-xl text-[#F9FAFB] placeholder:text-[#6B7280] min-h-[100px] resize-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                         />
+                        {formData.notes && (
+                            <p className="text-[10px] text-[#6B7280] text-right mt-1">{formData.notes.length}/500</p>
+                        )}
                     </div>
 
                     <Button

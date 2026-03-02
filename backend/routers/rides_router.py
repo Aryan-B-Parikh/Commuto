@@ -9,6 +9,7 @@ import auth
 import uuid
 from uuid import UUID
 from typing import List, Optional
+from pydantic import BaseModel
 from datetime import datetime, timedelta
 import logging
 from websocket_manager import manager
@@ -21,6 +22,33 @@ import schemas
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
 
+
+def populate_passenger_notes(trips, db):
+    """Attach all passengers' notes (with names) to each trip."""
+    trip_ids = [t.id for t in trips]
+    if not trip_ids:
+        return
+    bookings_with_notes = db.query(
+        models.Booking.trip_id,
+        models.Booking.notes,
+        models.User.full_name
+    ).join(
+        models.User, models.Booking.passenger_id == models.User.id
+    ).filter(
+        models.Booking.trip_id.in_(trip_ids),
+        models.Booking.notes != None,
+        models.Booking.notes != ""
+    ).all()
+    
+    notes_map = {}
+    for trip_id, note, name in bookings_with_notes:
+        notes_map.setdefault(str(trip_id), []).append({
+            "passenger_name": name,
+            "notes": note
+        })
+    
+    for trip in trips:
+        trip.passenger_notes = notes_map.get(str(trip.id), [])
 
 @router.get("/driver-earnings")
 @rate_limit(max_requests=30, window_seconds=60, key_suffix="driver_earnings")
@@ -124,6 +152,7 @@ async def create_shared_ride(
         total_seats=trip_data.total_seats,
         available_seats=trip_data.total_seats - 1, # Creator occupies 1 seat
         price_per_seat=trip_data.price_per_seat,
+        notes=trip_data.notes.strip()[:500] if trip_data.notes else None,
         status="pending",
         version=0
     )
@@ -136,7 +165,8 @@ async def create_shared_ride(
         seats_booked=1,
         total_price=trip_data.price_per_seat,
         status="confirmed",
-        payment_status="pending"
+        payment_status="pending",
+        notes=trip_data.notes.strip()[:500] if trip_data.notes else None
     )
     
     # Also add to TripPassenger table
@@ -221,12 +251,25 @@ def get_trip_details(
     
     trip.user_booking = user_booking
 
+    # Populate per-passenger notes from bookings
+    if hasattr(trip, 'passengers') and trip.passengers:
+        bookings = db.query(models.Booking).filter(
+            models.Booking.trip_id == trip_id
+        ).all()
+        booking_notes = {str(b.passenger_id): b.notes for b in bookings if b.notes}
+        for p in trip.passengers:
+            p.notes = booking_notes.get(str(p.id))
+
     return trip
 
+
+class JoinRideBody(BaseModel):
+    notes: Optional[str] = None
 
 @router.post("/{trip_id}/join", status_code=status.HTTP_200_OK)
 async def join_ride(
     trip_id: UUID,
+    body: Optional[JoinRideBody] = None,
     current_user: models.User = Depends(auth.require_role(["passenger"])),
     db: Session = Depends(get_db)
 ):
@@ -259,6 +302,7 @@ async def join_ride(
         )
         
         # Create booking record
+        join_notes = body.notes.strip()[:500] if body and body.notes else None
         booking = models.Booking(
             id=uuid.uuid4(),
             trip_id=trip_id,
@@ -266,7 +310,8 @@ async def join_ride(
             seats_booked=1,
             total_price=trip.price_per_seat,
             status="confirmed",
-            payment_status="pending"
+            payment_status="pending",
+            notes=join_notes
         )
         
         # Update trip
@@ -419,7 +464,8 @@ def get_driver_trips(
         trip.seats_requested = trip.total_seats
         trip.from_address = trip.origin_address
         trip.to_address = trip.dest_address
-        
+    
+    populate_passenger_notes(trips, db)
     return trips
 
 
@@ -448,6 +494,7 @@ def get_open_rides(
             ride.driver_avatar = ride.driver.user.avatar_url
             ride.driver_rating = float(ride.driver.rating) if ride.driver.rating else None
     
+    populate_passenger_notes(rides, db)
     return rides
 
 

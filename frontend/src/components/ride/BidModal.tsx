@@ -108,6 +108,23 @@ export const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, trip, onBid
                     </div>
                 </div>
 
+                {/* Passenger Notes */}
+                {trip.passenger_notes && trip.passenger_notes.length > 0 && (
+                    <div className="bg-[#111827] rounded-xl p-4 border border-[#1E293B]/30">
+                        <div className="flex items-center gap-2 mb-2">
+                            <MessageSquare size={14} className="text-indigo-400" />
+                            <h4 className="text-xs font-bold text-[#9CA3AF] uppercase tracking-wider">Passenger Notes</h4>
+                        </div>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                            {trip.passenger_notes.map((pn, idx) => (
+                                <p key={idx} className="text-sm text-[#9CA3AF] leading-relaxed">
+                                    <span className="font-bold text-[#F9FAFB]">{pn.passenger_name}:</span> {pn.notes}
+                                </p>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <Input

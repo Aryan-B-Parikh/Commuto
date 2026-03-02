@@ -22,7 +22,8 @@ import {
     MapPinned,
     Sparkles,
     ChevronRight,
-    X
+    X,
+    MessageSquare
 } from 'lucide-react';
 
 export default function DriverRequestsPage() {
@@ -88,7 +89,9 @@ export default function DriverRequestsPage() {
 
     // Calculate time-ago for display
     const getTimeAgo = (dateStr: string) => {
-        const diff = Date.now() - new Date(dateStr).getTime();
+        // Backend returns UTC timestamps without Z suffix — add it so JS parses correctly
+        const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+        const diff = Date.now() - new Date(utcStr).getTime();
         const mins = Math.floor(diff / 60000);
         if (mins < 1) return 'Just now';
         if (mins < 60) return `${mins}m ago`;
@@ -228,6 +231,20 @@ export default function DriverRequestsPage() {
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                {/* Passenger Notes Preview */}
+                                                {request.passenger_notes && request.passenger_notes.length > 0 && (
+                                                    <div className="px-5 pb-3 space-y-1.5">
+                                                        {request.passenger_notes.map((pn, idx) => (
+                                                            <div key={idx} className="flex items-start gap-2 bg-[#1E293B]/40 rounded-xl px-3 py-2 border border-[#1E293B]/30">
+                                                                <MessageSquare size={12} className="text-indigo-400 mt-0.5 shrink-0" />
+                                                                <p className="text-xs text-[#9CA3AF] line-clamp-2 leading-relaxed">
+                                                                    <span className="font-bold text-[#F9FAFB]">{pn.passenger_name}:</span> {pn.notes}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
 
                                                 {/* Meta Row — Distance, Schedule, Fare */}
                                                 <div className="px-5 pb-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
