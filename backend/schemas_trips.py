@@ -60,6 +60,8 @@ class TripResponse(BaseModel):
     price_per_seat: Optional[float] = None
     status: str
     notes: Optional[str] = None
+    start_otp: Optional[str] = None
+    otp_verified: bool = False
     created_at: datetime
     
     # Driver Details
@@ -156,7 +158,7 @@ class BidAcceptResponse(BaseModel):
 
 # OTP Schema
 class OTPVerify(BaseModel):
-    otp: str = Field(min_length=6, max_length=6)
+    otp: str = Field(min_length=4, max_length=4)
 
 
 class OTPVerifyResponse(BaseModel):

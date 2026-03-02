@@ -10,6 +10,7 @@ interface LocationInputProps {
     placeholder: string;
     type: 'pickup' | 'destination';
     onAutoDetect?: () => void;
+    onMapClick?: () => void;
 }
 
 export const LocationInput: React.FC<LocationInputProps> = ({
@@ -18,6 +19,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
     placeholder,
     type,
     onAutoDetect,
+    onMapClick,
 }) => {
     const isPickup = type === 'pickup';
 
@@ -38,19 +40,32 @@ export const LocationInput: React.FC<LocationInputProps> = ({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-full pl-12 pr-12 py-4 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-2xl text-[#F9FAFB] placeholder:text-[#6B7280]/50 focus:bg-[#111827] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 outline-none font-medium"
+                className="w-full pl-12 pr-24 py-4 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-2xl text-[#F9FAFB] placeholder:text-[#6B7280]/50 focus:bg-[#111827] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 outline-none font-medium"
             />
 
-            {isPickup && onAutoDetect && (
-                <button
-                    type="button"
-                    onClick={onAutoDetect}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-[#9CA3AF] hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all"
-                    title="Auto-detect current location"
-                >
-                    <Navigation className="w-4 h-4" />
-                </button>
-            )}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-20">
+                {isPickup && onAutoDetect && (
+                    <button
+                        type="button"
+                        onClick={onAutoDetect}
+                        className="p-2 text-[#9CA3AF] hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all"
+                        title="Auto-detect current location"
+                    >
+                        <Navigation className="w-4 h-4" />
+                    </button>
+                )}
+                {onMapClick && (
+                    <button
+                        type="button"
+                        onClick={onMapClick}
+                        className="p-2 text-[#9CA3AF] hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all"
+                        title="Select on map"
+                    >
+                        <Circle size={14} className="fill-current opacity-20" />
+                        <MapPin className="w-4 h-4 absolute inset-0 m-auto" />
+                    </button>
+                )}
+            </div>
         </div>
     );
 };

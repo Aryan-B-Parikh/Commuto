@@ -283,11 +283,11 @@ def accept_bid(
         # Update trip with driver and price
         trip.driver_id = bid.driver_id
         trip.price_per_seat = bid.bid_amount
-        trip.status = "active"
+        trip.status = "bid_accepted"
         trip.version = current_version + 1  # Increment version for optimistic locking
         
-        # Generate OTP for ride start
-        otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        # Generate OTP for ride start (4 digits for better UX)
+        otp = ''.join([str(random.randint(0, 9)) for _ in range(4)])
         trip.start_otp = otp
         trip.otp_verified = False
         trip.payment_status = "pending"

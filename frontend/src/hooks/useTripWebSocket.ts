@@ -61,7 +61,11 @@ export function useTripWebSocket(tripId: string | null) {
         };
 
         ws.onerror = (error) => {
-            console.error('Trip WS Error:', error);
+            // WebSocket errors are often opaque (Event {}), so we log a generic connection error
+            // only if we haven't already marked as disconnected.
+            if (socketRef.current) {
+                console.warn('Trip WS connection issues for:', tripId);
+            }
             ws.close();
         };
 

@@ -66,17 +66,45 @@ export default function TripMap({
     center = [23.0225, 72.5714],
     zoom = 13
 }: TripMapProps) {
+    const [liveRouteCoords, setLiveRouteCoords] = React.useState<[number, number][]>([]);
+    const [fullRouteCoords, setFullRouteCoords] = React.useState<[number, number][]>([]);
 
-    // Calculate route if both posts provided (simplified line for now)
-    const polyline: [number, number][] = [];
-    if (driverPos && passengerPos) {
-        polyline.push(driverPos);
-        polyline.push(passengerPos);
-    }
-    if (passengerPos && destinationPos) {
-        polyline.push(passengerPos);
-        polyline.push(destinationPos);
-    }
+    // Helper to fetch route from Mapbox
+    const fetchPath = async (start: [number, number], end: [number, number]) => {
+        try {
+            const query = await fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/driving/${start[1]},${start[0]};${end[1]},${end[0]}?geometries=geojson&access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`
+            );
+            const json = await query.json();
+            if (json.routes && json.routes.length > 0) {
+                return json.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]]);
+            }
+        } catch (err) {
+            console.error('Mapbox fetch error:', err);
+        }
+        return [];
+    };
+
+    // 1. Fetch the FULL intended journey (Pickup -> Destination)
+    useEffect(() => {
+        if (passengerPos && destinationPos) {
+            fetchPath(passengerPos, destinationPos).then(setFullRouteCoords);
+        } else {
+            setFullRouteCoords([]);
+        }
+    }, [passengerPos, destinationPos]);
+
+    // 2. Fetch the LIVE journey (Driver -> Target)
+    useEffect(() => {
+        const start = driverPos;
+        const end = destinationPos || passengerPos;
+
+        if (start && end) {
+            fetchPath(start, end).then(setLiveRouteCoords);
+        } else {
+            setLiveRouteCoords([]);
+        }
+    }, [driverPos, passengerPos, destinationPos]);
 
     return (
         <div className="w-full h-full min-h-[400px] rounded-3xl overflow-hidden border border-slate-200 shadow-sm relative z-0">
@@ -113,13 +141,26 @@ export default function TripMap({
                     </Marker>
                 )}
 
-                {polyline.length > 1 && (
+                {/* 1. Background full route (Dashed/Faint) */}
+                {fullRouteCoords.length > 1 && (
                     <Polyline
-                        positions={polyline}
-                        color="#4f46e5"
-                        weight={4}
-                        opacity={0.6}
+                        positions={fullRouteCoords}
+                        color="#6366f1"
+                        weight={5}
+                        opacity={0.3}
                         dashArray="10, 10"
+                    />
+                )}
+
+                {/* 2. Live navigation line (Solid) */}
+                {liveRouteCoords.length > 1 && (
+                    <Polyline
+                        positions={liveRouteCoords}
+                        color="#6366f1"
+                        weight={5}
+                        opacity={0.9}
+                        lineJoin="round"
+                        lineCap="round"
                     />
                 )}
             </MapContainer>

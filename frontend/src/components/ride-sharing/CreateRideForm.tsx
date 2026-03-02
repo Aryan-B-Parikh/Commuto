@@ -9,6 +9,7 @@ import { tripsAPI } from '@/services/api';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Calendar, Clock, Users, IndianRupee, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapSelectionModal } from '@/components/map/MapSelectionModal';
 
 interface CreateRideFormProps {
     isMobile?: boolean;
@@ -30,6 +31,16 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
         notes: ''
     });
 
+    const [coords, setCoords] = useState({
+        pickup: [23.0225, 72.5714] as [number, number],
+        destination: [23.1, 72.6] as [number, number]
+    });
+
+    const [mapConfig, setMapConfig] = useState<{
+        isOpen: boolean;
+        type: 'pickup' | 'destination';
+    }>({ isOpen: false, type: 'pickup' });
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -38,13 +49,13 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
             const tripData = {
                 from_location: {
                     address: formData.pickup,
-                    lat: 23.0225,
-                    lng: 72.5714
+                    lat: coords.pickup[0],
+                    lng: coords.pickup[1]
                 },
                 to_location: {
                     address: formData.destination,
-                    lat: 23.0338,
-                    lng: 72.5850
+                    lat: coords.destination[0],
+                    lng: coords.destination[1]
                 },
                 date: formData.date,
                 time: formData.time,
@@ -64,6 +75,24 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
         }
     };
 
+    const renderMapModal = () => (
+        <MapSelectionModal
+            isOpen={mapConfig.isOpen}
+            onClose={() => setMapConfig({ ...mapConfig, isOpen: false })}
+            title={`Select ${mapConfig.type === 'pickup' ? 'Pickup Location' : 'Destination'}`}
+            initialCoords={mapConfig.type === 'pickup' ? coords.pickup : coords.destination}
+            onSelect={(addr, lat, lng) => {
+                if (mapConfig.type === 'pickup') {
+                    setFormData({ ...formData, pickup: addr });
+                    setCoords({ ...coords, pickup: [lat, lng] });
+                } else {
+                    setFormData({ ...formData, destination: addr });
+                    setCoords({ ...coords, destination: [lat, lng] });
+                }
+            }}
+        />
+    );
+
     if (isMobile) {
         return (
             <div className="flex flex-col h-full relative">
@@ -82,6 +111,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                                     value={formData.pickup}
                                     onChange={(v) => setFormData({ ...formData, pickup: v })}
                                     placeholder="Pickup location"
+                                    onMapClick={() => setMapConfig({ isOpen: true, type: 'pickup' })}
                                 />
                                 <LocationInput
                                     type="destination"
@@ -89,6 +119,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                                     value={formData.destination}
                                     onChange={(v) => setFormData({ ...formData, destination: v })}
                                     placeholder="Where to?"
+                                    onMapClick={() => setMapConfig({ isOpen: true, type: 'destination' })}
                                 />
                             </div>
                         </div>
@@ -217,6 +248,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                         </Button>
                     </div>
                 </form>
+                {renderMapModal()}
             </div>
         );
     }
@@ -236,6 +268,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                             value={formData.pickup}
                             onChange={(v) => setFormData({ ...formData, pickup: v })}
                             placeholder="Where are you starting from?"
+                            onMapClick={() => setMapConfig({ isOpen: true, type: 'pickup' })}
                         />
                         <LocationInput
                             type="destination"
@@ -243,6 +276,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                             value={formData.destination}
                             onChange={(v) => setFormData({ ...formData, destination: v })}
                             placeholder="Where are you going?"
+                            onMapClick={() => setMapConfig({ isOpen: true, type: 'destination' })}
                         />
                     </div>
 
@@ -329,6 +363,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
 
                 </form>
             </div>
+            {renderMapModal()}
         </Card>
     );
 }

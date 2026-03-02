@@ -20,9 +20,11 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useTripWebSocket } from '@/hooks/useTripWebSocket';
-import { tripsAPI } from '@/services/api';
-import { TripResponse } from '@/types/api';
 import { calculateDistance } from '@/utils/geoUtils';
+import { otpAPI, tripsAPI } from '@/services/api';
+import { VerifyOTPModal } from '@/components/ride/VerifyOTPModal';
+import { TripResponse } from '@/types/api';
+import { useToast } from '@/hooks/useToast';
 import dynamic from 'next/dynamic';
 
 const TripMap = dynamic(() => import('@/components/map/TripMap'), {
@@ -32,10 +34,17 @@ const TripMap = dynamic(() => import('@/components/map/TripMap'), {
 
 export default function DriverLivePage() {
     const { user, isLoading: isAuthLoading } = useAuth();
+    const { showToast } = useToast() as any;
     const router = useRouter();
     const [trip, setTrip] = useState<TripResponse | null>(null);
     const [isFetchingTrip, setIsFetchingTrip] = useState(true);
+    const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
+    const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
+    const [isCompletingTrip, setIsCompletingTrip] = useState(false);
+    const [driverPos, setDriverPos] = useState<[number, number] | undefined>(undefined);
+    const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
     const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const routeIndexRef = useRef<number>(0);
 
     useEffect(() => {
         const fetchActiveTrip = async () => {
@@ -78,20 +87,42 @@ export default function DriverLivePage() {
     }, [tripStatus, trip, router]);
 
     useEffect(() => {
-        if (isConnected && trip?.status === 'active') {
-            console.log("Starting location broadcaster...");
+        const fetchRoute = async () => {
+            if (!trip) return;
+            const start = driverPos || [Number(trip.origin_lat) + 0.005, Number(trip.origin_lng) + 0.005];
+            const end = trip.status === 'active' ? [Number(trip.dest_lat), Number(trip.dest_lng)] : [Number(trip.origin_lat), Number(trip.origin_lng)];
 
-            let currentLat = Number(trip.origin_lat);
-            let currentLng = Number(trip.origin_lng);
-            const targetLat = Number(trip.dest_lat);
-            const targetLng = Number(trip.dest_lng);
+            try {
+                const query = await fetch(
+                    `https://api.mapbox.com/directions/v5/mapbox/driving/${start[1]},${start[0]};${end[1]},${end[0]}?geometries=geojson&access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`
+                );
+                const json = await query.json();
+                if (json.routes && json.routes.length > 0) {
+                    const coords = json.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]]);
+                    setRouteCoords(coords);
+                    routeIndexRef.current = 0;
+                    if (!driverPos) setDriverPos(coords[0]);
+                }
+            } catch (err) {
+                console.error("Failed to fetch route for simulation:", err);
+            }
+        };
+
+        if (trip) fetchRoute();
+    }, [trip?.status, !!trip]);
+
+    useEffect(() => {
+        if (isConnected && trip && routeCoords.length > 0) {
+            console.log("Starting road-aware location broadcaster...");
 
             locationIntervalRef.current = setInterval(() => {
-                currentLat += (targetLat - currentLat) * 0.05;
-                currentLng += (targetLng - currentLng) * 0.05;
-
-                sendLocation(currentLat, currentLng);
-            }, 5000);
+                if (routeIndexRef.current < routeCoords.length - 1) {
+                    routeIndexRef.current += 1;
+                    const nextPos = routeCoords[routeIndexRef.current];
+                    setDriverPos(nextPos);
+                    sendLocation(nextPos[0], nextPos[1]);
+                }
+            }, 3000);
         }
 
         return () => {
@@ -121,9 +152,10 @@ export default function DriverLivePage() {
             <DashboardLayout userType="driver" title="Live Navigation">
                 <div className="relative h-[calc(100vh-180px)] -mt-4 -mx-8 overflow-hidden">
                     <TripMap
+                        driverPos={driverPos}
                         passengerPos={passengerPos}
                         destinationPos={destinationPos}
-                        center={currentStatus === 'active' ? undefined : passengerPos}
+                        center={driverPos}
                     />
 
                     {/* Floating Passenger Info Header */}
@@ -186,10 +218,31 @@ export default function DriverLivePage() {
                                     </div>
 
                                     <div className="flex items-center gap-3 w-full md:w-auto">
+                                        {/* External Navigation Button */}
+                                        <Button
+                                            variant="outline"
+                                            className="h-14 w-14 p-0 bg-[#1E293B] border-[#374151] rounded-2xl hover:bg-[#334155] text-white flex items-center justify-center shrink-0 shadow-lg"
+                                            onClick={() => {
+                                                const targetLat = currentStatus === 'active' ? trip.dest_lat : trip.origin_lat;
+                                                const targetLng = currentStatus === 'active' ? trip.dest_lng : trip.origin_lng;
+                                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}&travelmode=driving`, '_blank');
+                                            }}
+                                            title="Navigate in Google Maps"
+                                        >
+                                            <Navigation size={22} className="rotate-45" />
+                                        </Button>
+
                                         {currentStatus === 'bid_accepted' && (
                                             <Button
                                                 className="flex-1 md:flex-none h-14 bg-indigo-600 hover:bg-indigo-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-indigo-500/20"
-                                                onClick={() => updateStatus('driver_assigned')}
+                                                onClick={async () => {
+                                                    try {
+                                                        await updateStatus('driver_assigned');
+                                                        showToast('success', "Status updated: You've arrived!");
+                                                    } catch (err) {
+                                                        showToast('error', "Failed to update arrival status");
+                                                    }
+                                                }}
                                             >
                                                 I Have Arrived
                                             </Button>
@@ -197,19 +250,31 @@ export default function DriverLivePage() {
                                         {currentStatus === 'driver_assigned' && (
                                             <Button
                                                 className="flex-1 md:flex-none h-14 bg-emerald-600 hover:bg-emerald-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-emerald-500/20 flex items-center gap-2"
-                                                onClick={() => updateStatus('active')}
+                                                onClick={() => setIsOTPModalOpen(true)}
                                             >
                                                 <Car size={18} />
-                                                Start Trip
+                                                Start Trip (Enter OTP)
                                             </Button>
                                         )}
                                         {currentStatus === 'active' && (
                                             <Button
-                                                className="flex-1 md:flex-none h-14 bg-[#F9FAFB] hover:bg-white text-[#0B1020] px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2"
-                                                onClick={() => updateStatus('completed')}
+                                                className="flex-1 md:flex-none h-14 bg-[#F9FAFB] hover:bg-white text-[#0B1020] px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2 disabled:opacity-50"
+                                                disabled={isCompletingTrip}
+                                                onClick={async () => {
+                                                    if (!confirm('Are you sure you want to complete this trip?')) return;
+                                                    setIsCompletingTrip(true);
+                                                    try {
+                                                        await otpAPI.completeRide(trip.id);
+                                                        showToast('success', "Trip completed! Total earnings updated.");
+                                                    } catch (err: any) {
+                                                        showToast('error', err.response?.data?.detail || "Failed to complete trip");
+                                                    } finally {
+                                                        setIsCompletingTrip(false);
+                                                    }
+                                                }}
                                             >
                                                 <CheckCircle size={18} />
-                                                Complete Trip
+                                                {isCompletingTrip ? 'Completing...' : 'Complete Trip'}
                                             </Button>
                                         )}
                                         {currentStatus === 'completed' && (
@@ -222,6 +287,24 @@ export default function DriverLivePage() {
                             </Card>
                         </motion.div>
                     </div>
+
+                    <VerifyOTPModal
+                        isOpen={isOTPModalOpen}
+                        onClose={() => setIsOTPModalOpen(false)}
+                        isVerifying={isVerifyingOTP}
+                        onVerify={async (otp) => {
+                            setIsVerifyingOTP(true);
+                            try {
+                                await otpAPI.verifyOTP(trip.id, otp);
+                                showToast('success', "OTP Verified! Trip started.");
+                                setIsOTPModalOpen(false);
+                            } catch (err: any) {
+                                showToast('error', err.response?.data?.detail || "Invalid OTP. Please try again.");
+                            } finally {
+                                setIsVerifyingOTP(false);
+                            }
+                        }}
+                    />
                 </div>
             </DashboardLayout>
         </RoleGuard>

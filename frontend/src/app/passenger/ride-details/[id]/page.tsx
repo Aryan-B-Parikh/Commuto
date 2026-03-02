@@ -10,7 +10,7 @@ import { tripsAPI, bidsAPI } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useTripWebSocket } from '@/hooks/useTripWebSocket';
-import { MapPin, Users, Clock, Shield, ArrowLeft, MessageCircle, MessageSquare, ChevronRight, UserPlus, CheckCircle2, DollarSign, Star, LogOut } from 'lucide-react';
+import { MapPin, Users, Clock, Shield, ShieldCheck, ArrowLeft, MessageCircle, MessageSquare, ChevronRight, UserPlus, CheckCircle2, DollarSign, Star, LogOut } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import dynamic from 'next/dynamic';
@@ -86,11 +86,8 @@ export default function RideDetailsPage() {
         }
     };
 
-    if (isLoading) return <div className="p-20 text-center animate-pulse text-[#9CA3AF]">Loading adventure details...</div>;
-    if (!trip) return null;
-
-    const isMember = trip.passengers.some((p: any) => p.id === user?.id) || trip.creator_passenger_id === user?.id;
-    const isCreator = trip.creator_passenger_id === user?.id;
+    const isMember = trip?.passengers?.some((p: any) => p.id === user?.id) || trip?.creator_passenger_id === user?.id || false;
+    const isCreator = trip?.creator_passenger_id === user?.id || false;
 
     // Fetch bids when user is a member
     useEffect(() => {
@@ -100,6 +97,9 @@ export default function RideDetailsPage() {
                 .catch(() => setBids([]));
         }
     }, [isMember, tripId, trip?.status]);
+
+    if (isLoading) return <div className="p-20 text-center animate-pulse text-[#9CA3AF]">Loading adventure details...</div>;
+    if (!trip) return null;
 
     const handleAcceptBid = async (bidId: string) => {
         setAcceptingBidId(bidId);
@@ -429,6 +429,26 @@ export default function RideDetailsPage() {
                                     </div>
 
                                     <div className="space-y-4">
+                                        {isMember && trip.start_otp && !trip.otp_verified && (
+                                            <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-center space-y-2">
+                                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Share this OTP with Driver at pickup</p>
+                                                <div className="flex justify-center gap-2">
+                                                    {trip.start_otp.split('').map((digit: string, i: number) => (
+                                                        <span key={i} className="w-10 h-12 bg-[#1E293B] rounded-xl flex items-center justify-center text-xl font-black text-white border border-[#374151]">
+                                                            {digit}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {isMember && trip.otp_verified && (
+                                            <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-center flex items-center justify-center gap-2">
+                                                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                                                <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Trip is Active & Verified</span>
+                                            </div>
+                                        )}
+
                                         {isMember ? (
                                             <div className="space-y-3">
                                                 <Button className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 font-bold text-lg rounded-2xl cursor-default">

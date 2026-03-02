@@ -83,6 +83,8 @@ export interface TripResponse {
     booking_total_price?: number;
     booking_payment_status?: string;
     notes?: string;
+    start_otp?: string;
+    otp_verified?: boolean;
     passenger_notes?: { passenger_name: string; notes: string }[];
 }
 

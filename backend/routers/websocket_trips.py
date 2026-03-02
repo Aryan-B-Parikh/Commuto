@@ -59,8 +59,8 @@ async def trip_websocket(
     if booking:
         is_passenger = True
 
-    if not (is_driver or is_passenger):
-        logger.warning(f"Unauthorized WebSocket access to trip {trip_id} by user {user_id}")
+    if not (is_driver or is_passenger or role == "passenger"):
+        logger.warning(f"Unauthorized WebSocket access to trip {trip_id} by user {user_id} with role {role}")
         await websocket.close(code=1008)
         return
 
