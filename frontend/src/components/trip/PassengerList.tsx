@@ -31,7 +31,7 @@ export const PassengerList: React.FC<PassengerListProps> = ({
                         <img
                             src={member.avatar}
                             alt={member.name}
-                            className="w-8 h-8 rounded-full border-2 border-white bg-gray-100"
+                            className="w-8 h-8 rounded-full border-2 border-[#111827] bg-[#1E293B]"
                         />
                         {member.isDriver && (
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
@@ -43,7 +43,7 @@ export const PassengerList: React.FC<PassengerListProps> = ({
                     </div>
                 ))}
                 {allMembers.length > 4 && (
-                    <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
+                    <div className="w-8 h-8 rounded-full border-2 border-[#111827] bg-[#1E293B] flex items-center justify-center text-xs font-medium text-[#9CA3AF]">
                         +{allMembers.length - 4}
                     </div>
                 )}
@@ -56,16 +56,16 @@ export const PassengerList: React.FC<PassengerListProps> = ({
             {allMembers.map((member) => (
                 <div
                     key={member.id}
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                    className="flex items-center gap-3 p-3 bg-[#0B1020] rounded-xl"
                 >
                     <div className="relative">
                         <img
                             src={member.avatar}
                             alt={member.name}
-                            className="w-12 h-12 rounded-full bg-gray-100"
+                            className="w-12 h-12 rounded-full bg-[#1E293B]"
                         />
                         {member.isDriver && (
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white">
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border-2 border-[#111827]">
                                 <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
                                 </svg>
@@ -74,9 +74,9 @@ export const PassengerList: React.FC<PassengerListProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                            <p className="font-medium text-gray-900 truncate">{member.name}</p>
+                            <p className="font-medium text-[#F9FAFB] truncate">{member.name}</p>
                             {member.isDriver && (
-                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                <span className="px-2 py-0.5 bg-blue-500/15 text-blue-400 text-xs font-medium rounded-full">
                                     Driver
                                 </span>
                             )}
@@ -89,7 +89,7 @@ export const PassengerList: React.FC<PassengerListProps> = ({
                         {showRating && <RatingStars rating={member.rating} size="sm" />}
                     </div>
                     <div className="text-right">
-                        <p className="text-sm text-gray-500">{member.totalTrips} trips</p>
+                        <p className="text-sm text-[#6B7280]">{member.totalTrips} trips</p>
                     </div>
                 </div>
             ))}

@@ -23,26 +23,26 @@ export const Card: React.FC<CardProps> = ({
     const baseStyles = 'rounded-2xl transition-all duration-200';
 
     const variantStyles = {
-        default: 'bg-white border border-gray-100 shadow-sm',
-        glass: 'bg-white/80 backdrop-blur-lg border border-white/20 shadow-lg',
-        elevated: 'bg-white shadow-xl shadow-gray-200/50',
-        outline: 'bg-white border border-gray-200',
+        default: 'bg-[#111827] border border-[#1E293B] shadow-sm shadow-black/20',
+        glass: 'bg-[#111827]/70 backdrop-blur-xl border border-[#1E293B]/50 shadow-lg shadow-black/20',
+        elevated: 'bg-[#111827] shadow-xl shadow-black/30 border border-[#1E293B]/50',
+        outline: 'bg-transparent border border-[#1E293B]',
     };
 
     const paddingStyles = {
         none: '',
         sm: 'p-3',
-        md: 'p-5',
-        lg: 'p-7',
+        md: 'p-4 lg:p-5',
+        lg: 'p-5 lg:p-7',
     };
 
-    const hoverStyles = hoverable ? 'hover:shadow-lg hover:-translate-y-1 cursor-pointer' : '';
+    const hoverStyles = hoverable ? 'hover:shadow-lg hover:shadow-black/30 hover:border-[#374151] cursor-pointer' : '';
 
     const Component = onClick ? motion.button : motion.div;
 
     return (
         <Component
-            whileHover={hoverable ? { y: -4 } : undefined}
+            whileHover={hoverable ? { y: -2 } : undefined}
             whileTap={onClick ? { scale: 0.98 } : undefined}
             className={`${baseStyles} ${variantStyles[variant]} ${paddingStyles[padding]} ${hoverStyles} ${className}`}
             onClick={onClick}

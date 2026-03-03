@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   },
 };
 
+import Script from 'next/script';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,7 +31,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased text-slate-100 bg-[#0B0F1A]`}>
+        {/* Load MapLibre GL globally for performance */}
+        <Script
+          src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"
+          strategy="beforeInteractive"
+        />
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css"
+        />
+
         <AuthProvider>
           <WebSocketProvider>
             <ToastProvider>
@@ -37,6 +49,7 @@ export default function RootLayout({
             </ToastProvider>
           </WebSocketProvider>
         </AuthProvider>
+        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </body>
     </html>
   );

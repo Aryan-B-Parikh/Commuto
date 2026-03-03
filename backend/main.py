@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -8,7 +9,7 @@ import logging
 
 from database import engine, get_db, Base
 import models
-from routers import auth_router, rides_router, bids_router, otp_router, websocket_router
+from routers import auth_router, rides_router, bids_router, otp_router, websocket_router, payment_methods_router, wallet_router, websocket_trips
 from rate_limiter import rate_limit
 
 load_dotenv()
@@ -23,7 +24,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Commuto API", version="1.0.0")
 
 # CORS Configuration from environment
-allow_origins = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000").split(",")
+allow_origins = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
 allow_origins = [origin.strip() for origin in allow_origins]
 
 app.add_middleware(
@@ -53,12 +54,36 @@ async def error_handling_middleware(request: Request, call_next):
             content={"detail": "Internal server error", "type": "internal_error"}
         )
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic validation errors and return a consistent format"""
+    errors = exc.errors()
+    # Format the error message to be more readable for the frontend
+    # Pydantic errors are often deeply nested; we simplify it here
+    detail = []
+    for error in errors:
+        loc = ".".join([str(p) for p in error.get("loc", [])])
+        msg = error.get("msg", "Validation error")
+        detail.append(f"{loc}: {msg}")
+    
+    logger.warning(f"Validation error: {detail}")
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": detail if len(detail) > 1 else detail[0] if detail else "Validation failed",
+            "type": "validation_error"
+        }
+    )
+
 # Include routers
 app.include_router(auth_router.router)
 app.include_router(rides_router.router)
 app.include_router(bids_router.router)
 app.include_router(otp_router.router)
 app.include_router(websocket_router.router)
+app.include_router(payment_methods_router.router)
+app.include_router(wallet_router.router)
+app.include_router(websocket_trips.router)
 
 @app.get("/")
 def root():
@@ -81,4 +106,4 @@ def health_check(request: Request, db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

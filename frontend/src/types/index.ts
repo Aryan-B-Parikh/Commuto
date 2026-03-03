@@ -15,7 +15,9 @@ export interface User {
     avatar?: string;  // Make optional to handle empty values
     role?: 'passenger' | 'driver';  // Add role field
     rating: number;
-    totalTrips: number;
+    todayEarnings?: number;
+    onlineHours?: number;
+    totalTrips?: number;
     verified: boolean;
     joinedDate: string;
 }
@@ -37,6 +39,7 @@ export interface Trip {
     duration: string;
     vehicleType: string;
     vehicleNumber: string;
+    bidCount?: number;
 }
 
 // Testimonial type

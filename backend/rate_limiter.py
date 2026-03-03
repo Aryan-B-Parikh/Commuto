@@ -1,14 +1,20 @@
-"""
-Rate limiting utilities for the Commuto API.
+"""backend.rate_limiter
+=======================
 
-This module provides a simplified rate limiting mechanism using
-in-memory storage. For production, consider using Redis.
+Small in-memory rate limiter used by route decorators.
+
+Notes:
+- This implementation is intentionally simple and stores counters in
+    process memory. For production use, prefer a centralized store
+    (Redis) so limits are enforced across multiple workers/instances.
+- Tests isolate rate limiting by clearing the in-memory store in the
+    test `TestClient` fixture (`backend/tests/conftest.py`).
 """
 
 import time
 from functools import wraps
 from fastapi import Request, HTTPException, status
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple
 import threading
 
 # In-memory rate limit storage
@@ -58,12 +64,13 @@ def is_rate_limited(key: str, max_requests: int, window_seconds: int) -> Tuple[b
 
 def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
     """
-    Decorator to apply rate limiting to a route.
-    
+    Decorator to apply rate limiting to a FastAPI/Starlette route.
+
     Args:
-        max_requests: Maximum number of requests allowed in the window
-        window_seconds: Time window in seconds
-        key_suffix: Optional suffix to differentiate rate limits for the same IP
+        max_requests: Maximum requests allowed inside the window.
+        window_seconds: Length of the window in seconds.
+        key_suffix: Optional suffix added to the client key to allow
+            separate limits for different actions from the same IP.
     """
     def decorator(func):
         @wraps(func)
@@ -75,24 +82,24 @@ def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
                     if isinstance(arg, Request):
                         request = arg
                         break
-            
+
             if not request:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Rate limiting requires Request parameter"
                 )
-            
+
             key = get_client_key(request, key_suffix or func.__name__)
             is_limited, remaining, reset_after = is_rate_limited(key, max_requests, window_seconds)
-            
+
             if is_limited:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=f"Rate limit exceeded. Try again in {reset_after} seconds."
                 )
-            
+
             return await func(*args, **kwargs)
-        
+
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             # Find request in args or kwargs
@@ -102,30 +109,30 @@ def rate_limit(max_requests: int, window_seconds: int, key_suffix: str = ""):
                     if isinstance(arg, Request):
                         request = arg
                         break
-            
+
             if not request:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Rate limiting requires Request parameter"
                 )
-            
+
             key = get_client_key(request, key_suffix or func.__name__)
             is_limited, remaining, reset_after = is_rate_limited(key, max_requests, window_seconds)
-            
+
             if is_limited:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=f"Rate limit exceeded. Try again in {reset_after} seconds."
                 )
-            
+
             return func(*args, **kwargs)
-        
+
         # Return appropriate wrapper based on whether function is async or not
         import asyncio
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
-    
+
     return decorator
 
 

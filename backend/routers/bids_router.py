@@ -16,6 +16,69 @@ router = APIRouter(prefix="/bids", tags=["Bidding"])
 logger = logging.getLogger(__name__)
 
 
+@router.get("/my-bids", response_model=List[trip_schemas.DriverBidWithTrip])
+@rate_limit(max_requests=30, window_seconds=60, key_suffix="my_bids")
+def get_my_bids(
+    request: Request,
+    current_user: models.User = Depends(auth.require_role(["driver"])),
+    db: Session = Depends(get_db)
+):
+    """Get all bids placed by the current driver with trip details"""
+    
+    bids = db.query(models.TripBid, models.Trip).join(
+        models.Trip, models.TripBid.trip_id == models.Trip.id
+    ).filter(
+        models.TripBid.driver_id == current_user.id
+    ).order_by(models.TripBid.created_at.desc()).all()
+    
+    result = []
+    trip_ids = [trip.id for _, trip in bids]
+    
+    # Batch-fetch all booking notes with passenger names
+    booking_notes = {}
+    if trip_ids:
+        notes_rows = db.query(
+            models.Booking.trip_id,
+            models.Booking.notes,
+            models.User.full_name
+        ).join(
+            models.User, models.Booking.passenger_id == models.User.id
+        ).filter(
+            models.Booking.trip_id.in_(trip_ids),
+            models.Booking.notes != None,
+            models.Booking.notes != ""
+        ).all()
+        for tid, note, name in notes_rows:
+            booking_notes.setdefault(str(tid), []).append({
+                "passenger_name": name,
+                "notes": note
+            })
+    
+    for bid, trip in bids:
+        result.append({
+            "id": bid.id,
+            "trip_id": bid.trip_id,
+            "driver_id": bid.driver_id,
+            "bid_amount": bid.bid_amount,
+            "status": bid.status,
+            "created_at": bid.created_at,
+            "origin_address": trip.origin_address,
+            "dest_address": trip.dest_address,
+            "origin_lat": trip.origin_lat,
+            "origin_lng": trip.origin_lng,
+            "dest_lat": trip.dest_lat,
+            "dest_lng": trip.dest_lng,
+            "trip_status": trip.status,
+            "start_time": trip.start_time,
+            "total_seats": trip.total_seats,
+            "price_per_seat": trip.price_per_seat,
+            "notes": trip.notes,
+            "passenger_notes": booking_notes.get(str(trip.id), []),
+        })
+    
+    return result
+
+
 @router.post("/{ride_id}", response_model=trip_schemas.BidResponse, status_code=status.HTTP_201_CREATED)
 @rate_limit(max_requests=5, window_seconds=60, key_suffix="place_bid")
 def place_bid(
@@ -79,6 +142,7 @@ def place_bid(
         driver_id=current_user.id,
         bid_amount=bid_data.amount,
         status="pending",
+        message=bid_data.message,
         version=0
     )
     
@@ -142,10 +206,13 @@ def get_ride_bids(
             "driver_id": bid.driver_id,
             "bid_amount": bid.bid_amount,
             "status": bid.status,
+            "message": bid.message,
             "created_at": bid.created_at,
             "driver_name": user.full_name,
             "driver_rating": driver.rating,
-            "driver_avatar": user.avatar_url
+            "driver_avatar": user.avatar_url,
+            "is_counter_bid": getattr(bid, "is_counter_bid", False),
+            "parent_bid_id": getattr(bid, "parent_bid_id", None)
         })
     
     return result
@@ -182,13 +249,8 @@ def accept_bid(
             models.Trip.id == bid.trip_id
         ).with_for_update().first()
         
-        # Check if user is the passenger
-        is_passenger = db.query(models.Booking).filter(
-            models.Booking.trip_id == bid.trip_id,
-            models.Booking.passenger_id == current_user.id
-        ).first() is not None
-        
-        if not is_passenger:
+        # Check if user is the trip creator (only creator can accept bids)
+        if trip.creator_passenger_id != current_user.id:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -221,11 +283,11 @@ def accept_bid(
         # Update trip with driver and price
         trip.driver_id = bid.driver_id
         trip.price_per_seat = bid.bid_amount
-        trip.status = "active"
+        trip.status = "bid_accepted"
         trip.version = current_version + 1  # Increment version for optimistic locking
         
-        # Generate OTP for ride start
-        otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        # Generate OTP for ride start (4 digits for better UX)
+        otp = ''.join([str(random.randint(0, 9)) for _ in range(4)])
         trip.start_otp = otp
         trip.otp_verified = False
         trip.payment_status = "pending"
@@ -241,13 +303,12 @@ def accept_bid(
             other_bid.status = "rejected"
             other_bid.version += 1
         
-        # Update booking with price
-        booking = db.query(models.Booking).filter(
-            models.Booking.trip_id == trip.id,
-            models.Booking.passenger_id == current_user.id
-        ).with_for_update().first()
+        # Update ALL bookings on this trip with price and confirmed status
+        all_bookings = db.query(models.Booking).filter(
+            models.Booking.trip_id == trip.id
+        ).with_for_update().all()
         
-        if booking:
+        for booking in all_bookings:
             booking.total_price = bid.bid_amount * booking.seats_booked
             booking.status = "confirmed"
         
@@ -262,6 +323,9 @@ def accept_bid(
             "otp": otp
         }
         
+    except HTTPException:
+        db.rollback()
+        raise
     except DBAPIError as e:
         db.rollback()
         logger.error(f"Database error (possible optimistic locking conflict): {str(e)}")
@@ -349,6 +413,9 @@ def counter_bid(
         
         return counter_bid_obj
         
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating counter bid: {str(e)}", exc_info=True)

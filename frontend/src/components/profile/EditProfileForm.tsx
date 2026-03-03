@@ -88,14 +88,14 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
     return (
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto pb-32">
             {/* Header & Avatar */}
-            <div className="mb-8 text-center bg-gradient-to-b from-blue-50/50 to-transparent pt-8 pb-4 rounded-3xl">
+            <div className="mb-8 text-center bg-gradient-to-b from-indigo-50/50 to-transparent pt-8 pb-4 rounded-3xl">
                 <ProfileImageUpload
                     currentImageUrl={formData.avatar}
                     onImageChange={(url) => handleSharedChange({ avatar: url })}
                 />
                 <div className="mt-4 flex flex-col items-center">
                     <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold text-slate-900">{formData.fullName}</h1>
+                        <h1 className="text-2xl font-bold text-foreground">{formData.fullName}</h1>
                         <AnimatePresence>
                             {isDirty && !isSaving && !showSuccess && (
                                 <motion.div
@@ -110,9 +110,10 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
                             )}
                         </AnimatePresence>
                     </div>
-                    <p className="text-slate-500 text-sm mt-1">{formData.role === 'driver' ? 'Verified Driver' : 'Passenger'}</p>
+                    <p className="text-muted-foreground text-sm mt-1">{formData.role === 'driver' ? 'Verified Driver' : 'Passenger'}</p>
                 </div>
             </div>
+
 
             {/* Shared Section: Basic Info */}
             <CollapsibleSection
@@ -232,7 +233,8 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
             pointer-events-auto h-16 px-10 rounded-full shadow-2xl flex items-center gap-3 font-bold text-lg transition-all
             ${showSuccess
                             ? 'bg-green-500 text-white'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200/50'}
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200/50'}
+
             disabled:opacity-70 disabled:cursor-not-allowed
           `}
                 >

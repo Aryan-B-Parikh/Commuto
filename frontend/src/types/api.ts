@@ -9,6 +9,8 @@ export interface BackendUser {
     role: 'passenger' | 'driver';
     is_verified: boolean;
     is_phone_verified: boolean;
+    rating?: number;
+    total_trips?: number;
     created_at: string;
     updated_at: string;
 }
@@ -45,41 +47,45 @@ export interface UserResponse {
     avatar_url?: string;
     role: string;
     is_verified: boolean;
+    rating?: number;
+    total_trips?: number;
+    today_earnings?: number;
+    online_hours?: number;
     created_at: string;
 }
 
 // Trip Types matching backend
-export interface TripRequest {
-    from_location: {
-        address: string;
-        lat: number;
-        lng: number;
-    };
-    to_location: {
-        address: string;
-        lat: number;
-        lng: number;
-    };
-    date: string;  // YYYY-MM-DD
-    time: string;  // HH:MM
-    seats_requested: number;
-}
-
 export interface TripResponse {
     id: string;
     driver_id?: string;
-    from_address: string;
-    to_address: string;
+    origin_address: string;
+    dest_address: string;
+    from_address?: string; // for backward compatibility
+    to_address?: string;   // for backward compatibility
     start_time: string;
     seats_requested?: number;
     total_seats: number;
     available_seats: number;
+    creator_passenger_id?: string;
+    shared_ride?: boolean;
     price_per_seat?: number;
     status: string;
     created_at: string;
     driver_name?: string;
     driver_rating?: number;
     driver_avatar?: string;
+    origin_lat: number;
+    origin_lng: number;
+    dest_lat: number;
+    dest_lng: number;
+    vehicle_details?: string;
+    bid_count?: number;
+    booking_total_price?: number;
+    booking_payment_status?: string;
+    notes?: string;
+    start_otp?: string;
+    otp_verified?: boolean;
+    passenger_notes?: { passenger_name: string; notes: string }[];
 }
 
 export interface BidRequest {
@@ -94,4 +100,47 @@ export interface BidResponse {
     bid_amount: number;
     status: string;
     created_at: string;
+}
+
+export interface DriverBidWithTrip {
+    id: string;
+    trip_id: string;
+    driver_id: string;
+    bid_amount: number;
+    status: string;
+    created_at: string;
+    origin_address: string;
+    dest_address: string;
+    origin_lat: number;
+    origin_lng: number;
+    dest_lat: number;
+    dest_lng: number;
+    trip_status: string;
+    start_time: string;
+    total_seats: number;
+    price_per_seat?: number;
+    notes?: string;
+    passenger_notes?: { passenger_name: string; notes: string }[];
+}
+
+export interface ActionResponse {
+    message: string;
+    success?: boolean;
+}
+
+export interface TripPaymentOrderResponse {
+    order_id: string;
+    amount: number;
+    currency: string;
+    key: string;
+    trip_id: string;
+    booking_id: string;
+}
+
+export interface TripPaymentVerifyRequest {
+    trip_id: string;
+    booking_id: string;
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
 }

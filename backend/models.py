@@ -19,6 +19,8 @@ class Gender(str, enum.Enum):
 
 class TripStatus(str, enum.Enum):
     PENDING = "pending"
+    BID_ACCEPTED = "bid_accepted"
+    DRIVER_ASSIGNED = "driver_assigned"
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
@@ -44,13 +46,21 @@ class User(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    phone_number = Column(String(20))  # Changed from 'phone'
+    phone_number = Column(String(20))
     full_name = Column(String(255), nullable=False)
-    avatar_url = Column(Text)  # Changed from 'avatar'
-    hashed_password = Column(Text, nullable=False)  # Changed from 'password_hash'
-    role = Column(String(20), nullable=False)  # Added role field
+    avatar_url = Column(Text)
+    hashed_password = Column(Text, nullable=False)
+    role = Column(String(20), nullable=False)
     is_verified = Column(Boolean, default=False)
     is_phone_verified = Column(Boolean, default=False)
+    
+    # Profile fields
+    gender = Column(String(20), nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    bio = Column(Text, nullable=True)
+    address = Column(Text, nullable=True)
+    emergency_contact = Column(JSON, nullable=True)  # {name, relationship, phone}
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -59,6 +69,8 @@ class User(Base):
     passenger_profile = relationship("Passenger", back_populates="user", uselist=False)
     saved_places = relationship("SavedPlace", back_populates="user")
     bookings = relationship("Booking", back_populates="passenger", foreign_keys="Booking.passenger_id")
+    payment_methods = relationship("PaymentMethod", back_populates="user", cascade="all, delete-orphan")
+    wallet = relationship("Wallet", back_populates="user", uselist=False)
 
 # Driver Model
 class Driver(Base):
@@ -68,10 +80,13 @@ class Driver(Base):
     license_number = Column(String(50), nullable=True)
     license_url = Column(Text, nullable=True)
     insurance_expiry = Column(Date, nullable=True)
+    insurance_status = Column(String(20), default="pending")  # active, pending, expired
     rating = Column(Numeric(3, 2), nullable=True)
     total_trips = Column(Integer, default=0)
     is_online = Column(Boolean, default=False)
     last_seen = Column(DateTime, nullable=True)
+    max_passengers = Column(Integer, default=4)
+    route_radius = Column(Integer, default=10)  # km
     
     # Relationships
     user = relationship("User", back_populates="driver_profile")
@@ -84,7 +99,8 @@ class Passenger(Base):
     __tablename__ = "passengers"
     
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
-    preferences = Column(JSON, nullable=True)
+    preferences = Column(JSON, nullable=True)  # {travel_preferences: [], route_radius, max_passengers}
+    accessibility_needs = Column(Boolean, default=False)
     
     # Relationships
     user = relationship("User", back_populates="passenger_profile")
@@ -116,6 +132,7 @@ class Trip(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     driver_id = Column(UUID(as_uuid=True), ForeignKey("drivers.user_id"), nullable=True)
     vehicle_id = Column(UUID(as_uuid=True), ForeignKey("vehicles.id"), nullable=True)
+    creator_passenger_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     
     origin_address = Column(Text, nullable=False)
     origin_lat = Column(Numeric, nullable=False)
@@ -130,6 +147,9 @@ class Trip(Base):
     price_per_seat = Column(Numeric, nullable=False)
     total_seats = Column(Integer, nullable=False)
     available_seats = Column(Integer, nullable=False)
+    
+    # Passenger notes (optional, max 500 chars enforced at schema level)
+    notes = Column(Text, nullable=True)
     
     start_otp = Column(String(6), nullable=True)
     otp_verified = Column(Boolean, default=False)
@@ -156,7 +176,19 @@ class Trip(Base):
     bookings = relationship("Booking", back_populates="trip", cascade="all, delete-orphan")
     bids = relationship("TripBid", back_populates="trip", cascade="all, delete-orphan")
     locations = relationship("TripLocation", back_populates="trip", cascade="all, delete-orphan")
-    cancelled_by_user = relationship("User", foreign_keys=[cancelled_by])
+    cancelled_by_user = relationship("User", foreign_keys=[cancelled_by], overlaps="cancelled_by_user")
+    creator_passenger = relationship("User", foreign_keys=[creator_passenger_id])
+    passengers = relationship("User", secondary="trip_passengers", backref="joined_shared_trips")
+
+# TripPassenger Association Table
+class TripPassenger(Base):
+    __tablename__ = "trip_passengers"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"), nullable=False)
+    passenger_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    joined_at = Column(DateTime, default=datetime.utcnow)
+    seats_booked = Column(Integer, default=1)
 
 # Booking Model
 class Booking(Base):
@@ -171,6 +203,7 @@ class Booking(Base):
     status = Column(String(20), default="pending")
     payment_status = Column(String(20), default="pending")
     otp_verified = Column(Boolean, default=False)
+    notes = Column(Text, nullable=True)  # Per-passenger notes
     
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -188,6 +221,7 @@ class TripBid(Base):
     
     bid_amount = Column(Numeric, nullable=False)
     status = Column(String(20), default="pending")
+    message = Column(String(500), nullable=True)
     
     # Optimistic locking for concurrent bid updates
     version = Column(Integer, default=0, nullable=False)
@@ -232,3 +266,65 @@ class TripLocation(Base):
     
     # Relationships
     trip = relationship("Trip", back_populates="locations")
+
+# PaymentMethod Model
+class PaymentMethod(Base):
+    __tablename__ = "payment_methods"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    type = Column(String(20), nullable=False)  # card, upi, netbanking
+    provider = Column(String(50), nullable=False)  # Visa, Mastercard, GPay, etc.
+    last4 = Column(String(4), nullable=True)
+    is_default = Column(Boolean, default=False)
+    razorpay_token = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="payment_methods")
+
+# Wallet Model
+class Wallet(Base):
+    __tablename__ = "wallets"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False)
+    balance = Column(Numeric(10, 2), default=0.00)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="wallet")
+    transactions = relationship("Transaction", back_populates="wallet", cascade="all, delete-orphan")
+
+# Transaction Model
+class Transaction(Base):
+    __tablename__ = "transactions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    wallet_id = Column(UUID(as_uuid=True), ForeignKey("wallets.id"), nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
+    type = Column(String(20), nullable=False)  # credit, payment, refund
+    description = Column(Text, nullable=True)
+    status = Column(String(20), default="pending")  # pending, completed, failed
+    razorpay_order_id = Column(String(100), nullable=True)
+    razorpay_payment_id = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    wallet = relationship("Wallet", back_populates="transactions")
+
+# LiveLocation Model (for real-time tracking, latest only)
+class LiveLocation(Base):
+    __tablename__ = "live_locations"
+    
+    trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"), primary_key=True)
+    latitude = Column(Numeric, nullable=False)
+    longitude = Column(Numeric, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    trip = relationship("Trip", back_populates="live_location_data")
+
+Trip.live_location_data = relationship("LiveLocation", back_populates="trip", uselist=False)
+

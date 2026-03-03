@@ -2,19 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { RatingStars } from '@/components/ui/RatingStars';
 import { Modal } from '@/components/ui/Modal';
+import { RatingStars } from '@/components/ui/RatingStars';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { PassengerBottomNav } from '@/components/layout/PassengerBottomNav';
-import { DriverBottomNav } from '@/components/layout/DriverBottomNav';
 import { tripsAPI } from '@/services/api';
 import { transformTripResponses } from '@/utils/tripTransformers';
-import { formatDate, formatCurrency } from '@/utils/formatters';
+import { formatCurrency } from '@/utils/formatters';
 import type { Trip } from '@/types';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 export default function ProfilePage() {
     const { user, logout, role, isLoading: authLoading } = useAuth();
@@ -66,132 +64,129 @@ export default function ProfilePage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            {/* Header */}
-            <div className={`text-white px-4 pt-6 pb-16 bg-gradient-to-br ${role === 'driver' ? 'from-green-500 to-green-600' : 'from-blue-500 to-blue-600'
-                }`}>
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-xl font-semibold">Profile</h1>
-                    <button
-                        onClick={() => setShowLogoutModal(true)}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
+        <DashboardLayout userType={role as any} title="Personal Profile">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Profile Identity Card */}
+                <div className="space-y-6">
+                    <Card className="relative overflow-hidden text-center border-none shadow-sm pb-8">
+                        {/* Role-based Banner */}
+                        <div className={`absolute top-0 left-0 w-full h-24 ${role === 'driver' ? 'bg-gradient-to-r from-indigo-500 to-blue-600' : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                            }`} />
 
-            <div className="px-4 -mt-12 max-w-xl mx-auto">
-                {/* Profile Card */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                    <Card variant="elevated" className="mb-6 text-center">
-                        <div className="relative -mt-12 mb-4">
+                        <div className="relative pt-12 mb-4">
                             {user.avatar ? (
                                 <img
                                     src={user.avatar}
                                     alt={user.name}
-                                    className="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-lg object-cover"
+                                    className="w-24 h-24 rounded-3xl mx-auto border-4 border-card-border shadow-xl object-cover relative z-10"
                                 />
                             ) : (
-                                <div className="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-3xl font-bold">
+                                <div className="w-24 h-24 rounded-3xl mx-auto border-4 border-card-border shadow-xl bg-muted flex items-center justify-center text-muted-foreground text-3xl font-bold relative z-10">
                                     {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                                 </div>
                             )}
-                            <span className="absolute bottom-0 right-1/2 translate-x-8 w-6 h-6 bg-green-500 border-2 border-white rounded-full" />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="absolute bottom-0 right-1/2 translate-x-12 translate-y-1 z-20 w-8 h-8 rounded-full p-0 bg-card"
+                            >
+                                ✏️
+                            </Button>
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
-                        <p className="text-gray-500 text-sm mb-3">{user.email}</p>
-                        <div className="flex items-center justify-center gap-1 mb-4">
-                            <RatingStars rating={user.rating || 5.0} size="sm" />
-                            <span className="text-sm text-gray-600 ml-1">{(user.rating || 5.0).toFixed(1)}</span>
+
+                        <div className="px-6 relative z-10 mt-4">
+                            <h2 className="text-2xl font-black text-foreground leading-none mb-1">{user.name}</h2>
+                            <p className="text-sm font-bold text-muted-foreground mb-4">{user.email}</p>
+
+                            <div className="flex items-center justify-center gap-2 py-2 px-4 bg-muted rounded-full w-fit mx-auto border border-card-border">
+                                <span className="text-sm font-black text-orange-500">{(user.rating || 5.0).toFixed(1)}</span>
+                                <RatingStars rating={user.rating || 5.0} size="sm" />
+                                <span className="text-xs text-muted-foreground font-bold ml-1">• {user.totalTrips || 0} rides</span>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-                            <div>
-                                <p className="text-2xl font-bold text-blue-600">{completedTrips.length}</p>
-                                <p className="text-xs text-gray-500">Trips</p>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalSpent)}</p>
-                                <p className="text-xs text-gray-500">Total Spent</p>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-purple-600">{co2Reduced}</p>
-                                <p className="text-xs text-gray-500">CO₂</p>
-                            </div>
+
+                        <div className="grid grid-cols-2 gap-4 mt-8 px-6">
+                            <Button
+                                variant="outline"
+                                className="h-12 border-card-border font-bold text-xs uppercase tracking-widest"
+                                onClick={() => setShowLogoutModal(true)}
+                            >
+                                Sign Out
+                            </Button>
+                            <Link href="/profile/edit" className="block">
+                                <Button variant="primary" className="h-12 w-full font-bold text-xs uppercase tracking-widest shadow-lg shadow-indigo-500/20">
+                                    Settings
+                                </Button>
+                            </Link>
                         </div>
                     </Card>
-                </motion.div>
 
-                {/* Trip History */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                    <Card className="mb-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-gray-900">Recent Trips</h3>
-                            <Link href="/passenger/history" className="text-sm text-blue-600 font-medium">View all</Link>
-                        </div>
-                        <div className="space-y-3">
-                            {isLoadingTrips ? (
-                                <div className="text-center py-4 text-gray-400 text-sm">Loading trips...</div>
-                            ) : tripHistory.length > 0 ? (
-                                tripHistory.map((trip) => (
-                                    <div key={trip.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                                            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                            </svg>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-gray-900 truncate">{trip.to.name}</p>
-                                            <p className="text-xs text-gray-500">{formatDate(trip.date)}</p>
-                                        </div>
-                                        <p className="font-semibold text-gray-900">{formatCurrency(trip.pricePerSeat)}</p>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-4 text-gray-400 text-sm">No recent trips</div>
-                            )}
-                        </div>
-                    </Card>
-                </motion.div>
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <Card className="p-4 text-center border-none shadow-sm">
+                            <p className="text-2xl font-black text-blue-600">{completedTrips.length}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Rides</p>
+                        </Card>
+                        <Card className="p-4 text-center border-none shadow-sm">
+                            <p className="text-2xl font-black text-indigo-600">{formatCurrency(totalSpent)}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Saved</p>
+                        </Card>
+                    </div>
+                </div>
 
-                {/* Settings Menu */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                    <Card>
-                        <h3 className="font-semibold text-gray-900 mb-4">Settings</h3>
-                        <div className="space-y-1">
+                {/* Main Content Area */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Settings Menu */}
+                    <Card className="border-none shadow-sm">
+                        <h3 className="text-lg font-bold text-foreground mb-6">Account Settings</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {menuItems.map((item) => (
                                 <Link
                                     key={item.label}
                                     href={item.href}
-                                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
+                                    className="flex items-center gap-4 p-4 rounded-2xl hover:bg-muted transition-all group"
                                 >
-                                    <span className="text-xl">{item.icon}</span>
-                                    <span className="text-gray-700">{item.label}</span>
-                                    <svg className="w-5 h-5 text-gray-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                                        {item.icon}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-foreground text-sm">{item.label}</p>
+                                        <p className="text-[10px] text-muted-foreground font-medium">Manage your {item.label.toLowerCase()}</p>
+                                    </div>
+                                    <svg className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
                                     </svg>
                                 </Link>
                             ))}
                         </div>
                     </Card>
-                </motion.div>
 
-                {/* App Version */}
-                <p className="text-center text-xs text-gray-400 mt-6">Commuto v1.0.0</p>
+                    {/* Security Tip Card */}
+                    <div className="bg-slate-900 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-32 -mt-32" />
+                        <div className="relative z-10 flex items-center gap-6">
+                            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-3xl group-hover:rotate-12 transition-transform">🛡️</div>
+                            <div>
+                                <h4 className="font-black text-xl mb-1 italic tracking-tighter">SECURE YOUR ACCOUNT</h4>
+                                <p className="text-sm text-gray-400 leading-snug">Enable two-factor authentication to add an extra layer of security to your profile and earnings.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
 
             {/* Logout Modal */}
             <Modal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} title="Log Out">
-                <p className="text-gray-600 mb-6 text-center">Are you sure you want to log out?</p>
-                <div className="flex gap-3">
-                    <Button variant="outline" fullWidth onClick={() => setShowLogoutModal(false)}>Cancel</Button>
-                    <Button variant="danger" fullWidth onClick={handleLogout}>Log Out</Button>
+                <div className="flex flex-col items-center py-6">
+                    <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-3xl mb-6">👋</div>
+                    <p className="text-gray-600 mb-8 text-center font-medium">Are you sure you want to end your session?</p>
+                    <div className="flex gap-4 w-full">
+                        <Button variant="outline" fullWidth onClick={() => setShowLogoutModal(false)} className="h-12 font-bold uppercase tracking-widest">Stay Here</Button>
+                        <Button variant="danger" fullWidth onClick={handleLogout} className="h-12 font-bold uppercase tracking-widest shadow-lg shadow-red-500/20 text-white bg-red-600 border-none">Log Out</Button>
+                    </div>
                 </div>
             </Modal>
-
-            {role === 'driver' ? <DriverBottomNav /> : <PassengerBottomNav />}
-        </div>
+        </DashboardLayout>
     );
 }

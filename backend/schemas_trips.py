@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 
@@ -27,31 +27,55 @@ class LocationResponse(BaseModel):
 
 
 # Trip Schemas
-class TripCreate(BaseModel):
+class SharedTripCreate(BaseModel):
     from_location: LocationCreate
     to_location: LocationCreate
     date: str
     time: str
-    seats_requested: int = Field(ge=1, le=4)
+    total_seats: int = Field(ge=1, le=8)
+    price_per_seat: float = Field(gt=0)
+    notes: Optional[str] = None
 
+
+class PassengerNote(BaseModel):
+    passenger_name: str
+    notes: str
 
 class TripResponse(BaseModel):
     id: UUID
     driver_id: Optional[UUID] = None
-    from_address: str = Field(validation_alias="origin_address")
-    to_address: str = Field(validation_alias="dest_address")
+    creator_passenger_id: Optional[UUID] = None
+    origin_address: str
+    dest_address: str
+    origin_lat: float
+    origin_lng: float
+    dest_lat: float
+    dest_lng: float
+    from_address: Optional[str] = None  # backward compat
+    to_address: Optional[str] = None    # backward compat
     start_time: datetime
-    seats_requested: int = None  # For backward compatibility
+    seats_requested: Optional[int] = None
     total_seats: int
     available_seats: int
     price_per_seat: Optional[float] = None
     status: str
+    notes: Optional[str] = None
+    start_otp: Optional[str] = None
+    otp_verified: bool = False
     created_at: datetime
     
     # Driver Details
     driver_name: Optional[str] = None
     driver_rating: Optional[float] = None
     driver_avatar: Optional[str] = None
+    bid_count: int = 0
+    
+    # User's booking info (if applicable)
+    booking_total_price: Optional[float] = None
+    booking_payment_status: Optional[str] = None
+    
+    # All passenger notes for this trip
+    passenger_notes: List[PassengerNote] = []
     
     class Config:
         from_attributes = True
@@ -80,10 +104,35 @@ class BidResponse(BaseModel):
     driver_id: UUID
     bid_amount: float
     status: str
+    message: Optional[str] = None
     created_at: datetime
+    is_counter_bid: Optional[bool] = False
+    parent_bid_id: Optional[UUID] = None
     
     class Config:
         from_attributes = True
+
+
+class DriverBidWithTrip(BaseModel):
+    id: UUID
+    trip_id: UUID
+    driver_id: UUID
+    bid_amount: float
+    status: str
+    created_at: datetime
+    # Trip details
+    origin_address: str
+    dest_address: str
+    origin_lat: float
+    origin_lng: float
+    dest_lat: float
+    dest_lng: float
+    trip_status: str
+    start_time: datetime
+    total_seats: int
+    price_per_seat: Optional[float] = None
+    notes: Optional[str] = None
+    passenger_notes: List[PassengerNote] = []
 
 
 class BidWithDriver(BaseModel):
@@ -92,7 +141,10 @@ class BidWithDriver(BaseModel):
     driver_id: UUID
     bid_amount: float
     status: str
+    message: Optional[str] = None
     created_at: datetime
+    is_counter_bid: Optional[bool] = False
+    parent_bid_id: Optional[UUID] = None
     driver_name: str
     driver_rating: Optional[float]
     driver_avatar: Optional[str] = None
@@ -106,7 +158,7 @@ class BidAcceptResponse(BaseModel):
 
 # OTP Schema
 class OTPVerify(BaseModel):
-    otp: str = Field(min_length=6, max_length=6)
+    otp: str = Field(min_length=4, max_length=4)
 
 
 class OTPVerifyResponse(BaseModel):
@@ -119,3 +171,24 @@ class TripCompleteResponse(BaseModel):
     message: str
     trip_id: str
     completed_at: datetime
+
+class PassengerShortInfo(BaseModel):
+    id: UUID
+    full_name: str
+    avatar_url: Optional[str] = None
+    notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class BookingShortInfo(BaseModel):
+    id: UUID
+    payment_status: str
+
+    class Config:
+        from_attributes = True
+
+class TripWithPassengers(TripResponse):
+    passengers: List[PassengerShortInfo] = []
+    creator: Optional[PassengerShortInfo] = None
+    user_booking: Optional[BookingShortInfo] = None

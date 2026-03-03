@@ -1,4 +1,8 @@
 import pytest
+from datetime import datetime, timedelta
+
+# Use a date 30 days in the future for creating trips in tests
+future_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
 
 
 class TestRides:
@@ -17,7 +21,7 @@ class TestRides:
                 "lat": 40.7589,
                 "lng": -73.9851
             },
-            "date": "2025-12-31",
+            "date": future_date,
             "time": "14:00",
             "seats_requested": 2
         }, headers=auth_headers_passenger)
@@ -83,7 +87,7 @@ class TestRides:
                 "lat": 40.7589,
                 "lng": -73.9851
             },
-            "date": "2025-12-31",
+            "date": future_date,
             "time": "14:00",
             "seats_requested": 2
         }, headers=auth_headers_driver)
@@ -202,7 +206,7 @@ class TestRidesRateLimiting:
                     "lat": 40.7589,
                     "lng": -73.9851
                 },
-                "date": "2025-12-31",
+                "date": future_date,
                 "time": "14:00",
                 "seats_requested": 1
             }, headers=auth_headers_passenger)

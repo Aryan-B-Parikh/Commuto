@@ -17,6 +17,7 @@ interface MapContainerProps {
     // New optional props for real data
     center?: [number, number];
     markers?: { lat: number; lng: number; title?: string }[];
+    onLocationSelect?: (lat: number, lng: number) => void;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -26,6 +27,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     interactive = true,
     center,
     markers,
+    onLocationSelect,
 }) => {
     return (
         <div className={`relative bg-gray-100 overflow-hidden ${className}`}>
@@ -34,6 +36,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                 showRoute={showRoute}
                 center={center}
                 markers={markers}
+                onLocationSelect={onLocationSelect}
             />
 
             {/* Overlay content */}
@@ -47,7 +50,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
             {/* Attribution/Badge */}
             <div className="absolute bottom-1 left-1 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-gray-500 shadow-sm z-[400]">
-                © OpenStreetMap
+                © Ola Maps
             </div>
         </div>
     );

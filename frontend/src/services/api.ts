@@ -1,13 +1,15 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 import type {
     RegisterRequest,
     LoginRequest,
     AuthResponse,
     UserResponse,
-    TripRequest,
     TripResponse,
     BidRequest,
-    BidResponse
+    BidResponse,
+    TripPaymentOrderResponse,
+    TripPaymentVerifyRequest
 } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -18,6 +20,34 @@ const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+axiosRetry(api, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
+
+api.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.response?.status === 401) {
+            // If it's a 401, the token might be invalid or expired.
+            // Avoid infinite loops for login/me requests
+            const isAuthReq = error.config?.url?.includes('/auth/');
+            if (!isAuthReq) {
+                localStorage.removeItem('auth_token');
+                // Optional: window.location.href = '/login';
+            }
+        }
+
+        // Don't log 401 errors for auth paths
+        if (error.response?.status !== 401) {
+            console.error('API Error:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message,
+                url: error.config?.url
+            });
+        }
+        return Promise.reject(error);
+    }
+);
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
@@ -44,15 +74,16 @@ export const authAPI = {
         const response = await api.get<UserResponse>('/auth/me');
         return response.data;
     },
+
+    updateProfile: async (data: any): Promise<UserResponse> => {
+        const response = await api.patch<UserResponse>('/auth/me', data);
+        return response.data;
+    },
 };
+
 
 // Trips APIs
 export const tripsAPI = {
-    createTrip: async (data: TripRequest): Promise<TripResponse> => {
-        const response = await api.post<TripResponse>('/rides/request', data);
-        return response.data;
-    },
-
     getOpenRides: async (): Promise<TripResponse[]> => {
         const response = await api.get<TripResponse[]>('/rides/open');
         return response.data;
@@ -63,8 +94,55 @@ export const tripsAPI = {
         return response.data;
     },
 
+    getDriverTrips: async (): Promise<TripResponse[]> => {
+        const response = await api.get<TripResponse[]>('/rides/driver-trips');
+        return response.data;
+    },
+
     cancelTrip: async (tripId: string): Promise<{ message: string }> => {
         const response = await api.post(`/rides/${tripId}/cancel`);
+        return response.data;
+    },
+
+    getDriverEarnings: async (): Promise<any> => {
+        const response = await api.get('/rides/driver-earnings');
+        return response.data;
+    },
+
+    createSharedRide: async (data: any): Promise<TripResponse> => {
+        const response = await api.post<TripResponse>('/rides/create-shared', data);
+        return response.data;
+    },
+
+    getAvailableRides: async (): Promise<TripResponse[]> => {
+        const response = await api.get<TripResponse[]>('/rides/available');
+        return response.data;
+    },
+
+    getTripDetails: async (tripId: string): Promise<any> => {
+        const response = await api.get(`/rides/${tripId}/details`);
+        return response.data;
+    },
+
+    joinRide: async (tripId: string, notes?: string): Promise<any> => {
+        const response = await api.post(`/rides/${tripId}/join`, notes ? { notes } : {});
+        return response.data;
+    },
+
+    leaveRide: async (tripId: string): Promise<any> => {
+        const response = await api.post(`/rides/${tripId}/leave`);
+        return response.data;
+    },
+
+    createTripPaymentOrder: async (tripId: string, bookingId: string): Promise<TripPaymentOrderResponse> => {
+        const response = await api.post<TripPaymentOrderResponse>(`/rides/${tripId}/pay-order`, null, {
+            params: { booking_id: bookingId }
+        });
+        return response.data;
+    },
+
+    verifyTripPayment: async (data: TripPaymentVerifyRequest): Promise<any> => {
+        const response = await api.post('/rides/verify-trip-payment', data);
         return response.data;
     },
 };
@@ -90,6 +168,11 @@ export const bidsAPI = {
         const response = await api.post<BidResponse>(`/bids/${bidId}/counter`, data);
         return response.data;
     },
+
+    getMyBids: async (): Promise<import('@/types/api').DriverBidWithTrip[]> => {
+        const response = await api.get<import('@/types/api').DriverBidWithTrip[]>('/bids/my-bids');
+        return response.data;
+    },
 };
 
 // OTP APIs
@@ -103,6 +186,61 @@ export const otpAPI = {
         const response = await api.post(`/rides/${tripId}/complete`);
         return response.data;
     },
+};
+
+// Wallet APIs
+export const walletAPI = {
+    getWallet: async (): Promise<{ balance: number; currency: string }> => {
+        const response = await api.get('/wallet');
+        return response.data;
+    },
+
+    getTransactions: async (): Promise<any[]> => {
+        const response = await api.get('/wallet/transactions');
+        return response.data;
+    },
+
+    addMoney: async (amount: number): Promise<{
+        order_id: string;
+        amount: number;
+        currency: string;
+        key: string;
+    }> => {
+        const response = await api.post('/wallet/add-money', { amount });
+        return response.data;
+    },
+
+    verifyPayment: async (paymentData: any): Promise<{ status: string; new_balance: number }> => {
+        const response = await api.post('/wallet/verify-payment', paymentData);
+        return response.data;
+    },
+
+    transfer: async (data: { recipient_email: string; amount: number; note?: string }): Promise<any> => {
+        const response = await api.post('/wallet/transfer', data);
+        return response.data;
+    }
+};
+
+// Payment Methods APIs
+export const paymentMethodsAPI = {
+    getMethods: async (): Promise<any[]> => {
+        const response = await api.get('/auth/payment-methods');
+        return response.data;
+    },
+
+    addMethod: async (data: { type: string; provider: string; last4: string; is_default?: boolean }): Promise<any> => {
+        const response = await api.post('/auth/payment-methods', data);
+        return response.data;
+    },
+
+    deleteMethod: async (id: string): Promise<void> => {
+        await api.delete(`/auth/payment-methods/${id}`);
+    },
+
+    setDefault: async (id: string): Promise<any> => {
+        const response = await api.patch(`/auth/payment-methods/${id}/default`);
+        return response.data;
+    }
 };
 
 export default api;

@@ -31,26 +31,26 @@ export const TripCard: React.FC<TripCardProps> = ({
         return (
             <motion.div
                 whileHover={{ y: -2 }}
-                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                className="bg-[#111827] rounded-xl p-4 shadow-sm border border-[#1E293B] hover:shadow-md transition-shadow"
             >
                 <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <div className="flex items-center gap-2 text-sm text-[#6B7280] mb-1">
                             <span>{formatDate(trip.date)}</span>
                             <span>•</span>
                             <span>{formatTime(trip.time)}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900 truncate">{trip.from.name}</span>
-                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <span className="font-medium text-[#F9FAFB] truncate">{trip.from.name}</span>
+                            <svg className="w-4 h-4 text-[#6B7280] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
-                            <span className="font-medium text-gray-900 truncate">{trip.to.name}</span>
+                            <span className="font-medium text-[#F9FAFB] truncate">{trip.to.name}</span>
                         </div>
                     </div>
                     <div className="text-right ml-4">
-                        <p className="text-lg font-bold text-blue-600">{formatCurrency(trip.pricePerSeat)}</p>
-                        <p className="text-xs text-gray-500">{trip.seatsAvailable} seats left</p>
+                        <p className="text-lg font-bold text-indigo-400">{formatCurrency(trip.pricePerSeat)}</p>
+                        <p className="text-xs text-[#6B7280]">{trip.seatsAvailable} seats left</p>
                     </div>
                 </div>
             </motion.div>
@@ -60,55 +60,55 @@ export const TripCard: React.FC<TripCardProps> = ({
     return (
         <motion.div
             whileHover={{ y: -4 }}
-            className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-lg transition-all"
+            className="bg-[#111827] rounded-2xl p-5 shadow-sm border border-[#1E293B] hover:shadow-lg hover:border-indigo-500/20 transition-all"
         >
             {/* Route Info */}
             <div className="flex gap-4 mb-4">
                 {/* Route Line */}
                 <div className="flex flex-col items-center py-1">
-                    <div className="w-3 h-3 rounded-full bg-green-500 ring-4 ring-green-100" />
-                    <div className="w-0.5 flex-1 bg-gray-200 my-1" />
-                    <div className="w-3 h-3 rounded-full bg-red-500 ring-4 ring-red-100" />
+                    <div className="w-3 h-3 rounded-full bg-green-500 ring-4 ring-green-500/20" />
+                    <div className="w-0.5 flex-1 bg-[#1E293B] my-1" />
+                    <div className="w-3 h-3 rounded-full bg-red-500 ring-4 ring-red-500/20" />
                 </div>
 
                 {/* Locations */}
                 <div className="flex-1 min-w-0">
                     <div className="mb-3">
-                        <p className="font-semibold text-gray-900 truncate">{trip.from.name}</p>
-                        <p className="text-sm text-gray-500 truncate">{trip.from.address}</p>
+                        <p className="font-semibold text-[#F9FAFB] truncate">{trip.from.name}</p>
+                        <p className="text-sm text-[#6B7280] truncate">{trip.from.address}</p>
                     </div>
                     <div>
-                        <p className="font-semibold text-gray-900 truncate">{trip.to.name}</p>
-                        <p className="text-sm text-gray-500 truncate">{trip.to.address}</p>
+                        <p className="font-semibold text-[#F9FAFB] truncate">{trip.to.name}</p>
+                        <p className="text-sm text-[#6B7280] truncate">{trip.to.address}</p>
                     </div>
                 </div>
 
                 {/* Price */}
                 <div className="text-right">
-                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(trip.pricePerSeat)}</p>
-                    <p className="text-sm text-gray-500">per seat</p>
+                    <p className="text-2xl font-bold text-indigo-400">{formatCurrency(trip.pricePerSeat)}</p>
+                    <p className="text-sm text-[#6B7280]">per seat</p>
                 </div>
             </div>
 
             {/* Trip Details */}
-            <div className="flex items-center gap-4 py-3 px-4 bg-gray-50 rounded-xl mb-4">
+            <div className="flex items-center gap-4 py-3 px-4 bg-[#0B1020] rounded-xl mb-4">
                 <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span className="text-sm text-gray-600">{formatDate(trip.date)}</span>
+                    <span className="text-sm text-[#9CA3AF]">{formatDate(trip.date)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="text-sm text-gray-600">{formatTime(trip.time)}</span>
+                    <span className="text-sm text-[#9CA3AF]">{formatTime(trip.time)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    <span className="text-sm text-gray-600">{trip.seatsAvailable} seats left</span>
+                    <span className="text-sm text-[#9CA3AF]">{trip.seatsAvailable} seats left</span>
                 </div>
             </div>
 
@@ -118,10 +118,10 @@ export const TripCard: React.FC<TripCardProps> = ({
                     <img
                         src={trip.driver.avatar}
                         alt={trip.driver.name}
-                        className="w-10 h-10 rounded-full bg-gray-100"
+                        className="w-10 h-10 rounded-full bg-[#1E293B]"
                     />
                     <div>
-                        <p className="font-medium text-gray-900">{trip.driver.name}</p>
+                        <p className="font-medium text-[#F9FAFB]">{trip.driver.name}</p>
                         <RatingStars rating={trip.driver.rating} size="sm" />
                     </div>
                 </Link>

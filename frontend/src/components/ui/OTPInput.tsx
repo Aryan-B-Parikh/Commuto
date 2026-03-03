@@ -74,7 +74,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
     };
 
     return (
-        <div className="flex gap-3 justify-center">
+        <div className="flex gap-2.5 sm:gap-3 justify-center">
             {Array.from({ length }).map((_, index) => (
                 <input
                     key={index}
@@ -90,19 +90,19 @@ export const OTPInput: React.FC<OTPInputProps> = ({
                     onBlur={() => setFocused(false)}
                     disabled={disabled}
                     className={`
-            w-12 h-14 sm:w-14 sm:h-16
-            text-center text-2xl font-bold
-            rounded-xl border-2
-            transition-all duration-200
-            focus:outline-none
-            ${error
-                            ? 'border-red-500 bg-red-50 text-red-600'
+                        w-12 h-14 sm:w-14 sm:h-16
+                        text-center text-2xl font-bold
+                        rounded-xl border-2
+                        transition-all duration-200
+                        focus:outline-none
+                        ${error
+                            ? 'border-red-500 bg-red-500/10 text-red-400'
                             : focused
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                                ? 'border-indigo-500 bg-indigo-500/10 text-[#F9FAFB] ring-2 ring-indigo-500/20'
+                                : 'border-[#374151] bg-[#1E293B] hover:border-[#4B5563] text-[#F9FAFB]'
                         }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-          `}
+                        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
                 />
             ))}
         </div>

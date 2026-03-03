@@ -9,11 +9,16 @@ import { Card } from '@/components/ui/Card';
 
 export default function SelectRolePage() {
     const router = useRouter();
-    const { setRole } = useAuth();
+    const { setRole, isAuthenticated } = useAuth() as any;
 
     const handleSelectRole = (role: 'driver' | 'passenger') => {
         setRole(role);
-        router.push('/signup');
+        // If user is already logged in, redirect to their new dashboard
+        if (isAuthenticated) {
+            router.push(`/${role}/dashboard`);
+        } else {
+            router.push('/signup');
+        }
     };
 
     const roles = [
@@ -27,7 +32,8 @@ export default function SelectRolePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
             ),
-            color: 'blue',
+            gradient: 'from-indigo-500 to-blue-600',
+            glowColor: 'shadow-indigo-500/20',
             features: ['Find affordable rides', 'Split travel costs', 'Rate your experience'],
         },
         {
@@ -40,22 +46,23 @@ export default function SelectRolePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
             ),
-            color: 'green',
+            gradient: 'from-emerald-500 to-green-600',
+            glowColor: 'shadow-emerald-500/20',
             features: ['Earn from your trips', 'Choose your passengers', 'Flexible schedule'],
         },
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col">
+        <div className="min-h-screen bg-[#0B1020] flex flex-col">
             {/* Header */}
             <div className="p-4">
                 <Link href="/" className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
                         <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                         </svg>
                     </div>
-                    <span className="text-xl font-bold text-gray-900">Commuto</span>
+                    <span className="text-xl font-bold text-[#F9FAFB]">Commuto</span>
                 </Link>
             </div>
 
@@ -67,15 +74,15 @@ export default function SelectRolePage() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-center mb-10"
                     >
-                        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#F9FAFB] mb-3">
                             How will you use Commuto?
                         </h1>
-                        <p className="text-gray-600 text-lg">
+                        <p className="text-[#9CA3AF] text-base lg:text-lg">
                             Choose your role to get started. You can always switch later.
                         </p>
                     </motion.div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6">
                         {roles.map((role, index) => (
                             <motion.div
                                 key={role.id}
@@ -85,24 +92,24 @@ export default function SelectRolePage() {
                             >
                                 <Card
                                     hoverable
-                                    className={`border-2 border-transparent hover:border-${role.color}-500 transition-all duration-300`}
+                                    className="border-2 border-[#1E293B] hover:border-indigo-500/30 transition-all duration-300"
                                 >
-                                    <div className="text-center p-4">
+                                    <div className="text-center p-2 lg:p-4">
                                         {/* Icon */}
-                                        <div className={`w-20 h-20 rounded-2xl bg-${role.color}-100 flex items-center justify-center mx-auto mb-4 text-${role.color}-600`}>
+                                        <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${role.gradient} flex items-center justify-center mx-auto mb-4 text-white shadow-lg ${role.glowColor}`}>
                                             {role.icon}
                                         </div>
 
                                         {/* Title */}
-                                        <h2 className="text-2xl font-bold text-gray-900 mb-1">{role.title}</h2>
-                                        <p className={`text-${role.color}-600 font-medium mb-3`}>{role.subtitle}</p>
-                                        <p className="text-gray-500 text-sm mb-6">{role.description}</p>
+                                        <h2 className="text-xl lg:text-2xl font-bold text-[#F9FAFB] mb-1">{role.title}</h2>
+                                        <p className="text-indigo-400 font-medium mb-3 text-sm">{role.subtitle}</p>
+                                        <p className="text-[#6B7280] text-sm mb-6">{role.description}</p>
 
                                         {/* Features */}
                                         <ul className="space-y-2 text-left">
                                             {role.features.map((feature) => (
-                                                <li key={feature} className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <svg className={`w-5 h-5 text-${role.color}-500 flex-shrink-0`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <li key={feature} className="flex items-center gap-2 text-sm text-[#9CA3AF]">
+                                                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                     </svg>
                                                     {feature}
@@ -113,12 +120,9 @@ export default function SelectRolePage() {
                                         {/* Button */}
                                         <motion.button
                                             whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
+                                            whileTap={{ scale: 0.97 }}
                                             onClick={() => handleSelectRole(role.id)}
-                                            className={`mt-6 w-full py-3 rounded-xl font-semibold transition-all ${role.id === 'passenger'
-                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                                : 'bg-green-600 hover:bg-green-700 text-white'
-                                                }`}
+                                            className={`mt-6 w-full py-3.5 min-h-[52px] rounded-[14px] font-semibold transition-all bg-gradient-to-r ${role.gradient} text-white shadow-lg ${role.glowColor}`}
                                         >
                                             Continue as {role.title}
                                         </motion.button>
@@ -133,10 +137,10 @@ export default function SelectRolePage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.4 }}
-                        className="text-center mt-8 text-gray-600"
+                        className="text-center mt-8 text-[#6B7280]"
                     >
                         Already have an account?{' '}
-                        <Link href="/login" className="text-blue-600 font-medium hover:underline">
+                        <Link href="/login" className="text-indigo-400 font-medium hover:text-indigo-300 transition-colors">
                             Sign in
                         </Link>
                     </motion.p>
