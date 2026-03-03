@@ -12,7 +12,8 @@ import {
     MessageSquare,
     MapPin,
     Clock,
-    User
+    User,
+    Shield
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleGuard } from '@/components/auth/RoleGuard';
@@ -27,7 +28,7 @@ import { TripResponse } from '@/types/api';
 import { useToast } from '@/hooks/useToast';
 import dynamic from 'next/dynamic';
 
-const TripMap = dynamic(() => import('@/components/map/TripMap'), {
+const MapWidget = dynamic(() => import('@/components/map/MapWidget').then(mod => mod.MapWidget), {
     ssr: false,
     loading: () => <div className="w-full h-full bg-[#0B1020] animate-pulse flex items-center justify-center text-[#9CA3AF]">Loading Navigation...</div>
 });
@@ -149,140 +150,186 @@ export default function DriverLivePage() {
 
     return (
         <RoleGuard allowedRoles={['driver']}>
-            <DashboardLayout userType="driver" title="Live Navigation">
-                <div className="relative h-[calc(100vh-180px)] -mt-4 -mx-8 overflow-hidden">
-                    <TripMap
-                        driverPos={driverPos}
-                        passengerPos={passengerPos}
-                        destinationPos={destinationPos}
-                        center={driverPos}
-                    />
+            <DashboardLayout userType="driver" title="Live Navigation" immersive={true}>
+                <div className="relative h-screen w-full bg-[#0B1020] overflow-hidden">
+                    {/* Immersive Map */}
+                    <div className="absolute inset-0 z-0">
+                        <MapWidget
+                            driverPos={driverPos}
+                            driverHeading={routeCoords[routeIndexRef.current] ? 90 : 0} // Simplified heading
+                            pickup={passengerPos}
+                            destination={destinationPos}
+                            showRoute={true}
+                        />
+                    </div>
 
-                    {/* Floating Passenger Info Header */}
-                    <div className="absolute top-6 left-6 right-6 z-10">
-                        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="max-w-xl mx-auto">
-                            <Card className="p-4 border-none shadow-2xl bg-[#0B1020]/95 backdrop-blur-md text-white flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-[#1E293B] flex items-center justify-center text-indigo-400 border border-[#374151]">
+                    {/* 1️⃣ TOP FLOATING INFO CARD (Mobile & Desktop) */}
+                    <div className="absolute top-4 left-4 right-4 z-20 flex justify-center">
+                        <motion.div
+                            initial={{ y: -20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="w-full max-w-xl"
+                        >
+                            <div className="bg-[#111827]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl p-4 shadow-2xl flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
                                         <User size={24} />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-white leading-none">
-                                            Pickup: {trip.origin_address.split(',')[0]}
+                                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5">Pickup Passenger</p>
+                                        <h4 className="font-bold text-[#F9FAFB] text-sm truncate max-w-[150px] md:max-w-none">
+                                            {trip.passenger_notes?.[0]?.passenger_name || 'Rider'}
                                         </h4>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">
-                                                Passenger Assigned
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button size="sm" variant="ghost" className="rounded-xl hover:bg-white/10 text-white px-2 h-10 w-10">
-                                        <Phone size={20} />
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="rounded-xl hover:bg-white/10 text-white px-2 h-10 w-10">
-                                        <MessageSquare size={20} />
-                                    </Button>
+                                <div className="flex items-center gap-2">
+                                    <button className="w-10 h-10 rounded-xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] hover:bg-[#334155] transition-colors">
+                                        <Phone size={18} />
+                                    </button>
+                                    <button className="w-10 h-10 rounded-xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] hover:bg-[#334155] transition-colors">
+                                        <MessageSquare size={18} />
+                                    </button>
                                 </div>
-                            </Card>
+                            </div>
                         </motion.div>
                     </div>
 
-                    {/* Bottom Controls */}
-                    <div className="absolute bottom-6 left-6 right-6 z-10 flex justify-center">
-                        <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="w-full max-w-4xl">
-                            <Card className="shadow-2xl border-none p-6 bg-[#111827]/95 backdrop-blur-md">
-                                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                                    <div className="flex items-center gap-6">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Target Destination</p>
-                                            <div className="flex items-center gap-2">
-                                                <MapPin size={16} className="text-red-500" />
-                                                <p className="font-bold text-[#F9FAFB]">{trip.dest_address.split(',')[0]}</p>
-                                            </div>
-                                        </div>
-                                        <div className="w-px h-10 bg-[#1E293B]" />
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Distance</p>
-                                            <div className="flex items-center gap-2">
-                                                <Navigation size={16} className="text-indigo-400 font-bold" />
-                                                <p className="font-bold text-[#F9FAFB] tracking-tight">
-                                                    {calculateDistance(
-                                                        { lat: trip.origin_lat, lng: trip.origin_lng },
-                                                        { lat: trip.dest_lat, lng: trip.dest_lng }
-                                                    ).toFixed(1)} km
-                                                </p>
-                                            </div>
+                    {/* 2️⃣ BOTTOM ACTION PANEL (Uber Style) */}
+                    <div className="absolute bottom-6 left-4 right-4 z-20 flex justify-center">
+                        <motion.div
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="w-full max-w-xl"
+                        >
+                            <div className="bg-[#111827] border border-[#1E293B] rounded-[2rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Destination</p>
+                                        <div className="flex items-center gap-2">
+                                            <MapPin size={14} className="text-red-500" />
+                                            <p className="font-bold text-[#F9FAFB] text-base truncate">
+                                                {trip.dest_address.split(',')[0]}
+                                            </p>
                                         </div>
                                     </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Distance</p>
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            <Navigation size={14} className="text-indigo-400" />
+                                            <p className="font-black text-indigo-400 text-base">
+                                                {calculateDistance(
+                                                    { lat: trip.origin_lat, lng: trip.origin_lng },
+                                                    { lat: trip.dest_lat, lng: trip.dest_lng }
+                                                ).toFixed(1)} km
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                    <div className="flex items-center gap-3 w-full md:w-auto">
-                                        {/* External Navigation Button */}
-                                        <Button
-                                            variant="outline"
-                                            className="h-14 w-14 p-0 bg-[#1E293B] border-[#374151] rounded-2xl hover:bg-[#334155] text-white flex items-center justify-center shrink-0 shadow-lg"
-                                            onClick={() => {
-                                                const targetLat = currentStatus === 'active' ? trip.dest_lat : trip.origin_lat;
-                                                const targetLng = currentStatus === 'active' ? trip.dest_lng : trip.origin_lng;
-                                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}&travelmode=driving`, '_blank');
+                                <div className="flex items-center gap-3">
+                                    {/* Google Maps Nav Icon */}
+                                    <button
+                                        onClick={() => {
+                                            const targetLat = currentStatus === 'active' ? trip.dest_lat : trip.origin_lat;
+                                            const targetLng = currentStatus === 'active' ? trip.dest_lng : trip.origin_lng;
+                                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}&travelmode=driving`, '_blank');
+                                        }}
+                                        className="w-14 h-14 rounded-2xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] shrink-0 border border-[#374151] active:scale-95 transition-transform"
+                                    >
+                                        <Navigation size={24} className="rotate-45" />
+                                    </button>
+
+                                    {/* Main Dynamic Action Button */}
+                                    {currentStatus === 'bid_accepted' && (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await updateStatus('driver_assigned');
+                                                    showToast('success', "Status updated: You've arrived!");
+                                                } catch (err) {
+                                                    showToast('error', "Failed to update arrival status");
+                                                }
                                             }}
-                                            title="Navigate in Google Maps"
+                                            className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition-all"
                                         >
-                                            <Navigation size={22} className="rotate-45" />
-                                        </Button>
+                                            I HAVE ARRIVED
+                                        </button>
+                                    )}
+                                    {currentStatus === 'driver_assigned' && (
+                                        <button
+                                            onClick={() => setIsOTPModalOpen(true)}
+                                            className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                                        >
+                                            <Car size={20} />
+                                            START TRIP
+                                        </button>
+                                    )}
+                                    {currentStatus === 'active' && (
+                                        <button
+                                            disabled={isCompletingTrip}
+                                            onClick={async () => {
+                                                if (!confirm('Are you sure you want to complete this trip?')) return;
+                                                setIsCompletingTrip(true);
+                                                try {
+                                                    await otpAPI.completeRide(trip.id);
+                                                    showToast('success', "Trip completed!");
+                                                } catch (err: any) {
+                                                    showToast('error', err.response?.data?.detail || "Failed to complete trip");
+                                                } finally {
+                                                    setIsCompletingTrip(false);
+                                                }
+                                            }}
+                                            className="flex-1 h-14 bg-white text-[#0B1020] rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
+                                        >
+                                            {isCompletingTrip ? 'COMPLETING...' : 'COMPLETE TRIP'}
+                                        </button>
+                                    )}
+                                    {currentStatus === 'completed' && (
+                                        <div className="flex-1 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center font-black uppercase tracking-widest text-sm italic">
+                                            TRIP FINISHED
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
 
-                                        {currentStatus === 'bid_accepted' && (
-                                            <Button
-                                                className="flex-1 md:flex-none h-14 bg-indigo-600 hover:bg-indigo-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-indigo-500/20"
-                                                onClick={async () => {
-                                                    try {
-                                                        await updateStatus('driver_assigned');
-                                                        showToast('success', "Status updated: You've arrived!");
-                                                    } catch (err) {
-                                                        showToast('error', "Failed to update arrival status");
-                                                    }
-                                                }}
-                                            >
-                                                I Have Arrived
-                                            </Button>
-                                        )}
-                                        {currentStatus === 'driver_assigned' && (
-                                            <Button
-                                                className="flex-1 md:flex-none h-14 bg-emerald-600 hover:bg-emerald-700 text-white px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-emerald-500/20 flex items-center gap-2"
-                                                onClick={() => setIsOTPModalOpen(true)}
-                                            >
-                                                <Car size={18} />
-                                                Start Trip (Enter OTP)
-                                            </Button>
-                                        )}
-                                        {currentStatus === 'active' && (
-                                            <Button
-                                                className="flex-1 md:flex-none h-14 bg-[#F9FAFB] hover:bg-white text-[#0B1020] px-10 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2 disabled:opacity-50"
-                                                disabled={isCompletingTrip}
-                                                onClick={async () => {
-                                                    if (!confirm('Are you sure you want to complete this trip?')) return;
-                                                    setIsCompletingTrip(true);
-                                                    try {
-                                                        await otpAPI.completeRide(trip.id);
-                                                        showToast('success', "Trip completed! Total earnings updated.");
-                                                    } catch (err: any) {
-                                                        showToast('error', err.response?.data?.detail || "Failed to complete trip");
-                                                    } finally {
-                                                        setIsCompletingTrip(false);
-                                                    }
-                                                }}
-                                            >
-                                                <CheckCircle size={18} />
-                                                {isCompletingTrip ? 'Completing...' : 'Complete Trip'}
-                                            </Button>
-                                        )}
-                                        {currentStatus === 'completed' && (
-                                            <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-widest text-xs bg-emerald-500/10 px-6 py-4 rounded-2xl border border-emerald-500/20 animate-pulse">
-                                                <Flag size={16} /> Trip Finished
+                    {/* 💻 DESKTOP ONLY: SIDE FLOATING PANEL */}
+                    <div className="hidden lg:block absolute right-6 top-24 bottom-24 w-80 z-20">
+                        <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
+                            <Card className="h-full bg-[#111827]/95 border-none shadow-2xl backdrop-blur-xl p-6 flex flex-col gap-8">
+                                <div>
+                                    <h3 className="text-sm font-black text-[#F9FAFB] uppercase tracking-[0.2em] mb-4">Trip Timeline</h3>
+                                    <div className="space-y-6">
+                                        <div className="flex gap-4">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${['bid_accepted', 'driver_assigned', 'active'].includes(currentStatus) ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
+                                                <div className="w-0.5 h-10 bg-[#1E293B]" />
                                             </div>
-                                        )}
+                                            <p className={`text-xs font-bold ${currentStatus === 'bid_accepted' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Driver Heading to Pickup</p>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${['driver_assigned', 'active'].includes(currentStatus) ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
+                                                <div className="w-0.5 h-10 bg-[#1E293B]" />
+                                            </div>
+                                            <p className={`text-xs font-bold ${currentStatus === 'driver_assigned' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Arrived at Location</p>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${currentStatus === 'active' ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
+                                            </div>
+                                            <p className={`text-xs font-bold ${currentStatus === 'active' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Live Trip in Progress</p>
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div className="mt-auto border-t border-[#1E293B] pt-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Shield className="text-emerald-400" size={16} />
+                                        <span className="text-[10px] font-black text-[#F9FAFB] uppercase tracking-widest">Safety Active</span>
+                                    </div>
+                                    <p className="text-[10px] text-[#6B7280] leading-relaxed">Your location is being broadcasted to our safety center.</p>
                                 </div>
                             </Card>
                         </motion.div>

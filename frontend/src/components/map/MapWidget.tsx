@@ -11,6 +11,8 @@ interface MapWidgetProps {
     interactive?: boolean;
     pickup?: [number, number]; // [lat, lng]
     destination?: [number, number]; // [lat, lng]
+    driverPos?: [number, number]; // [lat, lng]
+    driverHeading?: number;
     showRoute?: boolean;
 }
 
@@ -21,6 +23,8 @@ export function MapWidget({
     interactive = true,
     pickup,
     destination,
+    driverPos,
+    driverHeading,
     showRoute = false
 }: MapWidgetProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -94,6 +98,27 @@ export function MapWidget({
                     new maplibregl.Marker({ color: '#EF4444' }) // Destination - Red
                         .setLngLat([destination[1], destination[0]])
                         .addTo(map);
+
+                    // Render Driver Marker
+                    if (driverPos) {
+                        const el = document.createElement('div');
+                        el.style.width = '40px';
+                        el.style.height = '40px';
+                        el.style.background = '#6366F1';
+                        el.style.borderRadius = '50%';
+                        el.style.border = '4px solid white';
+                        el.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.5)';
+                        el.style.display = 'flex';
+                        el.style.alignItems = 'center';
+                        el.style.justifyContent = 'center';
+                        el.style.transform = `rotate(${driverHeading || 0}deg)`;
+                        el.style.transition = 'transform 0.5s ease';
+                        el.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`;
+
+                        new maplibregl.Marker({ element: el })
+                            .setLngLat([driverPos[1], driverPos[0]])
+                            .addTo(map);
+                    }
 
                     // Add Route if requested
                     if (showRoute) {

@@ -26,7 +26,17 @@ axiosRetry(api, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 api.interceptors.response.use(
     response => response,
     error => {
-        // Don't log 401 errors to console as they involve expected auth flows
+        if (error.response?.status === 401) {
+            // If it's a 401, the token might be invalid or expired.
+            // Avoid infinite loops for login/me requests
+            const isAuthReq = error.config?.url?.includes('/auth/');
+            if (!isAuthReq) {
+                localStorage.removeItem('auth_token');
+                // Optional: window.location.href = '/login';
+            }
+        }
+
+        // Don't log 401 errors for auth paths
         if (error.response?.status !== 401) {
             console.error('API Error:', {
                 status: error.response?.status,

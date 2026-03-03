@@ -10,9 +10,10 @@ interface DashboardLayoutProps {
     children: React.ReactNode;
     userType: 'passenger' | 'driver';
     title?: string;
+    immersive?: boolean;
 }
 
-export function DashboardLayout({ children, userType, title = 'Dashboard' }: DashboardLayoutProps) {
+export function DashboardLayout({ children, userType, title = 'Dashboard', immersive = false }: DashboardLayoutProps) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isSidebarMini, setIsSidebarMini] = useState(false);
     const { role, isAuthenticated, isLoading } = useAuth();
@@ -36,30 +37,34 @@ export function DashboardLayout({ children, userType, title = 'Dashboard' }: Das
     return (
         <div className="flex min-h-screen bg-[#0B1020]">
             {/* Sidebar — desktop only */}
-            <div className="hidden lg:block">
-                <Sidebar
-                    userType={role || userType}
-                    isOpen={isSidebarOpen}
-                    isMini={isSidebarMini}
-                    onToggleMini={() => setIsSidebarMini(!isSidebarMini)}
-                />
-            </div>
+            {!immersive && (
+                <div className="hidden lg:block">
+                    <Sidebar
+                        userType={role || userType}
+                        isOpen={isSidebarOpen}
+                        isMini={isSidebarMini}
+                        onToggleMini={() => setIsSidebarMini(!isSidebarMini)}
+                    />
+                </div>
+            )}
 
             {/* Main content */}
-            <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarOpen
+            <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${!immersive && isSidebarOpen
                 ? isSidebarMini ? 'lg:ml-[88px]' : 'lg:ml-[260px]'
                 : 'lg:ml-0'
                 }`}>
 
                 {/* TopBar — desktop only */}
-                <div className="hidden lg:block">
-                    <TopBar
-                        title={title}
-                        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                        isSidebarMini={isSidebarMini}
-                        onToggleMini={() => setIsSidebarMini(!isSidebarMini)}
-                    />
-                </div>
+                {!immersive && (
+                    <div className="hidden lg:block">
+                        <TopBar
+                            title={title}
+                            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                            isSidebarMini={isSidebarMini}
+                            onToggleMini={() => setIsSidebarMini(!isSidebarMini)}
+                        />
+                    </div>
+                )}
 
                 {/* Content area — extra bottom padding on mobile for bottom nav */}
                 <div className="flex-1 animate-fadeIn">
@@ -68,9 +73,11 @@ export function DashboardLayout({ children, userType, title = 'Dashboard' }: Das
             </main>
 
             {/* Bottom Navigation — mobile only */}
-            <div className="lg:hidden">
-                {userType === 'passenger' ? <PassengerBottomNav /> : <DriverBottomNav />}
-            </div>
+            {!immersive && (
+                <div className="lg:hidden">
+                    {userType === 'passenger' ? <PassengerBottomNav /> : <DriverBottomNav />}
+                </div>
+            )}
         </div>
     );
 }
