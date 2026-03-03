@@ -2,17 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MapPin, Check, Crosshair, Search, Loader2 } from 'lucide-react';
+import { X, MapPin, Check, Crosshair, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
-// Dynamically import Mapbox to avoid SSR issues
-let mapboxgl: any;
-if (typeof window !== 'undefined') {
-    import('mapbox-gl').then((m) => {
-        mapboxgl = m.default;
-        mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
-    });
-}
+// OLA Maps API Key
+const OLA_API_KEY = process.env.NEXT_PUBLIC_OLA_MAPS_API_KEY || '';
 
 interface MapSelectionModalProps {
     isOpen: boolean;
@@ -27,94 +21,229 @@ export function MapSelectionModal({
     onClose,
     onSelect,
     title,
-    initialCoords = [23.0225, 72.5714] // Ahmedabad default
+    initialCoords
 }: MapSelectionModalProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
+    const searchRef = useRef<HTMLDivElement>(null);
 
     const [isReady, setIsReady] = useState(false);
-    const [selectedPos, setSelectedPos] = useState<[number, number]>(initialCoords);
-    const [address, setAddress] = useState('Loading address...');
+    const [selectedPos, setSelectedPos] = useState<[number, number] | null>(initialCoords || null);
+    const [address, setAddress] = useState(initialCoords ? 'Loading address...' : 'Select a location on map');
     const [isFetchingAddress, setIsFetchingAddress] = useState(false);
 
-    // Fetch address from coordinates (Reverse Geocoding)
+    // Search state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [showResults, setShowResults] = useState(false);
+
+    // Handle click outside search results
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setShowResults(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Fetch address from coordinates (Ola Maps Reverse Geocoding)
     const fetchAddress = async (lat: number, lng: number) => {
+        if (!OLA_API_KEY) return;
         setIsFetchingAddress(true);
         try {
             const response = await fetch(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}&limit=1`
+                `https://api.olamaps.io/places/v1/reverse-geocode?latlng=${lat},${lng}&api_key=${OLA_API_KEY}`,
+                {
+                    headers: { 'X-Request-Id': crypto.randomUUID() }
+                }
             );
             const data = await response.json();
-            if (data.features && data.features.length > 0) {
-                setAddress(data.features[0].place_name);
+
+            if (data.results && data.results.length > 0) {
+                setAddress(data.results[0].formatted_address);
+            } else if (data.plus_code) {
+                setAddress(data.plus_code.compound_code || `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
             } else {
                 setAddress(`Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
             }
         } catch (error) {
-            console.error('Reverse geocoding failed:', error);
+            console.error('Ola Maps reverse geocoding failed:', error);
             setAddress(`Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         } finally {
             setIsFetchingAddress(false);
         }
     };
 
-    const initMap = useCallback(() => {
-        if (!mapContainerRef.current || mapRef.current || !mapboxgl) return;
+    // Ola Maps Autocomplete
+    useEffect(() => {
+        const fetchAutocomplete = async () => {
+            // Don't fetch if the query is too short or if it exactly matches the current selection address
+            // to prevent the list from popping back up after selection
+            if (searchQuery.length < 3 || searchQuery === address) {
+                setSearchResults([]);
+                setShowResults(false);
+                return;
+            }
 
-        // Ensure CSS is loaded
-        if (!document.getElementById('mapbox-gl-css')) {
-            const link = document.createElement('link');
-            link.id = 'mapbox-gl-css';
-            link.rel = 'stylesheet';
-            link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.css';
-            document.head.appendChild(link);
+            setIsSearching(true);
+            try {
+                const response = await fetch(
+                    `https://api.olamaps.io/places/v1/autocomplete?input=${encodeURIComponent(searchQuery)}&api_key=${OLA_API_KEY}`,
+                    { headers: { 'X-Request-Id': crypto.randomUUID() } }
+                );
+                const data = await response.json();
+                setSearchResults(data.predictions || []);
+                setShowResults(true);
+            } catch (error) {
+                console.error('Autocomplete failed:', error);
+            } finally {
+                setIsSearching(false);
+            }
+        };
+
+        const timer = setTimeout(fetchAutocomplete, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const handleSelectResult = async (result: any) => {
+        setSearchQuery(result.description);
+        setSearchResults([]); // Clear results immediately
+        setShowResults(false); // Hide the list
+        setIsFetchingAddress(true);
+
+        try {
+            const response = await fetch(
+                `https://api.olamaps.io/places/v1/details?place_id=${result.place_id}&api_key=${OLA_API_KEY}`,
+                { headers: { 'X-Request-Id': crypto.randomUUID() } }
+            );
+            const data = await response.json();
+
+            if (data.result && data.result.geometry && data.result.geometry.location) {
+                const { lat, lng } = data.result.geometry.location;
+                setSelectedPos([lat, lng]);
+                setAddress(data.result.formatted_address || result.description);
+
+                if (mapRef.current) {
+                    mapRef.current.flyTo({ center: [lng, lat], zoom: 16 });
+                    markerRef.current?.setLngLat([lng, lat]);
+                }
+            }
+        } catch (error) {
+            console.error('Place details failed:', error);
+        } finally {
+            setIsFetchingAddress(false);
         }
+    };
 
-        const map = new mapboxgl.Map({
-            container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/dark-v11',
-            center: [selectedPos[1], selectedPos[0]],
-            zoom: 14,
-            attributionControl: false
-        });
+    const initMap = useCallback(async () => {
+        if (!mapContainerRef.current || mapRef.current || !OLA_API_KEY) return;
 
-        map.on('load', () => {
-            setIsReady(true);
-            map.resize();
+        try {
+            // MapLibre is now loaded globally in layout.tsx via next/script
+            let maplibregl = (window as any).maplibregl;
 
-            // Marker logic
-            const marker = new mapboxgl.Marker({
-                draggable: true,
-                color: '#6366F1'
-            })
-                .setLngLat([selectedPos[1], selectedPos[0]])
-                .addTo(map);
+            if (!maplibregl) {
+                let attempts = 0;
+                while (!(window as any).maplibregl && attempts < 50) {
+                    await new Promise(r => setTimeout(r, 100));
+                    attempts++;
+                }
+                maplibregl = (window as any).maplibregl;
+            }
 
-            marker.on('dragend', () => {
-                const lngLat = marker.getLngLat();
-                setSelectedPos([lngLat.lat, lngLat.lng]);
-                fetchAddress(lngLat.lat, lngLat.lng);
+            if (!maplibregl) throw new Error('MapLibre GL not available');
+
+            // Fetch and patch the style to remove the broken 3D layer before initialization
+            const styleUrl = `https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=${OLA_API_KEY}`;
+            const response = await fetch(styleUrl);
+            const style = await response.json();
+
+            if (style.layers) {
+                style.layers = style.layers.filter((l: any) => l.id !== '3d_model_data');
+            }
+
+            const map = new maplibregl.Map({
+                container: mapContainerRef.current,
+                style: style,
+                center: selectedPos ? [selectedPos[1], selectedPos[0]] : [72.5714, 23.0225], // Use selected or Ahmedabad fallback
+                zoom: 14,
+                attributionControl: false,
+                transformRequest: (url: string) => {
+                    if (url.includes('api.olamaps.io')) {
+                        return {
+                            url: url.includes('?') ? `${url}&api_key=${OLA_API_KEY}` : `${url}?api_key=${OLA_API_KEY}`
+                        };
+                    }
+                    return { url };
+                }
             });
 
-            markerRef.current = marker;
-        });
+            map.on('load', () => {
+                setIsReady(true);
+                map.resize();
 
-        map.on('click', (e: any) => {
-            const { lng, lat } = e.lngLat;
-            setSelectedPos([lat, lng]);
-            markerRef.current?.setLngLat([lng, lat]);
-            fetchAddress(lat, lng);
-        });
+                // Only add marker if we have a position
+                if (selectedPos) {
+                    const marker = new maplibregl.Marker({
+                        draggable: true,
+                        color: '#6366F1'
+                    })
+                        .setLngLat([selectedPos[1], selectedPos[0]])
+                        .addTo(map);
 
-        mapRef.current = map;
-    }, [selectedPos]);
+                    marker.on('dragend', () => {
+                        const lngLat = marker.getLngLat();
+                        setSelectedPos([lngLat.lat, lngLat.lng]);
+                        fetchAddress(lngLat.lat, lngLat.lng);
+                    });
+
+                    markerRef.current = marker;
+                }
+            });
+
+            map.on('click', (e: any) => {
+                const { lng, lat } = e.lngLat;
+                setSelectedPos([lat, lng]);
+
+                if (markerRef.current) {
+                    markerRef.current.setLngLat([lng, lat]);
+                } else {
+                    const marker = new maplibregl.Marker({
+                        draggable: true,
+                        color: '#6366F1'
+                    })
+                        .setLngLat([lng, lat])
+                        .addTo(map);
+
+                    marker.on('dragend', () => {
+                        const mLat = marker.getLngLat().lat;
+                        const mLng = marker.getLngLat().lng;
+                        setSelectedPos([mLat, mLng]);
+                        fetchAddress(mLat, mLng);
+                    });
+                    markerRef.current = marker;
+                }
+
+                fetchAddress(lat, lng);
+            });
+
+            mapRef.current = map;
+        } catch (err) {
+            console.error('Ola Maps Modal init failed:', err);
+        }
+    }, [selectedPos, OLA_API_KEY]); // Added OLA_API_KEY to dependencies
 
     useEffect(() => {
         if (isOpen) {
             const timer = setTimeout(() => {
                 initMap();
-                fetchAddress(selectedPos[0], selectedPos[1]);
+                if (selectedPos) {
+                    fetchAddress(selectedPos[0], selectedPos[1]);
+                }
             }, 100);
             return () => clearTimeout(timer);
         } else {
@@ -123,13 +252,42 @@ export function MapSelectionModal({
                 mapRef.current = null;
                 markerRef.current = null;
                 setIsReady(false);
+                setSearchQuery('');
+                setSearchResults([]);
+                if (!initialCoords) {
+                    setSelectedPos(null);
+                    setAddress('Select a location on map');
+                }
             }
         }
-    }, [isOpen, initMap]);
+    }, [isOpen, initMap, selectedPos, initialCoords]);
 
     const handleConfirm = () => {
-        onSelect(address, selectedPos[0], selectedPos[1]);
-        onClose();
+        if (selectedPos) {
+            onSelect(address, selectedPos[0], selectedPos[1]);
+            onClose();
+            setSearchQuery('');
+            setSearchResults([]);
+        }
+    };
+
+    const handleGetCurrentLocation = () => {
+        if ("geolocation" in navigator) {
+            setIsFetchingAddress(true);
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                setSelectedPos([latitude, longitude]);
+
+                if (mapRef.current) {
+                    mapRef.current.flyTo({ center: [longitude, latitude], zoom: 16 });
+                    markerRef.current?.setLngLat([longitude, latitude]);
+                }
+                fetchAddress(latitude, longitude);
+            }, (err) => {
+                console.error("Geolocation error:", err);
+                setIsFetchingAddress(false);
+            });
+        }
     };
 
     return (
@@ -160,31 +318,84 @@ export function MapSelectionModal({
                         <div className="flex-1 relative">
                             <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
+                            {/* Search Overlay */}
+                            <div ref={searchRef} className="absolute top-4 left-4 right-4 z-[30]">
+                                <div className="relative group">
+                                    <div className="flex items-center bg-[#111827]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl shadow-2xl overflow-hidden focus-within:border-indigo-500/50 transition-all">
+                                        <div className="pl-4 text-[#9CA3AF]">
+                                            <Search size={18} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search for a location..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onFocus={() => setShowResults(true)}
+                                            className="flex-1 bg-transparent px-4 py-4 text-sm text-white placeholder-[#6B7280] outline-none"
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                onClick={() => setSearchQuery('')}
+                                                className="p-4 text-[#6B7280] hover:text-white transition-colors"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        )}
+                                        {isSearching && (
+                                            <div className="pr-4">
+                                                <Loader2 size={18} className="animate-spin text-indigo-500" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Search Results */}
+                                    <AnimatePresence>
+                                        {showResults && searchResults.length > 0 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="absolute top-full mt-2 left-0 right-0 bg-[#111827]/95 backdrop-blur-2xl border border-[#1E293B] rounded-2xl shadow-2xl overflow-hidden z-40 max-h-[300px] overflow-y-auto"
+                                            >
+                                                {searchResults.map((result: any, idx: number) => (
+                                                    <button
+                                                        key={result.place_id || idx}
+                                                        onClick={() => handleSelectResult(result)}
+                                                        className="w-full p-4 border-b border-[#1E293B]/50 flex items-start gap-3 hover:bg-indigo-500/10 transition-colors text-left group"
+                                                    >
+                                                        <div className="mt-1 w-8 h-8 rounded-lg bg-[#0B1020] flex items-center justify-center text-[#9CA3AF] group-hover:text-indigo-400 shrink-0">
+                                                            <MapPin size={16} />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-bold text-[#F9FAFB] truncate">
+                                                                {result.structured_formatting?.main_text || result.description.split(',')[0]}
+                                                            </p>
+                                                            <p className="text-[11px] text-[#9CA3AF] truncate mt-0.5">
+                                                                {result.structured_formatting?.secondary_text || result.description}
+                                                            </p>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </div>
+
                             {!isReady && (
                                 <div className="absolute inset-0 bg-[#0B1020] flex flex-col items-center justify-center z-10">
                                     <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
-                                    <span className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">Loading Map...</span>
+                                    <span className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">Loading Ola Maps...</span>
                                 </div>
                             )}
 
-                            {/* Center Pin Overlay (Optional visual cue) */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
-                                {/* Only show if not ready or something */}
-                            </div>
-
                             {/* Floating Re-center Button */}
                             <button
-                                onClick={() => {
-                                    if (mapRef.current) {
-                                        mapRef.current.flyTo({ center: [initialCoords[1], initialCoords[0]], zoom: 14 });
-                                        setSelectedPos(initialCoords);
-                                        markerRef.current?.setLngLat([initialCoords[1], initialCoords[0]]);
-                                        fetchAddress(initialCoords[0], initialCoords[1]);
-                                    }
-                                }}
-                                className="absolute bottom-24 right-4 p-3 bg-white text-[#111827] rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all z-20"
+                                onClick={handleGetCurrentLocation}
+                                className="absolute bottom-6 right-4 p-3 bg-indigo-500 text-white rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all z-20 flex items-center gap-2 group"
                             >
-                                <Crosshair size={22} />
+                                <Crosshair size={22} className="group-hover:rotate-90 transition-transform duration-500" />
+                                <span className="text-sm font-bold pr-1 text-white">Current Location</span>
                             </button>
                         </div>
 
@@ -194,7 +405,7 @@ export function MapSelectionModal({
                                 <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0">
                                     {isFetchingAddress ? <Loader2 size={24} className="animate-spin" /> : <MapPin size={24} />}
                                 </div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                     <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Selected Location</p>
                                     <p className="text-[#F9FAFB] text-sm font-bold truncate pr-2">
                                         {address}
@@ -216,7 +427,7 @@ export function MapSelectionModal({
                                     className="flex-[2] h-14 bg-indigo-500 hover:bg-indigo-600 font-bold text-white rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
                                 >
                                     <Check size={20} />
-                                    Confirm Destination
+                                    Confirm Location
                                 </Button>
                             </div>
                         </div>

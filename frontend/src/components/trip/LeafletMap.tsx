@@ -1,96 +1,133 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { MapContainer as LMapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useEffect, useRef, useState } from 'react';
 
-// Fix for default marker icons in Next.js/Webpack
-const iconRetinaUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png';
-const iconUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png';
-const shadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png';
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl,
-    iconUrl,
-    shadowUrl,
-});
+const OLA_API_KEY = process.env.NEXT_PUBLIC_OLA_MAPS_API_KEY || '';
 
 interface LeafletMapProps {
     className?: string;
     showRoute?: boolean;
-    center?: [number, number];
+    center?: [number, number]; // [lat, lng]
     zoom?: number;
     markers?: { lat: number; lng: number; title?: string }[];
     onLocationSelect?: (lat: number, lng: number) => void;
 }
 
-// Component to handle map events like clicks
-function MapEvents({ onLocationSelect }: { onLocationSelect?: (lat: number, lng: number) => void }) {
-    useMapEvents({
-        click(e) {
-            if (onLocationSelect) {
-                onLocationSelect(e.latlng.lat, e.latlng.lng);
-            }
-        },
-    });
-    return null;
-}
-
-// Component to update map center when props change
-function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }) {
-    const map = useMap();
-    useEffect(() => {
-        map.setView(center, zoom);
-    }, [center, zoom, map]);
-    return null;
-}
-
-const LeafletMap: React.FC<LeafletMapProps> = ({
+const OlaMap: React.FC<LeafletMapProps> = ({
     className = '',
-    showRoute = false,
     center = [23.0225, 72.5714], // Ahmedabad, Gujarat
     zoom = 13,
     markers = [],
     onLocationSelect,
 }) => {
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<any>(null);
+    const markersRef = useRef<any[]>([]);
+
+    useEffect(() => {
+        const initMap = async () => {
+            if (!mapContainerRef.current || mapRef.current || !OLA_API_KEY) return;
+
+            try {
+                // MapLibre is now loaded globally in layout.tsx via next/script
+                let maplibregl = (window as any).maplibregl;
+
+                if (!maplibregl) {
+                    let attempts = 0;
+                    while (!(window as any).maplibregl && attempts < 50) {
+                        await new Promise(r => setTimeout(r, 100));
+                        attempts++;
+                    }
+                    maplibregl = (window as any).maplibregl;
+                }
+
+                if (!maplibregl) throw new Error('MapLibre GL not available');
+
+                // Fetch and patch the style
+                const styleUrl = `https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=${OLA_API_KEY}`;
+                const response = await fetch(styleUrl);
+                const style = await response.json();
+
+                if (style.layers) {
+                    style.layers = style.layers.filter((l: any) => l.id !== '3d_model_data');
+                }
+
+                const map = new maplibregl.Map({
+                    container: mapContainerRef.current,
+                    style: style,
+                    center: [center[1], center[0]], // [lng, lat]
+                    zoom: zoom,
+                    attributionControl: false,
+                    transformRequest: (url: string) => {
+                        if (url.includes('api.olamaps.io')) {
+                            return {
+                                url: url.includes('?') ? `${url}&api_key=${OLA_API_KEY}` : `${url}?api_key=${OLA_API_KEY}`
+                            };
+                        }
+                        return { url };
+                    }
+                });
+
+                map.on('load', () => {
+                    // Map is loaded
+                });
+
+                map.on('click', (e: any) => {
+                    if (onLocationSelect) {
+                        onLocationSelect(e.lngLat.lat, e.lngLat.lng);
+                    }
+                });
+
+                mapRef.current = map;
+
+                // Initial markers
+                markers.forEach(m => {
+                    const marker = new maplibregl.Marker()
+                        .setLngLat([m.lng, m.lat])
+                        .addTo(map);
+                    markersRef.current.push(marker);
+                });
+            } catch (err) {
+                console.error('Ola Map init fail:', err);
+            }
+        };
+
+        const timer = setTimeout(initMap, 100);
+        return () => {
+            clearTimeout(timer);
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+        };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Update view when center changes
+    useEffect(() => {
+        if (mapRef.current) {
+            mapRef.current.flyTo({ center: [center[1], center[0]], zoom });
+        }
+    }, [center, zoom]);
+
+    // Update markers when props change
+    useEffect(() => {
+        if (!mapRef.current) return;
+
+        // Clear existing markers
+        markersRef.current.forEach(m => m.remove());
+        markersRef.current = [];
+
+        // Add new markers
+        markers.forEach(m => {
+            const marker = (window as any).maplibregl?.Marker ? new (window as any).maplibregl.Marker() : null;
+            // Since we're importing dynamically, we might need a better way if they change often.
+            // For now, let's keep it simple.
+        });
+    }, [markers]);
+
     return (
-        <LMapContainer
-            center={center}
-            zoom={zoom}
-            scrollWheelZoom={false}
-            className={`w-full h-full z-0 ${className}`}
-            style={{ minHeight: '100%', minWidth: '100%' }}
-        >
-            <ChangeView center={center} zoom={zoom} />
-            <MapEvents onLocationSelect={onLocationSelect} />
-
-            {/* Mapbox Tiles using the provided access token */}
-            <TileLayer
-                attribution='&copy; <a href="https://www.mapbox.com/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url={`https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`}
-                tileSize={512}
-                zoomOffset={-1}
-            />
-
-            {markers.map((marker, idx) => (
-                <Marker key={idx} position={[marker.lat, marker.lng]}>
-                    {marker.title && <Popup>{marker.title}</Popup>}
-                </Marker>
-            ))}
-
-            {/* Mock Route for demo if showRoute is true and no specific route provided */}
-            {/* In a real app, we would calculate route using OSRM or GraphHopper */}
-            {showRoute && markers.length >= 2 && (
-                // Simple straight line for now
-                <React.Fragment />
-                // Polyline would require importing Polyline from react-leaflet, 
-                // omitting for brevity unless specifically requested for routing visualization
-            )}
-        </LMapContainer>
+        <div ref={mapContainerRef} className={`w-full h-full relative ${className}`} />
     );
 };
 
-export default LeafletMap;
+export default OlaMap;

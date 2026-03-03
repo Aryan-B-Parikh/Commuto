@@ -31,7 +31,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased text-slate-100 bg-[#0B0F1A]`}>
+        {/* Load MapLibre GL globally for performance */}
+        <Script
+          src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"
+          strategy="beforeInteractive"
+        />
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css"
+        />
+
         <AuthProvider>
           <WebSocketProvider>
             <ToastProvider>

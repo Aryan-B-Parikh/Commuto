@@ -136,7 +136,11 @@ export default function RideDetailsPage() {
             <div className="lg:hidden min-h-screen bg-[#0B1020] flex flex-col font-sans">
                 {/* 1️⃣ Map Hero Section */}
                 <div className="h-[40vh] w-full relative">
-                    <MapWidget />
+                    <MapWidget
+                        pickup={[trip.origin_lat, trip.origin_lng]}
+                        destination={[trip.dest_lat, trip.dest_lng]}
+                        showRoute={true}
+                    />
                     {/* Floating Back Button */}
                     <button
                         onClick={() => router.back()}
@@ -363,7 +367,11 @@ export default function RideDetailsPage() {
                             <div className="lg:col-span-2 space-y-6 lg:space-y-8">
                                 <Card className="overflow-hidden border-0 shadow-2xl shadow-indigo-500/5">
                                     <div className="h-[300px] lg:h-[400px] w-full relative">
-                                        <MapWidget />
+                                        <MapWidget
+                                            pickup={[trip.origin_lat, trip.origin_lng]}
+                                            destination={[trip.dest_lat, trip.dest_lng]}
+                                            showRoute={true}
+                                        />
                                     </div>
                                     <div className="p-6 lg:p-8 bg-[#111827]">
                                         <div className="space-y-6">

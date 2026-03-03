@@ -50,7 +50,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
             {/* Attribution/Badge */}
             <div className="absolute bottom-1 left-1 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-gray-500 shadow-sm z-[400]">
-                © Mapbox
+                © Ola Maps
             </div>
         </div>
     );

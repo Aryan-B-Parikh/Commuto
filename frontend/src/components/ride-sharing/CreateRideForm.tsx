@@ -31,9 +31,12 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
         notes: ''
     });
 
-    const [coords, setCoords] = useState({
-        pickup: [23.0225, 72.5714] as [number, number],
-        destination: [23.1, 72.6] as [number, number]
+    const [coords, setCoords] = useState<{
+        pickup: [number, number] | undefined;
+        destination: [number, number] | undefined;
+    }>({
+        pickup: undefined,
+        destination: undefined
     });
 
     const [mapConfig, setMapConfig] = useState<{
@@ -43,19 +46,25 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!coords.pickup || !coords.destination) {
+            showToast('error', 'Please select both pickup and destination on the map.');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
             const tripData = {
                 from_location: {
                     address: formData.pickup,
-                    lat: coords.pickup[0],
-                    lng: coords.pickup[1]
+                    lat: coords.pickup![0],
+                    lng: coords.pickup![1]
                 },
                 to_location: {
                     address: formData.destination,
-                    lat: coords.destination[0],
-                    lng: coords.destination[1]
+                    lat: coords.destination![0],
+                    lng: coords.destination![1]
                 },
                 date: formData.date,
                 time: formData.time,

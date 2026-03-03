@@ -32,7 +32,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { useSocketEvent } from '@/hooks/useWebSocket';
 import dynamic from 'next/dynamic';
 
-const TripMap = dynamic(() => import('@/components/map/TripMap'), {
+const MapWidget = dynamic(() => import('@/components/map/MapWidget').then(mod => mod.MapWidget), {
     ssr: false,
     loading: () => <div className="w-full h-full bg-[#1E293B] animate-pulse rounded-2xl" />
 });
@@ -194,15 +194,16 @@ export default function PassengerTripDetailsPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-                        {/* Left Column – Route & Map */}
-                        <div className="lg:col-span-7 space-y-6">
+                    <div className="max-w-4xl mx-auto space-y-6">
+                        {/* Map & Route Info */}
+                        <div className="space-y-6">
                             {/* Map */}
                             <Card className="p-0 border-none shadow-lg overflow-hidden rounded-2xl">
-                                <div className="h-[250px] lg:h-[350px] relative">
-                                    <TripMap
-                                        passengerPos={passengerPos}
-                                        destinationPos={destinationPos}
+                                <div className="h-[250px] lg:h-[400px] relative">
+                                    <MapWidget
+                                        pickup={passengerPos}
+                                        destination={destinationPos}
+                                        showRoute={true}
                                     />
                                 </div>
                             </Card>
@@ -270,144 +271,6 @@ export default function PassengerTripDetailsPage() {
                                     Verified Ride
                                 </div>
                             </Card>
-                        </div>
-
-                        {/* Right Column – Bids & Actions */}
-                        <div className="lg:col-span-5 space-y-6">
-                            {/* Bids Header */}
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-[#9CA3AF] uppercase tracking-[0.15em] flex items-center gap-2">
-                                    <Zap size={14} className="text-indigo-400" />
-                                    Driver Offers
-                                </h3>
-                                {bids.length > 0 && (
-                                    <span className="bg-indigo-500/15 text-indigo-400 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">
-                                        {bids.length} {bids.length === 1 ? 'Offer' : 'Offers'}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Bids List */}
-                            <div className="space-y-4">
-                                <AnimatePresence mode="popLayout">
-                                    {bids.length > 0 ? (
-                                        bids.map((bid, index) => (
-                                            <motion.div
-                                                key={bid.id}
-                                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.95 }}
-                                                transition={{ delay: index * 0.08 }}
-                                            >
-                                                <Card className="border-none shadow-sm hover:shadow-md transition-all p-5 relative overflow-hidden group">
-                                                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 rounded-r-full" />
-
-                                                    <div className="flex items-center gap-4 mb-4">
-                                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-indigo-500/20">
-                                                            <Car size={22} />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <h4 className="font-bold text-[#F9FAFB] text-sm">Driver #{bid.driver_id.toString().substring(0, 5)}</h4>
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                <div className="flex items-center gap-0.5 text-amber-400">
-                                                                    <Star size={12} fill="currentColor" />
-                                                                    <span className="text-[10px] font-bold">4.8</span>
-                                                                </div>
-                                                                <span className="text-[10px] text-[#9CA3AF] font-medium">• Verified</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="text-2xl font-black text-indigo-400 tracking-tight">
-                                                                {formatCurrency(bid.bid_amount)}
-                                                            </p>
-                                                            <p className="text-[10px] text-[#9CA3AF] font-bold uppercase tracking-widest">Per Seat</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <Button
-                                                        fullWidth
-                                                        variant="primary"
-                                                        isLoading={isAccepting === bid.id}
-                                                        onClick={() => handleAcceptBid(bid.id)}
-                                                        className="h-12 rounded-xl font-bold uppercase tracking-widest text-xs bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
-                                                    >
-                                                        <CheckCircle2 size={16} className="mr-2" />
-                                                        Accept This Offer
-                                                    </Button>
-                                                </Card>
-                                            </motion.div>
-                                        ))
-                                    ) : (
-                                        <motion.div
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                        >
-                                            <Card className="border-2 border-dashed border-[#1E293B] bg-[#1E293B]/20 text-center py-12 px-6">
-                                                <div className="w-16 h-16 mx-auto bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-4">
-                                                    <div className="relative">
-                                                        <CircleDot size={28} className="text-indigo-400" />
-                                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full animate-ping" />
-                                                    </div>
-                                                </div>
-                                                <h4 className="font-bold text-[#F9FAFB] mb-1">Scanning for Drivers</h4>
-                                                <p className="text-sm text-[#9CA3AF] font-medium max-w-[250px] mx-auto">
-                                                    Your request is live. Drivers nearby will send offers shortly.
-                                                </p>
-                                                <div className="mt-6 flex items-center justify-center gap-2 text-indigo-400">
-                                                    <Loader2 size={14} className="animate-spin" />
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest">Broadcasting...</span>
-                                                </div>
-                                            </Card>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Safety Card */}
-                            <Card className="border-none shadow-sm p-5 bg-[#111827] text-white relative overflow-hidden border border-[#1E293B]">
-                                <div className="absolute top-0 right-0 opacity-5">
-                                    <Shield size={120} />
-                                </div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Shield size={16} className="text-emerald-400" />
-                                        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em]">Ride Protection</p>
-                                    </div>
-                                    <p className="text-xs text-[#6B7280] leading-relaxed font-medium">
-                                        Every ride includes live GPS tracking, verified driver identity, and instant SOS access for your safety.
-                                    </p>
-                                    <div className="mt-4 flex items-center gap-4">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                            GPS Tracked
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                            ID Verified
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-
-                            {/* Cancel Button (only if pending) */}
-                            {trip.status === 'pending' && (
-                                <Button
-                                    fullWidth
-                                    variant="outline"
-                                    className="h-12 rounded-xl text-xs font-bold uppercase tracking-widest border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
-                                    onClick={async () => {
-                                        try {
-                                            await tripsAPI.cancelTrip(tripId);
-                                            showToast('info', 'Trip cancelled successfully.');
-                                            router.push('/passenger/history');
-                                        } catch (e) {
-                                            showToast('error', 'Failed to cancel trip.');
-                                        }
-                                    }}
-                                >
-                                    Cancel This Trip
-                                </Button>
-                            )}
                         </div>
                     </div>
                 </motion.div>
