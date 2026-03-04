@@ -28,14 +28,14 @@ export function DashboardLayout({ children, userType, title = 'Dashboard', immer
 
     if (isLoading || (isAuthenticated && role && role !== userType)) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#0B1020]">
+            <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
 
     return (
-        <div className="flex min-h-screen bg-[#0B1020]">
+        <div className="flex min-h-screen bg-background">
             {/* Sidebar — desktop only */}
             {!immersive && (
                 <div className="hidden lg:block">

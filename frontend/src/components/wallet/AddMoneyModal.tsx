@@ -94,7 +94,7 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
             <div className="space-y-6">
                 <div>
                     <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold z-10 pt-6">₹</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/60 font-bold z-10 pt-6">₹</span>
                         <Input
                             label="Enter Amount"
                             value={amount}
@@ -115,7 +115,7 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
                             className={`px-3 py-1 rounded-full text-xs font-bold transition-all border
                 ${amount === val.toString()
                                     ? 'bg-indigo-600 text-white border-indigo-600'
-                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300'
+                                    : 'bg-muted text-muted-foreground border-card-border hover:border-indigo-300'
                                 }`}
                         >
                             ₹{val}

@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 :root {
-  /* Dark Theme Variables */
+  /* Dark Theme Variables (Default) */
   --background: #0B1020;
   --foreground: #F9FAFB;
   --muted: #1E293B;
@@ -21,6 +21,25 @@
   --sidebar-width: 260px;
   --accent-glow: rgba(99, 102, 241, 0.2);
   --bottom-nav-height: 64px;
+}
+
+.light {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --primary-glow: rgba(59, 130, 246, 0.15);
+  --secondary: #6366F1;
+  --success: #10B981;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --card-bg: #FFFFFF;
+  --card-border: #E2E8F0;
+  --sidebar-bg: #FFFFFF;
+  --sidebar-border: #E2E8F0;
+  --accent-glow: rgba(59, 130, 246, 0.1);
 }
 
 @theme inline {
@@ -258,6 +277,19 @@ body {
 
 .gradient-dark {
   background: linear-gradient(180deg, #0B1020, #111827);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 /* ===== MOBILE-FIRST FORM UTILITIES ===== */

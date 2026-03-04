@@ -70,6 +70,11 @@ export const authAPI = {
         return response.data;
     },
 
+    googleLogin: async (token: string, role?: string): Promise<AuthResponse> => {
+        const response = await api.post<AuthResponse>('/auth/google', { token, role });
+        return response.data;
+    },
+
     getCurrentUser: async (): Promise<UserResponse> => {
         const response = await api.get<UserResponse>('/auth/me');
         return response.data;

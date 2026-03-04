@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 
 export const CTA: React.FC = () => {
     return (
-        <section className="py-20 lg:py-32 bg-white">
+        <section className="py-20 lg:py-32 bg-background transition-colors duration-500">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

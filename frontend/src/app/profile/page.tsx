@@ -13,6 +13,7 @@ import { transformTripResponses } from '@/utils/tripTransformers';
 import { formatCurrency } from '@/utils/formatters';
 import type { Trip } from '@/types';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function ProfilePage() {
     const { user, logout, role, isLoading: authLoading } = useAuth();
@@ -39,7 +40,7 @@ export default function ProfilePage() {
     };
 
     if (authLoading || !user) {
-        return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+        return <div className="min-h-screen flex items-center justify-center bg-background text-foreground">Loading...</div>;
     }
 
     const completedTrips = trips.filter(t => t.status === 'completed');
@@ -65,10 +66,10 @@ export default function ProfilePage() {
 
     return (
         <DashboardLayout userType={role as any} title="Personal Profile">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 pb-20 lg:pb-0">
                 {/* Profile Identity Card */}
                 <div className="space-y-6">
-                    <Card className="relative overflow-hidden text-center border-none shadow-sm pb-8">
+                    <Card className="relative overflow-hidden text-center border-none shadow-sm pb-8 px-4 lg:px-6">
                         {/* Role-based Banner */}
                         <div className={`absolute top-0 left-0 w-full h-24 ${role === 'driver' ? 'bg-gradient-to-r from-indigo-500 to-blue-600' : 'bg-gradient-to-r from-blue-500 to-indigo-600'
                             }`} />
@@ -139,6 +140,11 @@ export default function ProfilePage() {
                     {/* Settings Menu */}
                     <Card className="border-none shadow-sm">
                         <h3 className="text-lg font-bold text-foreground mb-6">Account Settings</h3>
+
+                        <div className="mb-6">
+                            <ThemeToggle />
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {menuItems.map((item) => (
                                 <Link
@@ -162,7 +168,7 @@ export default function ProfilePage() {
                     </Card>
 
                     {/* Security Tip Card */}
-                    <div className="bg-slate-900 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden group">
+                    <div className="bg-indigo-950 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-32 -mt-32" />
                         <div className="relative z-10 flex items-center gap-6">
                             <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-3xl group-hover:rotate-12 transition-transform">🛡️</div>
@@ -179,8 +185,8 @@ export default function ProfilePage() {
             {/* Logout Modal */}
             <Modal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} title="Log Out">
                 <div className="flex flex-col items-center py-6">
-                    <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-3xl mb-6">👋</div>
-                    <p className="text-gray-600 mb-8 text-center font-medium">Are you sure you want to end your session?</p>
+                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-3xl mb-6">👋</div>
+                    <p className="text-muted-foreground mb-8 text-center font-medium">Are you sure you want to end your session?</p>
                     <div className="flex gap-4 w-full">
                         <Button variant="outline" fullWidth onClick={() => setShowLogoutModal(false)} className="h-12 font-bold uppercase tracking-widest">Stay Here</Button>
                         <Button variant="danger" fullWidth onClick={handleLogout} className="h-12 font-bold uppercase tracking-widest shadow-lg shadow-red-500/20 text-white bg-red-600 border-none">Log Out</Button>

@@ -12,6 +12,11 @@ from datetime import datetime, timedelta
 import logging
 from services.email_service import smtp_is_configured, send_verification_email as _send_verification_email_bg
 from services.sms_service import twilio_is_configured, send_phone_otp as _send_phone_otp_bg
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+google_request_adapter = google_requests.Request()
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
@@ -330,6 +335,84 @@ def verify_phone(
 
     logger.info("Phone verified for user: %s", current_user.email)
     return {"message": "Phone number verified successfully", "is_phone_verified": True}
+
+
+@router.post("/google", response_model=schemas.Token)
+@rate_limit(max_requests=10, window_seconds=60, key_suffix="google_login")
+def google_auth(
+    request: Request,
+    auth_data: schemas.GoogleAuthRequest,
+    db: Session = Depends(get_db)
+):
+    """Verify Google token and login/register user"""
+    import time
+    start_time = time.time()
+    try:
+        # Verify the ID token
+        idinfo = id_token.verify_oauth2_token(
+            auth_data.token, 
+            google_request_adapter, 
+            GOOGLE_CLIENT_ID
+        )
+        verify_time = time.time() - start_time
+        logger.info(f"Google token verified in {verify_time:.4f}s")
+
+        email = idinfo['email']
+        full_name = idinfo.get('name', '')
+        
+        # Check if user exists
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        if not user:
+            # Create a new user if not exists
+            # Use the requested role from frontend if provided, otherwise default to passenger
+            requested_role = auth_data.role if auth_data.role in ["passenger", "driver"] else "passenger"
+            
+            user = models.User(
+                id=uuid.uuid4(),
+                email=email,
+                full_name=full_name,
+                hashed_password="OAUTH_USER_NO_PASSWORD_" + str(uuid.uuid4()), 
+                role=requested_role,
+                is_verified=True
+            )
+            db.add(user)
+            db.flush()
+            
+            # Create appropriate profile
+            if requested_role == "driver":
+                driver = models.Driver(user_id=user.id)
+                db.add(driver)
+            else:
+                passenger = models.Passenger(user_id=user.id, preferences={})
+                db.add(passenger)
+                
+            db.commit()
+            db.refresh(user)
+            logger.info(f"New user created via Google with role {requested_role}: {email}")
+        
+        # Determine role
+        role = auth.get_user_role(user, db)
+        
+        # Create access token
+        access_token = auth.create_access_token(data={"sub": str(user.id), "role": role})
+        
+        logger.info(f"User logged in via Google: {email}")
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except ValueError as e:
+        # Invalid token
+        logger.error(f"Invalid Google token: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google token",
+        )
+    except Exception as e:
+        logger.error(f"Google auth error: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during Google auth",
+        )
 
 
 @router.get("/me", response_model=schemas.UserResponse)

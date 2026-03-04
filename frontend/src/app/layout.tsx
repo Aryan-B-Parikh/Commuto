@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { WebSocketProvider } from "@/context/WebSocketContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
   },
 };
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import Script from 'next/script';
 
 export default function RootLayout({
@@ -29,26 +31,31 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={`${inter.variable} font-sans antialiased text-slate-100 bg-[#0B0F1A]`}>
-        {/* Load MapLibre GL globally for performance */}
-        <Script
-          src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"
-          strategy="beforeInteractive"
-        />
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css"
-        />
-
-        <AuthProvider>
-          <WebSocketProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </WebSocketProvider>
-        </AuthProvider>
+      <body className={`${inter.variable} font-sans antialiased transition-colors duration-300`}>
+        <ThemeProvider>
+          <GoogleOAuthProvider clientId={googleClientId}>
+            {/* Load MapLibre GL globally for performance */}
+            <Script
+              src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"
+              strategy="beforeInteractive"
+            />
+            <link
+              rel="stylesheet"
+              href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css"
+            />
+            <AuthProvider>
+              <WebSocketProvider>
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
+              </WebSocketProvider>
+            </AuthProvider>
+          </GoogleOAuthProvider>
+        </ThemeProvider>
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </body>
     </html>
