@@ -62,6 +62,18 @@ MIGRATIONS = [
         created_at TIMESTAMP DEFAULT NOW()
     )""",
     
+    # --- User table: email verification token ---
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMP",
+    "CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token)",
+
+    # --- Driver table: rating count ---
+    "ALTER TABLE drivers ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0",
+
+    # --- User table: phone OTP ---
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp VARCHAR(6)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_expires TIMESTAMP",
+
     # Indexes
     "CREATE INDEX IF NOT EXISTS idx_payment_methods_user ON payment_methods(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id)",

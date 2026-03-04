@@ -79,6 +79,26 @@ export const authAPI = {
         const response = await api.patch<UserResponse>('/auth/me', data);
         return response.data;
     },
+
+    sendVerification: async (): Promise<{ message: string; dev_token?: string; dev_verify_url?: string }> => {
+        const response = await api.post('/auth/send-verification');
+        return response.data;
+    },
+
+    verifyEmail: async (token: string): Promise<{ message: string; is_verified: boolean }> => {
+        const response = await api.post('/auth/verify-email', { token });
+        return response.data;
+    },
+
+    sendPhoneVerification: async (): Promise<{ message: string; dev_otp?: string }> => {
+        const response = await api.post('/auth/send-phone-verification');
+        return response.data;
+    },
+
+    verifyPhone: async (otp: string): Promise<{ message: string; is_phone_verified: boolean }> => {
+        const response = await api.post('/auth/verify-phone', { otp });
+        return response.data;
+    },
 };
 
 
@@ -143,6 +163,16 @@ export const tripsAPI = {
 
     verifyTripPayment: async (data: TripPaymentVerifyRequest): Promise<any> => {
         const response = await api.post('/rides/verify-trip-payment', data);
+        return response.data;
+    },
+
+    getReceipt: async (tripId: string): Promise<any> => {
+        const response = await api.get(`/rides/${tripId}/receipt`);
+        return response.data;
+    },
+
+    rateDriver: async (tripId: string, rating: number, comment?: string): Promise<any> => {
+        const response = await api.post(`/rides/${tripId}/rate-driver`, { rating, comment });
         return response.data;
     },
 };

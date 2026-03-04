@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { isValidEmail, isValidName, getPasswordStrength } from '@/utils/validators';
+import { authAPI } from '@/services/api';
 
 export default function SignupPage() {
     const router = useRouter();
@@ -84,15 +85,14 @@ export default function SignupPage() {
         });
 
         if (loggedInUser) {
-            showToast('success', 'Account created successfully!');
-            const userRole = loggedInUser.role;
-            if (userRole === 'driver') {
-                router.push('/driver/dashboard');
-            } else if (userRole === 'passenger') {
-                router.push('/passenger/dashboard');
-            } else {
-                router.push(`/${role}/dashboard`);
+            showToast('success', 'Account created! Please verify your email.');
+            // Trigger verification email (non-blocking)
+            try {
+                await authAPI.sendVerification();
+            } catch (_) {
+                // best-effort; user can resend on the verify page
             }
+            router.push('/verify-email');
         } else {
             showToast('error', 'Signup failed. Please try again.');
         }

@@ -189,3 +189,27 @@ class TripPaymentVerifyRequest(BaseModel):
     razorpay_order_id: str
     razorpay_payment_id: str
     razorpay_signature: str
+
+
+class SendVerificationResponse(BaseModel):
+    message: str
+    # In dev mode only: the token is returned so the user can verify without email
+    dev_token: Optional[str] = None
+    dev_verify_url: Optional[str] = None
+
+class EmailVerifyRequest(BaseModel):
+    token: str
+
+# ── SMS / Phone verification ─────────────────────────────────────────────────
+
+class SendPhoneVerificationResponse(BaseModel):
+    message: str
+    # In dev mode only: OTP returned directly so the app works without Twilio
+    dev_otp: Optional[str] = None
+
+class PhoneVerifyRequest(BaseModel):
+    otp: str = Field(min_length=6, max_length=6, pattern=r'^\d{6}$')
+
+class DriverRatingRequest(BaseModel):
+    rating: float = Field(ge=1.0, le=5.0, description="Rating between 1 and 5")
+    comment: Optional[str] = None

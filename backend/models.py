@@ -53,6 +53,10 @@ class User(Base):
     role = Column(String(20), nullable=False)
     is_verified = Column(Boolean, default=False)
     is_phone_verified = Column(Boolean, default=False)
+    verification_token = Column(String(64), nullable=True, index=True)
+    verification_token_expires = Column(DateTime, nullable=True)
+    phone_otp = Column(String(6), nullable=True)
+    phone_otp_expires = Column(DateTime, nullable=True)
     
     # Profile fields
     gender = Column(String(20), nullable=True)
@@ -83,6 +87,7 @@ class Driver(Base):
     insurance_status = Column(String(20), default="pending")  # active, pending, expired
     rating = Column(Numeric(3, 2), nullable=True)
     total_trips = Column(Integer, default=0)
+    rating_count = Column(Integer, default=0)
     is_online = Column(Boolean, default=False)
     last_seen = Column(DateTime, nullable=True)
     max_passengers = Column(Integer, default=4)
