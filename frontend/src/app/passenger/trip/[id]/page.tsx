@@ -1,27 +1,20 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
     ArrowLeft,
-    MapPin,
     Navigation,
     Clock,
     Users,
-    Star,
     CheckCircle2,
     Loader2,
-    Car,
     Shield,
-    Zap,
-    ChevronRight,
-    CircleDot
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
 import { tripsAPI, bidsAPI } from '@/services/api';
 import { transformTripResponse } from '@/utils/tripTransformers';
@@ -31,11 +24,13 @@ import type { Trip } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 import { useSocketEvent } from '@/hooks/useWebSocket';
 import dynamic from 'next/dynamic';
+import { TripReceiptCard } from '@/components/trip/TripReceiptCard';
+import { BiddingSection } from '@/components/trip/BiddingSection';
 
-const MapWidget = dynamic(() => import('@/components/map/MapWidget').then(mod => mod.MapWidget), {
-    ssr: false,
-    loading: () => <div className="w-full h-full bg-[#1E293B] animate-pulse rounded-2xl" />
-});
+const MapWidget = dynamic(
+    () => import('@/components/map/MapWidget').then(mod => mod.MapWidget),
+    { ssr: false, loading: () => <div className="w-full h-full bg-[#1E293B] animate-pulse rounded-2xl" /> }
+);
 
 export default function PassengerTripDetailsPage() {
     const router = useRouter();
@@ -97,9 +92,9 @@ export default function PassengerTripDetailsPage() {
     const handleAcceptBid = async (bidId: string) => {
         try {
             setIsAccepting(bidId);
-            await bidsAPI.acceptBid(bidId);
-            showToast('success', 'Driver accepted! Your ride is confirmed.');
-            router.push('/passenger/live');
+            const result = await bidsAPI.acceptBid(bidId);
+            showToast('success', `Driver accepted! Your ride OTP: ${result.otp}`);
+            await fetchData();
         } catch (error) {
             console.error('Failed to accept bid:', error);
             showToast('error', 'Failed to accept bid. Please try again.');
@@ -271,6 +266,48 @@ export default function PassengerTripDetailsPage() {
                                     Verified Ride
                                 </div>
                             </Card>
+
+                            {/* OTP Display (after bid accepted) */}
+                            {rawTrip?.start_otp && !rawTrip?.otp_verified && (
+                                <Card className="border-none shadow-sm p-5 lg:p-6">
+                                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Share this OTP with your Driver at pickup</p>
+                                    <div className="flex justify-center gap-2">
+                                        {rawTrip.start_otp.split('').map((digit: string, i: number) => (
+                                            <span key={i} className="w-12 h-14 bg-[#1E293B] rounded-xl flex items-center justify-center text-2xl font-black text-white border border-[#374151]">
+                                                {digit}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-[#6B7280] text-center mt-3">Only share when you are seated in the vehicle</p>
+                                </Card>
+                            )}
+
+                            {/* OTP Verified badge */}
+                            {rawTrip?.otp_verified && rawTrip?.status !== 'completed' && (
+                                <div className="flex items-center gap-2 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                    <CheckCircle2 size={16} className="text-emerald-400" />
+                                    <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Trip is Live & Verified</span>
+                                </div>
+                            )}
+
+                            {/* Driver Bids */}
+                            {bids.length > 0 && rawTrip?.status === 'pending' && (
+                                <BiddingSection
+                                    bids={bids}
+                                    isAccepting={isAccepting}
+                                    onAcceptBid={handleAcceptBid}
+                                    onRefetch={fetchData}
+                                />
+                            )}
+                            {/* Post-ride Receipt (completed trips) */}
+                            {rawTrip?.status === 'completed' && (
+                                <TripReceiptCard
+                                    rawTrip={rawTrip}
+                                    trip={trip}
+                                    tripId={tripId}
+                                    distance={distance}
+                                />
+                            )}
                         </div>
                     </div>
                 </motion.div>

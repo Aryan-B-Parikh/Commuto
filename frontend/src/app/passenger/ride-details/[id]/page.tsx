@@ -10,6 +10,7 @@ import { tripsAPI, bidsAPI } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useTripWebSocket } from '@/hooks/useTripWebSocket';
+import { useCounterBid } from '@/hooks/useCounterBid';
 import { MapPin, Users, Clock, Shield, ShieldCheck, ArrowLeft, MessageCircle, MessageSquare, ChevronRight, UserPlus, CheckCircle2, DollarSign, Star, LogOut } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 import { RoleGuard } from '@/components/auth/RoleGuard';
@@ -17,6 +18,7 @@ import dynamic from 'next/dynamic';
 
 const MapWidget = dynamic(() => import('@/components/map/MapWidget').then(mod => mod.MapWidget), { ssr: false });
 import { TripPaymentModal } from '@/components/ride/TripPaymentModal';
+import CounterBidInput from '@/components/ride/CounterBidInput';
 
 export default function RideDetailsPage() {
     const params = useParams();
@@ -33,6 +35,20 @@ export default function RideDetailsPage() {
     const [bids, setBids] = useState<any[]>([]);
     const [acceptingBidId, setAcceptingBidId] = useState<string | null>(null);
     const [isLeaving, setIsLeaving] = useState(false);
+
+    const refreshBids = async () => {
+        const updatedBids = await bidsAPI.getRideBids(tripId);
+        setBids(updatedBids);
+    };
+
+    const {
+        counterBidId,
+        setCounterBidId,
+        counterAmount,
+        setCounterAmount,
+        isCountering,
+        handleCounterBid,
+    } = useCounterBid({ onSuccess: refreshBids });
 
     const { isConnected, availableSeats, newPassenger } = useTripWebSocket(tripId);
 
@@ -269,13 +285,38 @@ export default function RideDetailsPage() {
                                         )}
                                     </div>
                                     {trip.creator_passenger_id === user?.id && (
-                                        <button
-                                            onClick={() => handleAcceptBid(bid.id)}
-                                            disabled={acceptingBidId === bid.id}
-                                            className="px-4 h-9 bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-transform text-white font-bold text-xs rounded-lg disabled:opacity-50 shrink-0"
-                                        >
-                                            {acceptingBidId === bid.id ? '...' : 'Accept'}
-                                        </button>
+                                        <div className="flex flex-col gap-1.5 shrink-0">
+                                            {counterBidId === bid.id ? (
+                                                <CounterBidInput
+                                                    bidId={bid.id}
+                                                    isActive={counterBidId === bid.id}
+                                                    counterAmount={counterAmount}
+                                                    onAmountChange={setCounterAmount}
+                                                    isSubmitting={isCountering}
+                                                    onSubmit={handleCounterBid}
+                                                    onCancel={() => { setCounterBidId(null); setCounterAmount(''); }}
+                                                    size="sm"
+                                                />
+                                            ) : (
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => handleAcceptBid(bid.id)}
+                                                        disabled={acceptingBidId === bid.id}
+                                                        className="px-3 h-9 bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-transform text-white font-bold text-xs rounded-lg disabled:opacity-50"
+                                                    >
+                                                        {acceptingBidId === bid.id ? '...' : 'Accept'}
+                                                    </button>
+                                                    {!bid.is_counter_bid && (
+                                                        <button
+                                                            onClick={() => { setCounterBidId(bid.id); setCounterAmount(String(bid.bid_amount)); }}
+                                                            className="px-3 h-9 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xs rounded-lg"
+                                                        >
+                                                            Counter
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             ))}
@@ -284,7 +325,27 @@ export default function RideDetailsPage() {
                 )}
 
                 {/* Sticky Bottom Pricing & CTA */}
-                <div className="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-[#1E293B] p-4 flex items-center justify-between z-50 pb-safe">
+                <div className="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-[#1E293B] p-4 flex flex-col gap-3 z-50 pb-safe">
+                    {/* Mobile OTP display */}
+                    {isMember && trip.start_otp && !trip.otp_verified && (
+                        <div className="flex flex-col items-center gap-1.5 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Share this OTP with your Driver</p>
+                            <div className="flex gap-1.5">
+                                {trip.start_otp.split('').map((digit: string, i: number) => (
+                                    <span key={i} className="w-9 h-11 bg-[#1E293B] rounded-lg flex items-center justify-center text-lg font-black text-white border border-[#374151]">
+                                        {digit}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {isMember && trip.otp_verified && (
+                        <div className="flex items-center justify-center gap-2 p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                            <ShieldCheck size={14} className="text-emerald-400" />
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Trip Active & Verified</span>
+                        </div>
+                    )}
+                    <div className="flex items-center justify-between">
                     <div>
                         <p className="text-2xl font-black text-[#F9FAFB]">{formatCurrency(trip.price_per_seat)}</p>
                         <p className="text-[10px] font-bold text-[#9CA3AF] uppercase">Per Seat</p>
@@ -338,6 +399,7 @@ export default function RideDetailsPage() {
                             </button>
                         </div>
                     )}
+                    </div>
                 </div>
             </div>
 
@@ -629,13 +691,37 @@ export default function RideDetailsPage() {
                                                     <div className="flex items-center gap-3">
                                                         <p className="text-xl font-black text-emerald-400">{formatCurrency(bid.bid_amount)}</p>
                                                         {trip.creator_passenger_id === user?.id && (
-                                                            <Button
-                                                                onClick={() => handleAcceptBid(bid.id)}
-                                                                disabled={acceptingBidId === bid.id}
-                                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 h-9 rounded-xl"
-                                                            >
-                                                                {acceptingBidId === bid.id ? 'Accepting...' : 'Accept'}
-                                                            </Button>
+                                                            <div className="flex items-center gap-2">
+                                                                {counterBidId === bid.id ? (
+                                                                    <CounterBidInput
+                                                                        bidId={bid.id}
+                                                                        isActive={counterBidId === bid.id}
+                                                                        counterAmount={counterAmount}
+                                                                        onAmountChange={setCounterAmount}
+                                                                        isSubmitting={isCountering}
+                                                                        onSubmit={handleCounterBid}
+                                                                        onCancel={() => { setCounterBidId(null); setCounterAmount(''); }}
+                                                                    />
+                                                                ) : (
+                                                                    <>
+                                                                        <Button
+                                                                            onClick={() => handleAcceptBid(bid.id)}
+                                                                            disabled={acceptingBidId === bid.id}
+                                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 h-9 rounded-xl"
+                                                                        >
+                                                                            {acceptingBidId === bid.id ? 'Accepting...' : 'Accept'}
+                                                                        </Button>
+                                                                        {!bid.is_counter_bid && (
+                                                                            <Button
+                                                                                onClick={() => { setCounterBidId(bid.id); setCounterAmount(String(bid.bid_amount)); }}
+                                                                                className="bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xs px-4 h-9 rounded-xl"
+                                                                            >
+                                                                                Counter
+                                                                            </Button>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
