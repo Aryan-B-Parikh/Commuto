@@ -59,7 +59,7 @@ const colorClasses = {
 
 export const HowItWorks: React.FC = () => {
     return (
-        <section id="how-it-works" className="py-20 lg:py-32 bg-white">
+        <section id="how-it-works" className="py-20 lg:py-32 bg-muted transition-colors duration-500">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <motion.div
@@ -68,11 +68,11 @@ export const HowItWorks: React.FC = () => {
                     viewport={{ once: true }}
                     className="text-center mb-16"
                 >
-                    <span className="text-blue-600 font-semibold text-sm uppercase tracking-wider">How It Works</span>
-                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mt-2 mb-4">
+                    <span className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-wider">How It Works</span>
+                    <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-2 mb-4">
                         Get Started in 3 Simple Steps
                     </h2>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Join thousands of commuters who save money and reduce their carbon footprint every day.
                     </p>
                 </motion.div>
@@ -93,7 +93,7 @@ export const HowItWorks: React.FC = () => {
                                 <div className="hidden md:block absolute top-16 left-[60%] w-full h-0.5 bg-gradient-to-r from-gray-200 to-transparent" />
                             )}
 
-                            <div className="relative bg-white rounded-2xl p-8 border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300">
+                            <div className="relative bg-card rounded-2xl p-8 border border-card-border hover:border-blue-500/30 hover:shadow-lg transition-all duration-300">
                                 {/* Step Number */}
                                 <div className={`absolute -top-4 right-8 px-3 py-1 bg-gradient-to-r ${colorClasses[step.color as keyof typeof colorClasses].gradient} text-white text-sm font-bold rounded-full`}>
                                     {step.number}
@@ -105,8 +105,8 @@ export const HowItWorks: React.FC = () => {
                                 </div>
 
                                 {/* Content */}
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>
-                                <p className="text-gray-600">{step.description}</p>
+                                <h3 className="text-xl font-bold text-foreground mb-3">{step.title}</h3>
+                                <p className="text-muted-foreground">{step.description}</p>
                             </div>
                         </motion.div>
                     ))}

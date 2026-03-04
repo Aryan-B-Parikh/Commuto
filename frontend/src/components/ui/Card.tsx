@@ -23,10 +23,10 @@ export const Card: React.FC<CardProps> = ({
     const baseStyles = 'rounded-2xl transition-all duration-200';
 
     const variantStyles = {
-        default: 'bg-[#111827] border border-[#1E293B] shadow-sm shadow-black/20',
-        glass: 'bg-[#111827]/70 backdrop-blur-xl border border-[#1E293B]/50 shadow-lg shadow-black/20',
-        elevated: 'bg-[#111827] shadow-xl shadow-black/30 border border-[#1E293B]/50',
-        outline: 'bg-transparent border border-[#1E293B]',
+        default: 'bg-card border border-card-border shadow-sm shadow-black/20',
+        glass: 'bg-card/70 backdrop-blur-xl border border-card-border/50 shadow-lg shadow-black/20',
+        elevated: 'bg-card shadow-xl shadow-black/30 border border-card-border/50',
+        outline: 'bg-transparent border border-card-border',
     };
 
     const paddingStyles = {
@@ -36,7 +36,7 @@ export const Card: React.FC<CardProps> = ({
         lg: 'p-5 lg:p-7',
     };
 
-    const hoverStyles = hoverable ? 'hover:shadow-lg hover:shadow-black/30 hover:border-[#374151] cursor-pointer' : '';
+    const hoverStyles = hoverable ? 'hover:shadow-lg hover:shadow-black/30 hover:border-card-border/80 cursor-pointer' : '';
 
     const Component = onClick ? motion.button : motion.div;
 

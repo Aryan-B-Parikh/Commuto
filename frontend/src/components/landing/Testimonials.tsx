@@ -44,17 +44,17 @@ export const Testimonials: React.FC = () => {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -50 }}
                             transition={{ duration: 0.3 }}
-                            className="bg-white rounded-3xl p-8 md:p-12 shadow-2xl"
+                            className="bg-card rounded-3xl p-8 md:p-12 shadow-2xl border border-card-border transition-colors duration-500"
                         >
                             {/* Quote Icon */}
-                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-6">
-                                <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                            <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 transition-colors">
+                                <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
                                 </svg>
                             </div>
 
                             {/* Content */}
-                            <p className="text-xl md:text-2xl text-gray-700 mb-8 leading-relaxed">
+                            <p className="text-xl md:text-2xl text-foreground mb-8 leading-relaxed transition-colors">
                                 &quot;{testimonials[activeIndex].content}&quot;
                             </p>
 
@@ -64,11 +64,11 @@ export const Testimonials: React.FC = () => {
                                     <img
                                         src={testimonials[activeIndex].avatar}
                                         alt={testimonials[activeIndex].name}
-                                        className="w-14 h-14 rounded-full bg-gray-100"
+                                        className="w-14 h-14 rounded-full bg-muted transition-colors"
                                     />
-                                    <div>
-                                        <p className="font-semibold text-gray-900">{testimonials[activeIndex].name}</p>
-                                        <p className="text-sm text-gray-500">{testimonials[activeIndex].role}</p>
+                                    <div className="flex-1 leading-tight">
+                                        <p className="font-semibold text-foreground transition-colors">{testimonials[activeIndex].name}</p>
+                                        <p className="text-sm text-muted-foreground transition-colors">{testimonials[activeIndex].role}</p>
                                     </div>
                                 </div>
                                 <RatingStars rating={testimonials[activeIndex].rating} size="md" showValue={false} />

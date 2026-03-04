@@ -70,20 +70,20 @@ export const Modal: React.FC<ModalProps> = ({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 100 }}
                         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                        className={`relative w-full ${sizeStyles[size]} bg-[#111827] rounded-t-3xl lg:rounded-3xl shadow-2xl shadow-black/40 overflow-hidden border border-[#1E293B]/50 max-h-[90vh] overflow-y-auto`}
+                        className={`relative w-full ${sizeStyles[size]} bg-card rounded-t-3xl lg:rounded-3xl shadow-2xl shadow-black/40 overflow-hidden border border-card-border/50 max-h-[90vh] overflow-y-auto`}
                     >
                         {/* Drag handle (mobile) */}
                         <div className="flex justify-center pt-3 pb-1 lg:hidden">
-                            <div className="w-10 h-1 bg-[#374151] rounded-full" />
+                            <div className="w-10 h-1 bg-muted rounded-full" />
                         </div>
 
                         {/* Header */}
                         {title && (
-                            <div className="flex items-center justify-between px-5 lg:px-8 py-4 lg:py-6 border-b border-[#1E293B]">
-                                <h2 className="text-lg lg:text-xl font-bold text-[#F9FAFB]">{title}</h2>
+                            <div className="flex items-center justify-between px-5 lg:px-8 py-4 lg:py-6 border-b border-card-border">
+                                <h2 className="text-lg lg:text-xl font-bold text-foreground">{title}</h2>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 text-[#6B7280] hover:text-[#F9FAFB] hover:bg-[#1E293B] rounded-xl transition-all"
+                                    className="p-2 text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded-xl transition-all"
                                 >
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
