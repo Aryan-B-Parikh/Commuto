@@ -80,6 +80,7 @@ export interface TripResponse {
     dest_lng: number;
     vehicle_details?: string;
     bid_count?: number;
+    booking_id?: string;
     booking_total_price?: number;
     booking_payment_status?: string;
     notes?: string;

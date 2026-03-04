@@ -29,6 +29,7 @@ export function MapWidget({
 }: MapWidgetProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
+    const driverMarkerRef = useRef<any>(null);
     const [isReady, setIsReady] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -99,23 +100,10 @@ export function MapWidget({
                         .setLngLat([destination[1], destination[0]])
                         .addTo(map);
 
-                    // Render Driver Marker
+                    // Render Driver Marker (managed separately via ref for live updates)
                     if (driverPos) {
-                        const el = document.createElement('div');
-                        el.style.width = '40px';
-                        el.style.height = '40px';
-                        el.style.background = '#6366F1';
-                        el.style.borderRadius = '50%';
-                        el.style.border = '4px solid white';
-                        el.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.5)';
-                        el.style.display = 'flex';
-                        el.style.alignItems = 'center';
-                        el.style.justifyContent = 'center';
-                        el.style.transform = `rotate(${driverHeading || 0}deg)`;
-                        el.style.transition = 'transform 0.5s ease';
-                        el.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`;
-
-                        new maplibregl.Marker({ element: el })
+                        const el = _createDriverMarkerEl(driverHeading);
+                        driverMarkerRef.current = new maplibregl.Marker({ element: el })
                             .setLngLat([driverPos[1], driverPos[0]])
                             .addTo(map);
                     }
@@ -175,6 +163,10 @@ export function MapWidget({
                         .extend([pickup[1], pickup[0]])
                         .extend([destination[1], destination[0]]);
 
+                    if (driverPos) {
+                        bounds.extend([driverPos[1], driverPos[0]]);
+                    }
+
                     map.fitBounds(bounds, { padding: 50, duration: 2000 });
                 } else if (pickup) {
                     new maplibregl.Marker({ color: '#6366F1' })
@@ -200,6 +192,31 @@ export function MapWidget({
             setError('Failed to load map. Please refresh.');
         }
     }, [center, zoom, interactive]);
+
+    // ── Live driver marker position update ──────────────────────────────────
+    useEffect(() => {
+        if (!driverPos || !mapRef.current || !isReady) return;
+
+        const maplibregl = (window as any).maplibregl;
+        if (!maplibregl) return;
+
+        if (driverMarkerRef.current) {
+            // Smoothly update existing marker position
+            driverMarkerRef.current.setLngLat([driverPos[1], driverPos[0]]);
+            // Update heading rotation
+            const el = driverMarkerRef.current.getElement();
+            if (el) {
+                el.style.transform = `rotate(${driverHeading || 0}deg)`;
+                el.style.transition = 'transform 0.5s ease';
+            }
+        } else {
+            // Create marker for first time (if map loaded after first driverPos)
+            const el = _createDriverMarkerEl(driverHeading);
+            driverMarkerRef.current = new maplibregl.Marker({ element: el })
+                .setLngLat([driverPos[1], driverPos[0]])
+                .addTo(mapRef.current);
+        }
+    }, [driverPos, driverHeading, isReady]);
 
     useEffect(() => {
         // Small delay to ensure container is rendered and has dimensions
@@ -267,6 +284,24 @@ export function MapWidget({
             )}
         </div>
     );
+}
+
+// Helper to create a styled driver marker element
+function _createDriverMarkerEl(heading?: number): HTMLDivElement {
+    const el = document.createElement('div');
+    el.style.width = '40px';
+    el.style.height = '40px';
+    el.style.background = '#6366F1';
+    el.style.borderRadius = '50%';
+    el.style.border = '4px solid white';
+    el.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.5)';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.transform = `rotate(${heading || 0}deg)`;
+    el.style.transition = 'transform 0.5s ease';
+    el.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`;
+    return el;
 }
 
 // Polyline decoder helper

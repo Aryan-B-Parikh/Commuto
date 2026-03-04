@@ -88,6 +88,31 @@ export default function RideDetailsPage() {
         }
     }, [newPassenger]);
 
+    // Poll for trip status changes (e.g. driver completes the trip)
+    useEffect(() => {
+        if (!tripId || !trip) return;
+        // Only poll if trip is active/confirmed (not yet completed/cancelled)
+        if (['completed', 'cancelled'].includes(trip.status)) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const updatedData = await tripsAPI.getTripDetails(tripId);
+                if (updatedData.status !== trip.status) {
+                    setTrip(updatedData);
+                    // Auto-open payment if trip just became completed and payment is pending
+                    if (
+                        updatedData.status === 'completed' &&
+                        updatedData.user_booking?.payment_status === 'pending'
+                    ) {
+                        setIsPaymentModalOpen(true);
+                    }
+                }
+            } catch { /* silent */ }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [tripId, trip?.status]);
+
     const handleJoin = async () => {
         setIsJoining(true);
         try {
@@ -346,59 +371,59 @@ export default function RideDetailsPage() {
                         </div>
                     )}
                     <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-2xl font-black text-[#F9FAFB]">{formatCurrency(trip.price_per_seat)}</p>
-                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase">Per Seat</p>
-                    </div>
-
-                    {isMember ? (
-                        trip.user_booking?.payment_status === 'pending' ? (
-                            <button
-                                onClick={() => setIsPaymentModalOpen(true)}
-                                className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-transform text-white font-black italic rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center"
-                            >
-                                Pay Now
-                            </button>
-                        ) : trip.user_booking?.payment_status === 'completed' ? (
-                            <div className="flex items-center gap-2 px-4 h-12 bg-green-500/10 rounded-xl border border-green-500/20 text-green-400 font-bold text-sm">
-                                <CheckCircle2 size={16} /> Paid
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <div className="px-4 h-12 bg-[#1E293B] flex items-center justify-center rounded-xl text-[#9CA3AF] font-bold text-sm">
-                                    Joined
-                                </div>
-                                {!isCreator && (
-                                    <button
-                                        onClick={handleLeaveRide}
-                                        disabled={isLeaving}
-                                        className="px-3 h-12 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-50"
-                                    >
-                                        <LogOut size={14} />
-                                        {isLeaving ? '...' : 'Leave'}
-                                    </button>
-                                )}
-                            </div>
-                        )
-                    ) : (
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="text"
-                                value={joinNotes}
-                                onChange={(e) => setJoinNotes(e.target.value)}
-                                placeholder="Add a note... (optional)"
-                                maxLength={500}
-                                className="flex-1 h-12 px-4 bg-[#1E293B] border border-[#374151] rounded-xl text-sm text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-indigo-500 focus:outline-none"
-                            />
-                            <button
-                                onClick={handleJoin}
-                                disabled={isJoining || trip.available_seats === 0}
-                                className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-transform text-white font-bold text-base rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center disabled:opacity-50 disabled:active:scale-100 shrink-0"
-                            >
-                                {isJoining ? 'Joining...' : trip.available_seats > 0 ? 'Join Ride' : 'Full'}
-                            </button>
+                        <div>
+                            <p className="text-2xl font-black text-[#F9FAFB]">{formatCurrency(trip.price_per_seat)}</p>
+                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase">Per Seat</p>
                         </div>
-                    )}
+
+                        {isMember ? (
+                            trip.user_booking?.payment_status === 'pending' ? (
+                                <button
+                                    onClick={() => setIsPaymentModalOpen(true)}
+                                    className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-transform text-white font-black italic rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center"
+                                >
+                                    Pay Now
+                                </button>
+                            ) : trip.user_booking?.payment_status === 'completed' ? (
+                                <div className="flex items-center gap-2 px-4 h-12 bg-green-500/10 rounded-xl border border-green-500/20 text-green-400 font-bold text-sm">
+                                    <CheckCircle2 size={16} /> Paid
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <div className="px-4 h-12 bg-[#1E293B] flex items-center justify-center rounded-xl text-[#9CA3AF] font-bold text-sm">
+                                        Joined
+                                    </div>
+                                    {!isCreator && (
+                                        <button
+                                            onClick={handleLeaveRide}
+                                            disabled={isLeaving}
+                                            className="px-3 h-12 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-50"
+                                        >
+                                            <LogOut size={14} />
+                                            {isLeaving ? '...' : 'Leave'}
+                                        </button>
+                                    )}
+                                </div>
+                            )
+                        ) : (
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="text"
+                                    value={joinNotes}
+                                    onChange={(e) => setJoinNotes(e.target.value)}
+                                    placeholder="Add a note... (optional)"
+                                    maxLength={500}
+                                    className="flex-1 h-12 px-4 bg-[#1E293B] border border-[#374151] rounded-xl text-sm text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-indigo-500 focus:outline-none"
+                                />
+                                <button
+                                    onClick={handleJoin}
+                                    disabled={isJoining || trip.available_seats === 0}
+                                    className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-transform text-white font-bold text-base rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center disabled:opacity-50 disabled:active:scale-100 shrink-0"
+                                >
+                                    {isJoining ? 'Joining...' : trip.available_seats > 0 ? 'Join Ride' : 'Full'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

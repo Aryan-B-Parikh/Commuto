@@ -43,9 +43,9 @@ export default function DriverLivePage() {
     const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
     const [isCompletingTrip, setIsCompletingTrip] = useState(false);
     const [driverPos, setDriverPos] = useState<[number, number] | undefined>(undefined);
-    const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
-    const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const routeIndexRef = useRef<number>(0);
+    const [heading, setHeading] = useState<number>(0);
+    const locationWatchRef = useRef<number | null>(null);
+    const hasCompletedRef = useRef<boolean>(false);
 
     useEffect(() => {
         const fetchActiveTrip = async () => {
@@ -87,51 +87,75 @@ export default function DriverLivePage() {
         }
     }, [tripStatus, trip, router]);
 
+    // Watch for actual device GPS location
     useEffect(() => {
-        const fetchRoute = async () => {
-            if (!trip) return;
-            const start = driverPos || [Number(trip.origin_lat) + 0.005, Number(trip.origin_lng) + 0.005];
-            const end = trip.status === 'active' ? [Number(trip.dest_lat), Number(trip.dest_lng)] : [Number(trip.origin_lat), Number(trip.origin_lng)];
+        if (!isConnected || !trip || hasCompletedRef.current) return;
 
-            try {
-                const query = await fetch(
-                    `https://api.mapbox.com/directions/v5/mapbox/driving/${start[1]},${start[0]};${end[1]},${end[0]}?geometries=geojson&access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`
-                );
-                const json = await query.json();
-                if (json.routes && json.routes.length > 0) {
-                    const coords = json.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]]);
-                    setRouteCoords(coords);
-                    routeIndexRef.current = 0;
-                    if (!driverPos) setDriverPos(coords[0]);
-                }
-            } catch (err) {
-                console.error("Failed to fetch route for simulation:", err);
-            }
-        };
-
-        if (trip) fetchRoute();
-    }, [trip?.status, !!trip]);
-
-    useEffect(() => {
-        if (isConnected && trip && routeCoords.length > 0) {
-            console.log("Starting road-aware location broadcaster...");
-
-            locationIntervalRef.current = setInterval(() => {
-                if (routeIndexRef.current < routeCoords.length - 1) {
-                    routeIndexRef.current += 1;
-                    const nextPos = routeCoords[routeIndexRef.current];
-                    setDriverPos(nextPos);
-                    sendLocation(nextPos[0], nextPos[1]);
-                }
-            }, 3000);
+        if (!("geolocation" in navigator)) {
+            showToast('error', "Geolocation is not supported by your browser");
+            return;
         }
 
+        console.log("Starting real-time GPS tracking...");
+
+        // Automatically set initial driver pos to pickup if not known
+        if (!driverPos && trip.status !== 'completed') {
+            setDriverPos([Number(trip.origin_lat), Number(trip.origin_lng)]);
+        }
+
+        locationWatchRef.current = navigator.geolocation.watchPosition(
+            async (position) => {
+                const { latitude, longitude, heading: newHeading } = position.coords;
+                const newPos: [number, number] = [latitude, longitude];
+
+                setDriverPos(newPos);
+                if (newHeading !== null) {
+                    setHeading(newHeading);
+                }
+
+                // Send to websocket for passenger/backend to see
+                sendLocation(latitude, longitude);
+
+                // Auto-complete logic based on distance to destination
+                if (trip.status === 'active' && !hasCompletedRef.current) {
+                    const distToDest = calculateDistance(
+                        { lat: latitude, lng: longitude },
+                        { lat: Number(trip.dest_lat), lng: Number(trip.dest_lng) }
+                    );
+
+                    // If within 50 meters (0.05 km)
+                    if (distToDest <= 0.05) {
+                        hasCompletedRef.current = true;
+                        try {
+                            setIsCompletingTrip(true);
+                            await otpAPI.completeRide(trip.id);
+                            showToast('success', "Destination reached! Trip auto-completed.");
+                        } catch (err: any) {
+                            hasCompletedRef.current = false; // Revert if failed
+                            showToast('error', err.response?.data?.detail || "Failed to auto-complete trip");
+                        } finally {
+                            setIsCompletingTrip(false);
+                        }
+                    }
+                }
+            },
+            (error) => {
+                console.error("GPS Error:", error);
+                // Optionally show a toast, but usually better to log quietly on watches to avoid spam
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 5000, // 5 seconds maximum age of cached positions
+                timeout: 10000 // 10 second timeout for new positions
+            }
+        );
+
         return () => {
-            if (locationIntervalRef.current) {
-                clearInterval(locationIntervalRef.current);
+            if (locationWatchRef.current !== null) {
+                navigator.geolocation.clearWatch(locationWatchRef.current);
             }
         };
-    }, [isConnected, trip, sendLocation]);
+    }, [isConnected, trip?.status, sendLocation]);
 
     const passengerPos = useMemo(() => {
         if (!trip) return undefined;
@@ -156,7 +180,7 @@ export default function DriverLivePage() {
                     <div className="absolute inset-0 z-0">
                         <MapWidget
                             driverPos={driverPos}
-                            driverHeading={routeCoords[routeIndexRef.current] ? 90 : 0} // Simplified heading
+                            driverHeading={heading}
                             pickup={passengerPos}
                             destination={destinationPos}
                             showRoute={true}

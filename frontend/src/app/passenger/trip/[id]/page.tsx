@@ -26,6 +26,7 @@ import { useSocketEvent } from '@/hooks/useWebSocket';
 import dynamic from 'next/dynamic';
 import { TripReceiptCard } from '@/components/trip/TripReceiptCard';
 import { BiddingSection } from '@/components/trip/BiddingSection';
+import { TripPaymentModal } from '@/components/ride/TripPaymentModal';
 
 const MapWidget = dynamic(
     () => import('@/components/map/MapWidget').then(mod => mod.MapWidget),
@@ -41,6 +42,7 @@ export default function PassengerTripDetailsPage() {
     const [rawTrip, setRawTrip] = useState<TripResponse | null>(null);
     const [bids, setBids] = useState<BidResponse[]>([]);
     const [isAccepting, setIsAccepting] = useState<string | null>(null);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const tripId = params.id as string;
 
@@ -79,6 +81,37 @@ export default function PassengerTripDetailsPage() {
             setIsLoading(false);
         }
     };
+
+    // Poll for trip status changes (e.g. driver completes the trip)
+    useEffect(() => {
+        if (!tripId || !rawTrip) return;
+        // Only poll if trip is active (not yet completed/cancelled)
+        if (['completed', 'cancelled'].includes(rawTrip.status)) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const allTrips = await tripsAPI.getMyTrips();
+                const latest = allTrips.find(t => t.id === tripId);
+                if (latest && latest.status !== rawTrip.status) {
+                    setRawTrip(latest);
+                    setTrip(transformTripResponse(latest));
+                }
+            } catch { /* silent */ }
+        }, 5000); // Poll every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [tripId, rawTrip?.status]);
+
+    // Auto-open payment modal when trip becomes completed with pending payment
+    useEffect(() => {
+        if (
+            rawTrip?.status === 'completed' &&
+            rawTrip?.booking_payment_status === 'pending' &&
+            rawTrip?.booking_id
+        ) {
+            setIsPaymentModalOpen(true);
+        }
+    }, [rawTrip?.status, rawTrip?.booking_payment_status]);
 
     useSocketEvent('new_bid', (data: any) => {
         console.log('New bid received:', data);
@@ -310,6 +343,21 @@ export default function PassengerTripDetailsPage() {
                             )}
                         </div>
                     </div>
+
+                    {/* Auto-Payment Modal */}
+                    {rawTrip?.booking_id && (
+                        <TripPaymentModal
+                            isOpen={isPaymentModalOpen}
+                            onClose={() => setIsPaymentModalOpen(false)}
+                            tripId={tripId}
+                            bookingId={rawTrip.booking_id}
+                            amount={rawTrip.booking_total_price ?? rawTrip.price_per_seat ?? 0}
+                            tripName={rawTrip.dest_address?.split(',')[0] || 'Destination'}
+                            onSuccess={() => {
+                                fetchData(); // Refresh trip data after payment
+                            }}
+                        />
+                    )}
                 </motion.div>
             </DashboardLayout>
         </RoleGuard>
