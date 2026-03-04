@@ -90,7 +90,28 @@ If SMTP vars are absent and `APP_ENV=development`, the verification URL is retur
 
 ---
 
-## 6. Maps — Location & Routing (Optional / Future)
+## 6. Google OAuth — Social Sign-In
+
+| Variable | Where used | Description |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | Backend `.env` | OAuth 2.0 client ID — used by `google-auth` to verify ID tokens on `POST /auth/google` |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Frontend `.env.local` | Same client ID exposed to Next.js — passed to `<GoogleOAuthProvider>` in `layout.tsx` |
+
+**How to get it:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com) → **APIs & Services → Credentials**.
+2. Click **Create Credentials → OAuth client ID**.
+3. Application type: **Web application**.
+4. Add authorised JavaScript origins: `http://localhost:3000` (dev) and your production URL.
+5. Add authorised redirect URIs if you add server-side OAuth flows (not needed for the current token-based flow).
+6. Copy the **Client ID** (looks like `xxxxxxxx.apps.googleusercontent.com`).
+7. Enable the **Google Identity** API (also called *People API* or *OAuth 2.0* — it's on by default for web credentials).
+
+**Dev-mode note:**  
+Google OAuth requires a real Client ID even in development. The `@react-oauth/google` login button will silently fail if `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is empty or wrong. Use a real (but test-restricted) Client ID during local development.
+
+---
+
+## 7. Maps — Location & Routing (Optional / Future)
 
 | Variable | Description |
 |---|---|
@@ -104,7 +125,7 @@ If SMTP vars are absent and `APP_ENV=development`, the verification URL is retur
 
 ---
 
-## 7. Sample `.env` Files
+## 8. Sample `.env` Files
 
 ### `backend/.env`
 ```env
@@ -131,22 +152,27 @@ SMTP_PASS=your_app_password
 # Razorpay
 RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
 RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxx
+
+# Google OAuth
+GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
 ```
 
 ### `frontend/.env.local`
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSy...
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
 ```
 
 ---
 
-## 8. Which Credentials Are Strictly Required?
+## 9. Which Credentials Are Strictly Required?
 
 | Service | Required to run locally? | Required in production? |
 |---|---|---|
 | PostgreSQL | ✅ Yes | ✅ Yes |
 | `SECRET_KEY` | ✅ Yes | ✅ Yes |
+| Google OAuth (`GOOGLE_CLIENT_ID`) | ✅ Yes (social login button won't work without it) | ✅ Yes |
 | Twilio | ❌ No (dev fallback) | ✅ Yes |
 | SMTP | ❌ No (dev fallback) | ✅ Yes |
 | Razorpay | ❌ No (wallet features disabled) | ✅ Yes |
@@ -154,7 +180,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSy...
 
 ---
 
-## 9. Security Reminders
+## 10. Security Reminders
 
 - **Never commit** `.env` or `.env.local` to git — both are already in `.gitignore`.
 - Rotate `SECRET_KEY` to invalidate all existing JWTs when needed.
