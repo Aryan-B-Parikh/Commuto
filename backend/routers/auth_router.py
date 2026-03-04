@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from database import get_db
 from rate_limiter import rate_limit
@@ -6,8 +6,12 @@ import models
 import schemas
 import auth
 import uuid
-from datetime import datetime
+import secrets
+import os
+from datetime import datetime, timedelta
 import logging
+from services.email_service import smtp_is_configured, send_verification_email as _send_verification_email_bg
+from services.sms_service import twilio_is_configured, send_phone_otp as _send_phone_otp_bg
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
@@ -161,6 +165,171 @@ def login(
     logger.info(f"User logged in: {user.email}")
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+def _smtp_is_configured() -> bool:
+    """Thin wrapper kept for backwards compatibility; delegates to email_service."""
+    return smtp_is_configured()
+
+
+@router.post("/send-verification", response_model=schemas.SendVerificationResponse)
+@rate_limit(max_requests=3, window_seconds=60, key_suffix="send_verification")
+def send_verification(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate a verification token and queue a delivery email.
+
+    * SMTP configured  → email is dispatched in a background task (non-blocking).
+    * SMTP absent + APP_ENV=development  → token returned in response for local testing.
+    * SMTP absent + production  → 503 so misconfiguration surfaces early.
+    """
+    if current_user.is_verified:
+        raise HTTPException(status_code=400, detail="Email is already verified")
+
+    token = secrets.token_urlsafe(32)
+    current_user.verification_token = token
+    current_user.verification_token_expires = datetime.utcnow() + timedelta(hours=24)
+    db.commit()
+
+    if _smtp_is_configured():
+        # Non-blocking: the worker thread returns immediately; SMTP happens in the background.
+        background_tasks.add_task(_send_verification_email_bg, current_user.email, token)
+        return schemas.SendVerificationResponse(
+            message="Verification email queued. Check your inbox shortly."
+        )
+
+    # No SMTP – only acceptable in an explicitly declared development environment.
+    is_dev = os.getenv("APP_ENV", "").lower() == "development"
+    if not is_dev:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Email delivery is not configured. "
+                "Set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables."
+            ),
+        )
+
+    # Development mode only: return the raw token so the app can be exercised
+    # without a live mail server.  Never enabled when APP_ENV != development.
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    verify_url = f"{frontend_url}/verify-email?token={token}"
+    logger.debug("[DEV] Verification URL for %s: %s", current_user.email, verify_url)
+    return schemas.SendVerificationResponse(
+        message="Dev mode: SMTP not configured. Use the token below to verify.",
+        dev_token=token,
+        dev_verify_url=verify_url,
+    )
+
+
+@router.post("/verify-email")
+@rate_limit(max_requests=10, window_seconds=60, key_suffix="verify_email")
+def verify_email(
+    request: Request,
+    payload: schemas.EmailVerifyRequest,
+    db: Session = Depends(get_db)
+):
+    """Verify email using a token from the verification link."""
+    user = db.query(models.User).filter(
+        models.User.verification_token == payload.token
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+
+    if user.verification_token_expires and user.verification_token_expires < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Verification token has expired. Request a new one.")
+
+    user.is_verified = True
+    user.verification_token = None
+    user.verification_token_expires = None
+    db.commit()
+
+    logger.info(f"Email verified for user: {user.email}")
+    return {"message": "Email verified successfully", "is_verified": True}
+
+
+# ── Phone / SMS verification ────────────────────────────────────────────────
+
+@router.post("/send-phone-verification", response_model=schemas.SendPhoneVerificationResponse)
+@rate_limit(max_requests=3, window_seconds=60, key_suffix="send_phone_otp")
+def send_phone_verification(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate a 6-digit OTP and send it via Twilio SMS.
+
+    * Twilio configured  → SMS dispatched in a background task (non-blocking).
+    * Twilio absent + APP_ENV=development  → OTP returned in response for testing.
+    * Twilio absent + production  → 503 so misconfiguration surfaces early.
+    """
+    if current_user.is_phone_verified:
+        raise HTTPException(status_code=400, detail="Phone number is already verified")
+
+    if not current_user.phone_number:
+        raise HTTPException(status_code=400, detail="No phone number on account. Update your profile first.")
+
+    otp = f"{secrets.randbelow(1_000_000):06d}"
+    current_user.phone_otp = otp
+    current_user.phone_otp_expires = datetime.utcnow() + timedelta(minutes=10)
+    db.commit()
+
+    if twilio_is_configured():
+        background_tasks.add_task(_send_phone_otp_bg, current_user.phone_number, otp)
+        return schemas.SendPhoneVerificationResponse(
+            message="OTP sent to your phone number. Check your SMS."
+        )
+
+    is_dev = os.getenv("APP_ENV", "").lower() == "development"
+    if not is_dev:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "SMS delivery is not configured. "
+                "Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER "
+                "environment variables."
+            ),
+        )
+
+    logger.debug("[DEV] Phone OTP for %s: %s", current_user.phone_number, otp)
+    return schemas.SendPhoneVerificationResponse(
+        message="Dev mode: Twilio not configured. Use the OTP below to verify.",
+        dev_otp=otp,
+    )
+
+
+@router.post("/verify-phone")
+@rate_limit(max_requests=5, window_seconds=60, key_suffix="verify_phone")
+def verify_phone(
+    request: Request,
+    payload: schemas.PhoneVerifyRequest,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Verify phone using the 6-digit OTP sent via SMS."""
+    if current_user.is_phone_verified:
+        raise HTTPException(status_code=400, detail="Phone number is already verified")
+
+    if not current_user.phone_otp:
+        raise HTTPException(status_code=400, detail="No OTP requested. Send a verification SMS first.")
+
+    if current_user.phone_otp_expires and current_user.phone_otp_expires < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="OTP has expired. Request a new one.")
+
+    if current_user.phone_otp != payload.otp:
+        raise HTTPException(status_code=400, detail="Incorrect OTP. Please try again.")
+
+    current_user.is_phone_verified = True
+    current_user.phone_otp = None
+    current_user.phone_otp_expires = None
+    db.commit()
+
+    logger.info("Phone verified for user: %s", current_user.email)
+    return {"message": "Phone number verified successfully", "is_phone_verified": True}
 
 
 @router.get("/me", response_model=schemas.UserResponse)

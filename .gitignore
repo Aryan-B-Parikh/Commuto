@@ -71,3 +71,6 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+#MDs
+tracker.md

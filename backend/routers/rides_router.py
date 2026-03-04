@@ -18,6 +18,8 @@ import os
 import hmac
 import hashlib
 import schemas
+from services.rating_service import apply_driver_rating
+from services.billing_service import get_trip_receipt as _build_receipt
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
@@ -865,3 +867,52 @@ def verify_trip_payment(
         db.rollback()
         logger.error(f"Error verifying trip payment: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to verify payment")
+
+
+@router.get("/{trip_id}/receipt")
+@rate_limit(max_requests=30, window_seconds=60, key_suffix="trip_receipt")
+def get_trip_receipt(
+    request: Request,
+    trip_id: UUID,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a formatted receipt for a completed trip."""
+    return _build_receipt(db, trip_id, current_user)
+
+
+@router.post("/{trip_id}/rate-driver", status_code=status.HTTP_200_OK)
+@rate_limit(max_requests=5, window_seconds=60, key_suffix="rate_driver")
+def rate_driver(
+    request: Request,
+    trip_id: UUID,
+    rating_data: schemas.DriverRatingRequest,
+    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    db: Session = Depends(get_db)
+):
+    """Submit a rating for the driver after trip completion."""
+    trip = db.query(models.Trip).filter(models.Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    if trip.status != "completed":
+        raise HTTPException(status_code=400, detail="Can only rate a completed trip")
+
+    booking = db.query(models.Booking).filter(
+        models.Booking.trip_id == trip_id,
+        models.Booking.passenger_id == current_user.id
+    ).first()
+    if not booking:
+        raise HTTPException(status_code=403, detail="You were not a passenger on this trip")
+
+    driver = db.query(models.Driver).filter(
+        models.Driver.user_id == trip.driver_id
+    ).with_for_update().first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+
+    # Delegate to the rating service; it handles the weighted rolling average.
+    new_rating = apply_driver_rating(driver, rating_data.rating)
+
+    db.commit()
+    return {"message": "Rating submitted", "new_rating": new_rating}
