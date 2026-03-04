@@ -8,6 +8,8 @@ import auth
 from uuid import UUID
 from datetime import datetime
 import logging
+import uuid
+from services.wallet_service import process_ride_payments
 
 router = APIRouter(prefix="/rides", tags=["OTP & Trip Completion"])
 logger = logging.getLogger(__name__)
@@ -184,6 +186,10 @@ def complete_ride(
         if driver:
             driver.total_trips += 1
         
+        # Delegate payment processing to the service layer.
+        # All wallet locking, ledger balancing, and debt recording is handled there.
+        process_ride_payments(db, trip, bookings)
+
         db.commit()
         
         logger.info(f"Trip {trip_id} completed by driver {current_user.id}")
