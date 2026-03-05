@@ -83,6 +83,7 @@ class Driver(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
     license_number = Column(String(50), nullable=True)
     license_url = Column(Text, nullable=True)
+    license_photo_url = Column(Text, nullable=True)
     insurance_expiry = Column(Date, nullable=True)
     insurance_status = Column(String(20), default="pending")  # active, pending, expired
     rating = Column(Numeric(3, 2), nullable=True)

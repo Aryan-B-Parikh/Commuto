@@ -25,6 +25,7 @@ export default function DriverDashboard() {
     const [earnings, setEarnings] = useState<any>(null);
     const [isOnline, setIsOnline] = useState(true);
     const [sheetExpanded, setSheetExpanded] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const fetchRequests = async () => {
@@ -59,6 +60,11 @@ export default function DriverDashboard() {
 
         fetchRequests();
     }, []);
+
+    const filteredRequests = requests.filter(request =>
+        request.origin_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        request.dest_address.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <RoleGuard allowedRoles={['driver']}>
@@ -131,7 +137,7 @@ export default function DriverDashboard() {
 
                 {/* 3️⃣ MAP — Main Hero Section */}
                 <div className="flex-1 relative min-h-[65vh]">
-                    <MapWidget />
+                    <MapWidget showSearch={true} />
 
                     {/* Scanning Overlay */}
                     {isOnline && (
@@ -179,13 +185,29 @@ export default function DriverDashboard() {
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-sm font-bold text-foreground">Incoming Requests</h3>
                                         <span className="bg-red-500/15 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                            {requests.length}
+                                            {filteredRequests.length}
                                         </span>
                                     </div>
                                 </div>
 
+                                {/* Mobile Search Bar */}
+                                <div className="relative mb-4">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-3.5 w-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="block w-full pl-9 pr-4 py-2 bg-background border border-card-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+                                        placeholder="Search by location..."
+                                    />
+                                </div>
+
                                 <div className="space-y-2">
-                                    {requests.slice(0, sheetExpanded ? 5 : 2).map((request, idx) => (
+                                    {filteredRequests.slice(0, sheetExpanded ? 10 : 2).map((request, idx) => (
                                         <motion.div
                                             key={request.id}
                                             initial={{ opacity: 0, y: 10 }}
@@ -231,9 +253,11 @@ export default function DriverDashboard() {
                             </div>
                         )}
 
-                        {!isLoading && requests.length === 0 && (
+                        {!isLoading && filteredRequests.length === 0 && (
                             <div className="text-center py-6 mb-4">
-                                <p className="text-muted-foreground/60 text-sm">No incoming requests right now</p>
+                                <p className="text-muted-foreground/60 text-sm">
+                                    {searchQuery ? 'No matching requests' : 'No incoming requests right now'}
+                                </p>
                             </div>
                         )}
 
@@ -341,7 +365,7 @@ export default function DriverDashboard() {
                                 </div>
                             </div>
 
-                            <MapWidget />
+                            <MapWidget showSearch={true} />
 
                             {/* "Scan for Riders" Overlay */}
                             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000]">
@@ -358,11 +382,27 @@ export default function DriverDashboard() {
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-lg font-bold text-foreground">Incoming Requests</h2>
-                                {requests.length > 0 && (
+                                {filteredRequests.length > 0 && (
                                     <span className="bg-red-500/15 text-red-400 text-xs font-bold px-2 py-1 rounded-full">
-                                        {requests.length} New
+                                        {filteredRequests.length} Result{filteredRequests.length !== 1 ? 's' : ''}
                                     </span>
                                 )}
+                            </div>
+
+                            {/* Desktop Search Bar */}
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <svg className="h-4 w-4 text-muted-foreground transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="block w-full pl-11 pr-4 py-3 border border-card-border rounded-xl leading-5 bg-card focus:bg-card/50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all duration-200 text-sm text-foreground placeholder:text-muted-foreground font-medium"
+                                    placeholder="Search pickup or destination..."
+                                />
                             </div>
 
                             <div className="space-y-4">
@@ -370,8 +410,8 @@ export default function DriverDashboard() {
                                     [1, 2].map(i => (
                                         <div key={i} className="h-[200px] w-full bg-card/50 animate-pulse rounded-2xl border border-card-border" />
                                     ))
-                                ) : requests.length > 0 ? (
-                                    requests.slice(0, 3).map((request) => (
+                                ) : filteredRequests.length > 0 ? (
+                                    filteredRequests.slice(0, 5).map((request) => (
                                         <div key={request.id} className="bg-card p-5 rounded-2xl border border-card-border shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                                             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
 
@@ -412,13 +452,15 @@ export default function DriverDashboard() {
                                     ))
                                 ) : (
                                     <div className="text-center py-10 bg-muted/10 rounded-2xl border-2 border-dashed border-card-border">
-                                        <p className="text-muted-foreground text-sm">No incoming requests</p>
+                                        <p className="text-muted-foreground text-sm">
+                                            {searchQuery ? 'No matching requests found' : 'No incoming requests'}
+                                        </p>
                                     </div>
                                 )}
 
-                                {requests.length > 3 && (
+                                {filteredRequests.length > 5 && (
                                     <Link href="/driver/requests" className="block text-center text-sm font-bold text-indigo-400 hover:underline pt-2">
-                                        View all {requests.length} requests
+                                        View all {filteredRequests.length} results
                                     </Link>
                                 )}
                             </div>

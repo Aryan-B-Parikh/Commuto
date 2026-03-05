@@ -14,6 +14,7 @@ interface MapWidgetProps {
     driverPos?: [number, number]; // [lat, lng]
     driverHeading?: number;
     showRoute?: boolean;
+    showSearch?: boolean;
 }
 
 export function MapWidget({
@@ -25,12 +26,87 @@ export function MapWidget({
     destination,
     driverPos,
     driverHeading,
-    showRoute = false
+    showRoute = false,
+    showSearch = false
 }: MapWidgetProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const [isReady, setIsReady] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
+
+    // Handle clicks outside search suggestions
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Fetch autocomplete suggestions
+    useEffect(() => {
+        if (!searchQuery || searchQuery.length < 3) {
+            setSuggestions([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const response = await fetch(
+                    `https://api.olamaps.io/places/v1/autocomplete?input=${encodeURIComponent(searchQuery)}&api_key=${OLA_API_KEY}`
+                );
+                const data = await response.json();
+                if (data.predictions) {
+                    setSuggestions(data.predictions);
+                    setShowSuggestions(true);
+                }
+            } catch (err) {
+                console.error('Autocomplete failed:', err);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const handleSelectLocation = async (prediction: any) => {
+        setSearchQuery(prediction.description);
+        setShowSuggestions(false);
+        setIsSearching(true);
+
+        try {
+            const response = await fetch(
+                `https://api.olamaps.io/places/v1/geocode?address=${encodeURIComponent(prediction.description)}&api_key=${OLA_API_KEY}`
+            );
+            const data = await response.json();
+
+            if (data.geocodingResults && data.geocodingResults.length > 0) {
+                const { lat, lng } = data.geocodingResults[0].geometry.location;
+                if (mapRef.current) {
+                    mapRef.current.flyTo({
+                        center: [lng, lat],
+                        zoom: 15,
+                        duration: 2000
+                    });
+
+                    // Add a temporary marker for the searched location
+                    new (window as any).maplibregl.Marker({ color: '#6366F1' })
+                        .setLngLat([lng, lat])
+                        .addTo(mapRef.current);
+                }
+            }
+        } catch (err) {
+            console.error('Geocoding failed:', err);
+        } finally {
+            setIsSearching(false);
+        }
+    };
 
     // Dynamically import mapbox-gl only on client side to avoid SSR issues
     const initMap = useCallback(async () => {
@@ -247,6 +323,67 @@ export function MapWidget({
                 className="absolute inset-0 w-full h-full"
                 style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
             />
+
+            {/* Search Overlay */}
+            {isReady && showSearch && (
+                <div ref={searchRef} className="absolute top-4 left-4 right-4 md:right-auto md:w-80 z-20">
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg className={`h-4 w-4 transition-colors ${isSearching ? 'text-indigo-500 animate-spin' : 'text-muted-foreground group-focus-within:text-indigo-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                {isSearching ? (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                ) : (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                )}
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                            className="block w-full pl-11 pr-12 py-3 bg-card/90 backdrop-blur-xl border border-card-border rounded-2xl shadow-xl shadow-black/20 text-sm text-foreground placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 outline-none transition-all"
+                            placeholder="Explore destinations..."
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute inset-y-0 right-3 flex items-center p-2 text-muted-foreground hover:text-foreground"
+                            >
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Suggestions Dropdown */}
+                    {showSuggestions && suggestions.length > 0 && (
+                        <div className="absolute top-full mt-2 w-full bg-card/95 backdrop-blur-2xl border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-fadeIn">
+                            <div className="max-h-64 overflow-y-auto">
+                                {suggestions.map((s, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelectLocation(s)}
+                                        className="w-full px-4 py-3 flex items-start gap-3 hover:bg-muted transition-colors text-left border-b border-card-border/50 last:border-0"
+                                    >
+                                        <div className="mt-0.5 w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                                            <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-bold text-foreground truncate">{s.structured_formatting?.main_text || s.description}</p>
+                                            <p className="text-[10px] text-muted-foreground truncate">{s.structured_formatting?.secondary_text || ''}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Loading overlay */}
             {!isReady && (

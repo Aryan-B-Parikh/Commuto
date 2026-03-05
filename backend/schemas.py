@@ -52,6 +52,7 @@ class ProfileUpdate(BaseModel):
     max_passengers: Optional[int] = None
     route_radius: Optional[int] = None
     is_available: Optional[bool] = None
+    license_photo_url: Optional[str] = None
     
     # Vehicle fields
     vehicle_type: Optional[str] = None
@@ -91,6 +92,7 @@ class UserResponse(BaseModel):
     insurance_status: Optional[str] = None
     max_passengers: Optional[int] = None
     route_radius: Optional[int] = None
+    license_photo_url: Optional[str] = None
     
     # Passenger-specific fields
     travel_preferences: Optional[list] = None

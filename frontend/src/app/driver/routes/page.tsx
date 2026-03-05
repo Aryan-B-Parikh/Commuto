@@ -62,7 +62,7 @@ export default function MyBidsPage() {
     const tripStatusConfig: Record<string, { bg: string, text: string }> = {
         pending: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
         active: { bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
-        completed: { bg: 'bg-[#1E293B]', text: 'text-[#9CA3AF]' },
+        completed: { bg: 'bg-muted', text: 'text-muted-foreground' },
         cancelled: { bg: 'bg-red-500/10', text: 'text-red-400' },
         bid_accepted: { bg: 'bg-blue-500/10', text: 'text-blue-400' },
         driver_assigned: { bg: 'bg-indigo-500/10', text: 'text-indigo-400' },
@@ -94,14 +94,14 @@ export default function MyBidsPage() {
         <RoleGuard allowedRoles={['driver']}>
 
             {/* ═══════════════════════ MOBILE LAYOUT ═══════════════════════ */}
-            <div className="md:hidden min-h-screen bg-[#0B1020] pb-24">
+            <div className="md:hidden min-h-screen bg-background pb-24">
                 <DashboardLayout userType="driver" title="My Trips">
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-1">
 
                         {/* ── Page Heading ── */}
                         <div className="mb-6">
-                            <h1 className="text-2xl font-black text-[#F9FAFB] tracking-tight">My Trips</h1>
-                            <p className="text-sm text-[#6B7280] mt-0.5">{bids.length} total bid{bids.length !== 1 ? 's' : ''}</p>
+                            <h1 className="text-2xl font-black text-foreground tracking-tight">My Trips</h1>
+                            <p className="text-sm text-muted-foreground mt-0.5">{bids.length} total bid{bids.length !== 1 ? 's' : ''}</p>
                         </div>
 
                         {/* ── Mobile Stats: 2×2 Grid ── */}
@@ -113,8 +113,8 @@ export default function MyBidsPage() {
                                         <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center mb-3">
                                             <TrendingUp size={20} className="text-indigo-400" />
                                         </div>
-                                        <p className="text-3xl font-black text-[#F9FAFB] leading-none">{bids.length}</p>
-                                        <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mt-1.5">Total Bids</p>
+                                        <p className="text-3xl font-black text-foreground leading-none">{bids.length}</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1.5">Total Bids</p>
                                     </div>
                                 </motion.div>
                                 {/* Pending */}
@@ -124,7 +124,7 @@ export default function MyBidsPage() {
                                             <Clock size={20} className="text-amber-400" />
                                         </div>
                                         <p className="text-3xl font-black text-amber-400 leading-none">{pendingCount}</p>
-                                        <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mt-1.5">Pending</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1.5">Pending</p>
                                     </div>
                                 </motion.div>
                                 {/* Accepted */}
@@ -134,7 +134,7 @@ export default function MyBidsPage() {
                                             <CheckCircle2 size={20} className="text-emerald-400" />
                                         </div>
                                         <p className="text-3xl font-black text-emerald-400 leading-none">{acceptedCount}</p>
-                                        <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mt-1.5">Accepted</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1.5">Accepted</p>
                                     </div>
                                 </motion.div>
                                 {/* Rejected */}
@@ -144,7 +144,7 @@ export default function MyBidsPage() {
                                             <XCircle size={20} className="text-red-400" />
                                         </div>
                                         <p className="text-3xl font-black text-red-400 leading-none">{rejectedCount}</p>
-                                        <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mt-1.5">Rejected</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1.5">Rejected</p>
                                     </div>
                                 </motion.div>
                             </div>
@@ -160,11 +160,11 @@ export default function MyBidsPage() {
                                             onClick={() => setFilter(tab.key)}
                                             className={`relative px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all active:scale-95 ${filter === tab.key
                                                 ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
-                                                : 'bg-[#111827] text-[#6B7280] border border-[#1E293B]'
+                                                : 'bg-card text-muted-foreground border border-border'
                                                 }`}
                                         >
                                             {tab.label}
-                                            <span className={`ml-1.5 ${filter === tab.key ? 'text-indigo-100' : 'text-[#4B5563]'}`}>
+                                            <span className={`ml-1.5 ${filter === tab.key ? 'text-indigo-100' : 'text-muted-foreground/60'}`}>
                                                 {tab.count}
                                             </span>
                                         </button>
@@ -173,7 +173,7 @@ export default function MyBidsPage() {
                             </div>
                             <button
                                 onClick={fetchBids}
-                                className="w-10 h-10 rounded-xl bg-[#1E293B] hover:bg-[#374151] flex items-center justify-center text-[#9CA3AF] shrink-0 active:scale-90 transition-all"
+                                className="w-10 h-10 rounded-xl bg-card hover:bg-muted flex items-center justify-center text-muted-foreground shrink-0 active:scale-90 transition-all"
                             >
                                 <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
                             </button>
@@ -188,14 +188,14 @@ export default function MyBidsPage() {
                         ) : filtered.length === 0 ? (
                             /* Mobile Empty State */
                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                                <div className="bg-[#111827] rounded-2xl border border-[#1E293B] py-16 px-6 text-center">
+                                <div className="bg-card rounded-2xl border border-border py-16 px-6 text-center">
                                     <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto mb-4">
                                         <Inbox size={28} className="text-indigo-400" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-[#F9FAFB] mb-1">
+                                    <h3 className="text-lg font-bold text-foreground mb-1">
                                         {filter === 'all' ? 'No trips yet' : `No ${filter} trips`}
                                     </h3>
-                                    <p className="text-sm text-[#6B7280] max-w-xs mx-auto">
+                                    <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                                         {filter === 'all'
                                             ? 'Start bidding on ride requests to see your trips here.'
                                             : `You don't have any ${filter} bids right now.`}
@@ -221,7 +221,7 @@ export default function MyBidsPage() {
                                                 whileTap={{ scale: 0.98 }}
                                             >
                                                 {/* Premium Mobile Trip Card */}
-                                                <div className={`bg-[#111827] rounded-2xl border border-[#1E293B] overflow-hidden border-l-[3px] ${st.accent} hover:border-[#374151] transition-colors`}>
+                                                <div className={`bg-card rounded-2xl border border-border overflow-hidden border-l-[3px] ${st.accent} hover:border-accent/20 transition-colors`}>
                                                     {/* Card Header: Status + Bid Amount */}
                                                     <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
@@ -243,13 +243,13 @@ export default function MyBidsPage() {
                                                                 }`}>
                                                                 {formatCurrency(bid.bid_amount)}
                                                             </p>
-                                                            <p className="text-[9px] text-[#4B5563] uppercase font-bold tracking-wider">per seat</p>
+                                                            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">per seat</p>
                                                         </div>
                                                     </div>
 
                                                     {/* Route Visualization */}
                                                     <div className="px-4 py-3">
-                                                        <div className="bg-[#0B1020] rounded-xl p-3 border border-[#1E293B]/50">
+                                                        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 border border-border/50">
                                                             <div className="flex gap-3">
                                                                 <div className="flex flex-col items-center pt-0.5">
                                                                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
@@ -258,12 +258,12 @@ export default function MyBidsPage() {
                                                                 </div>
                                                                 <div className="flex-1 min-w-0 space-y-2.5">
                                                                     <div>
-                                                                        <p className="text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider">Pickup</p>
-                                                                        <p className="text-sm text-[#F9FAFB] font-medium truncate">{bid.origin_address}</p>
+                                                                        <p className="text-[9px] text-emerald-500 font-bold uppercase tracking-wider">Pickup</p>
+                                                                        <p className="text-sm text-foreground font-medium truncate">{bid.origin_address}</p>
                                                                     </div>
                                                                     <div>
-                                                                        <p className="text-[9px] text-red-400/70 font-bold uppercase tracking-wider">Drop-off</p>
-                                                                        <p className="text-sm text-[#F9FAFB] font-medium truncate">{bid.dest_address}</p>
+                                                                        <p className="text-[9px] text-red-500 font-bold uppercase tracking-wider">Drop-off</p>
+                                                                        <p className="text-sm text-foreground font-medium truncate">{bid.dest_address}</p>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -272,17 +272,17 @@ export default function MyBidsPage() {
 
                                                     {/* Meta Row */}
                                                     <div className="px-4 pb-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                                                        <div className="flex items-center gap-1.5 bg-[#1E293B]/60 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                            <Navigation size={11} className="text-indigo-400" />
-                                                            <span className="text-[11px] font-semibold text-[#9CA3AF]">{dist} km</span>
+                                                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
+                                                            <Navigation size={11} className="text-indigo-500" />
+                                                            <span className="text-[11px] font-semibold text-muted-foreground">{dist} km</span>
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 bg-[#1E293B]/60 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                            <Users size={11} className="text-indigo-400" />
-                                                            <span className="text-[11px] font-semibold text-[#9CA3AF]">{bid.total_seats} seats</span>
+                                                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
+                                                            <Users size={11} className="text-indigo-500" />
+                                                            <span className="text-[11px] font-semibold text-muted-foreground">{bid.total_seats} seats</span>
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 bg-[#1E293B]/60 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                            <Clock size={11} className="text-indigo-400" />
-                                                            <span className="text-[11px] font-semibold text-[#9CA3AF]">
+                                                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
+                                                            <Clock size={11} className="text-indigo-500" />
+                                                            <span className="text-[11px] font-semibold text-muted-foreground">
                                                                 {new Date(bid.start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} • {new Date(bid.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
@@ -292,10 +292,10 @@ export default function MyBidsPage() {
                                                     {bid.passenger_notes && bid.passenger_notes.length > 0 && (
                                                         <div className="mt-2 space-y-1">
                                                             {bid.passenger_notes.map((pn, idx) => (
-                                                                <div key={idx} className="flex items-start gap-2 bg-[#1E293B]/40 rounded-lg px-3 py-2 border border-[#1E293B]/30">
+                                                                <div key={idx} className="flex items-start gap-2 bg-muted/20 rounded-lg px-3 py-2 border border-border/30">
                                                                     <MessageSquare size={11} className="text-indigo-400 mt-0.5 shrink-0" />
-                                                                    <p className="text-[11px] text-[#9CA3AF] line-clamp-2 leading-relaxed">
-                                                                        <span className="font-bold text-[#F9FAFB]">{pn.passenger_name}:</span> {pn.notes}
+                                                                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                                                                        <span className="font-bold text-foreground">{pn.passenger_name}:</span> {pn.notes}
                                                                     </p>
                                                                 </div>
                                                             ))}
@@ -323,20 +323,20 @@ export default function MyBidsPage() {
                         {/* Stats Row */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <Card className="p-4 border-none shadow-sm text-center">
-                                <p className="text-3xl font-black text-[#F9FAFB]">{bids.length}</p>
-                                <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-1">Total Bids</p>
+                                <p className="text-3xl font-black text-foreground">{bids.length}</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Bids</p>
                             </Card>
                             <Card className="p-4 border-none shadow-sm text-center">
                                 <p className="text-3xl font-black text-amber-400">{pendingCount}</p>
-                                <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-1">Pending</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Pending</p>
                             </Card>
                             <Card className="p-4 border-none shadow-sm text-center">
                                 <p className="text-3xl font-black text-emerald-400">{acceptedCount}</p>
-                                <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-1">Accepted</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Accepted</p>
                             </Card>
                             <Card className="p-4 border-none shadow-sm text-center">
                                 <p className="text-3xl font-black text-red-400">{rejectedCount}</p>
-                                <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-1">Rejected</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Rejected</p>
                             </Card>
                         </div>
 
@@ -349,7 +349,7 @@ export default function MyBidsPage() {
                                         onClick={() => setFilter(f as any)}
                                         className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${filter === f
                                             ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                                            : 'bg-[#111827] text-[#9CA3AF] hover:bg-[#1E293B] border border-[#1E293B]'
+                                            : 'bg-card text-muted-foreground hover:bg-muted border border-border'
                                             }`}
                                     >
                                         {f} {f === 'all' ? `(${bids.length})` : `(${bids.filter(b => b.status === f).length})`}
@@ -370,17 +370,17 @@ export default function MyBidsPage() {
                         {isLoading ? (
                             <div className="flex flex-col items-center justify-center py-24">
                                 <Loader2 size={32} className="animate-spin text-indigo-400 mb-4" />
-                                <p className="text-sm text-[#9CA3AF] font-bold uppercase tracking-widest">Loading your bids...</p>
+                                <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">Loading your bids...</p>
                             </div>
                         ) : filtered.length === 0 ? (
                             <Card className="text-center py-20 border-none shadow-sm">
                                 <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-6">
                                     <Inbox size={36} className="text-indigo-400" />
                                 </div>
-                                <h3 className="text-xl font-bold text-[#F9FAFB] mb-2">
+                                <h3 className="text-xl font-bold text-foreground mb-2">
                                     {filter === 'all' ? 'No bids yet' : `No ${filter} bids`}
                                 </h3>
-                                <p className="text-sm text-[#9CA3AF] max-w-sm mx-auto">
+                                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                                     {filter === 'all'
                                         ? 'Start bidding on passenger ride requests from the Route Requests page.'
                                         : `You don't have any ${filter} bids at the moment.`
@@ -432,12 +432,12 @@ export default function MyBidsPage() {
                                                             <div className="space-y-2 mb-4">
                                                                 <div className="flex items-center gap-2.5">
                                                                     <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-2 ring-indigo-500/20" />
-                                                                    <p className="text-sm font-bold text-[#F9FAFB] truncate">{bid.origin_address}</p>
+                                                                    <p className="text-sm font-bold text-foreground truncate">{bid.origin_address}</p>
                                                                 </div>
                                                                 <div className="ml-[5px] w-[1px] h-3 bg-gradient-to-b from-indigo-400 to-red-400" />
                                                                 <div className="flex items-center gap-2.5">
                                                                     <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/20" />
-                                                                    <p className="text-sm font-bold text-[#F9FAFB] truncate">{bid.dest_address}</p>
+                                                                    <p className="text-sm font-bold text-foreground truncate">{bid.dest_address}</p>
                                                                 </div>
                                                             </div>
 
@@ -482,7 +482,7 @@ export default function MyBidsPage() {
                                                                 }`}>
                                                                 {formatCurrency(bid.bid_amount)}
                                                             </p>
-                                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-1">Per Seat</p>
+                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Per Seat</p>
                                                         </div>
                                                     </div>
                                                 </Card>

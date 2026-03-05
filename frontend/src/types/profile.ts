@@ -50,6 +50,7 @@ export interface DriverDocuments {
     licenseNumber: string;
     insuranceStatus: 'active' | 'expired' | 'pending';
     registrationUrl: string;
+    licensePhotoUrl?: string;
 }
 
 export interface DriverProfile extends SharedProfile {

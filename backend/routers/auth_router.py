@@ -459,6 +459,7 @@ def get_current_user_info(
             resp["insurance_status"] = driver.insurance_status
             resp["max_passengers"] = driver.max_passengers
             resp["route_radius"] = driver.route_radius
+            resp["license_photo_url"] = driver.license_photo_url
             
             # Compute today's earnings
             today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -545,6 +546,8 @@ def update_current_user(
                     driver.route_radius = data["route_radius"]
                 if data.get("is_available") is not None:
                     driver.is_online = data["is_available"]
+                if data.get("license_photo_url"):
+                    driver.license_photo_url = data["license_photo_url"]
                 
                 # Vehicle info
                 vehicle_data = {}
@@ -627,6 +630,7 @@ def update_current_user(
                 resp["insurance_status"] = driver.insurance_status
                 resp["max_passengers"] = driver.max_passengers
                 resp["route_radius"] = driver.route_radius
+                resp["license_photo_url"] = driver.license_photo_url
         elif role == "passenger":
             passenger = db.query(models.Passenger).filter(models.Passenger.user_id == current_user.id).first()
             if passenger:

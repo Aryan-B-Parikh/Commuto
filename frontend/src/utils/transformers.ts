@@ -22,6 +22,7 @@ export function transformBackendUser(backendUser: BackendUser | UserResponse): U
         joinedDate: backendUser.created_at,
         todayEarnings: (backendUser as UserResponse).today_earnings || 0,
         onlineHours: (backendUser as UserResponse).online_hours || 0,
+        licensePhotoUrl: (backendUser as UserResponse).license_photo_url, // Add this mapping
     };
 }
 
