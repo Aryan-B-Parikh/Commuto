@@ -50,7 +50,12 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
         e.preventDefault();
         const fullOtp = otp.join('');
         if (fullOtp.length === 4) {
-            await onVerify(fullOtp);
+            try {
+                await onVerify(fullOtp);
+            } catch (err: any) {
+                // Error handling is actually done in DriverLivePage, 
+                // but we can add UI local states here if needed.
+            }
         }
     };
 
@@ -103,7 +108,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                                             value={digit}
                                             onChange={(e) => handleChange(index, e.target.value)}
                                             onKeyDown={(e) => handleKeyDown(index, e)}
-                                            className="w-14 h-16 bg-[#1E293B] border border-[#374151] rounded-2xl text-2xl font-black text-white text-center focus:border-indigo-500 focus:outline-none transition-all shadow-lg"
+                                            className="w-14 h-16 bg-[#1E293B] border border-[#374151] rounded-2xl text-2xl font-black text-white text-center focus:border-indigo-500 focus:outline-none transition-all shadow-lg focus:ring-4 focus:ring-indigo-500/20"
                                             disabled={isVerifying}
                                         />
                                     ))}
@@ -113,7 +118,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                                     <Button
                                         type="submit"
                                         disabled={otp.join('').length !== 4 || isVerifying}
-                                        className="h-14 bg-indigo-500 hover:bg-indigo-600 font-bold text-lg rounded-2xl w-full flex items-center justify-center gap-2"
+                                        className="h-14 bg-indigo-500 hover:bg-indigo-600 font-bold text-lg rounded-2xl w-full flex items-center justify-center gap-2 shadow-xl shadow-indigo-500/20"
                                     >
                                         {isVerifying ? (
                                             <>

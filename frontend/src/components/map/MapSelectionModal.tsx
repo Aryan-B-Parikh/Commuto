@@ -27,6 +27,7 @@ export function MapSelectionModal({
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
     const searchRef = useRef<HTMLDivElement>(null);
+    const justSelectedRef = useRef(false);
 
     const [isReady, setIsReady] = useState(false);
     const [selectedPos, setSelectedPos] = useState<[number, number] | null>(initialCoords || null);
@@ -81,9 +82,11 @@ export function MapSelectionModal({
     // Ola Maps Autocomplete
     useEffect(() => {
         const fetchAutocomplete = async () => {
-            // Don't fetch if the query is too short or if it exactly matches the current selection address
-            // to prevent the list from popping back up after selection
-            if (searchQuery.length < 3 || searchQuery === address) {
+            if (justSelectedRef.current) {
+                justSelectedRef.current = false;
+                return;
+            }
+            if (searchQuery.length < 3) {
                 setSearchResults([]);
                 setShowResults(false);
                 return;
@@ -110,9 +113,10 @@ export function MapSelectionModal({
     }, [searchQuery]);
 
     const handleSelectResult = async (result: any) => {
+        justSelectedRef.current = true;
         setSearchQuery(result.description);
-        setSearchResults([]); // Clear results immediately
-        setShowResults(false); // Hide the list
+        setSearchResults([]);
+        setShowResults(false);
         setIsFetchingAddress(true);
 
         try {
@@ -129,7 +133,28 @@ export function MapSelectionModal({
 
                 if (mapRef.current) {
                     mapRef.current.flyTo({ center: [lng, lat], zoom: 16 });
-                    markerRef.current?.setLngLat([lng, lat]);
+
+                    if (markerRef.current) {
+                        markerRef.current.setLngLat([lng, lat]);
+                    } else {
+                        const maplibregl = (window as any).maplibregl;
+                        if (maplibregl) {
+                            const marker = new maplibregl.Marker({
+                                draggable: true,
+                                color: '#6366F1'
+                            })
+                                .setLngLat([lng, lat])
+                                .addTo(mapRef.current);
+
+                            marker.on('dragend', () => {
+                                const mLat = marker.getLngLat().lat;
+                                const mLng = marker.getLngLat().lng;
+                                setSelectedPos([mLat, mLng]);
+                                fetchAddress(mLat, mLng);
+                            });
+                            markerRef.current = marker;
+                        }
+                    }
                 }
             }
         } catch (error) {

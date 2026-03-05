@@ -421,7 +421,9 @@ export default function DriverDashboard() {
                                                         {request.seats_requested}
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-foreground">Passenger ID: {request.id.substring(0, 5)}</p>
+                                                        <p className="font-bold text-foreground">
+                                                            {request.passenger_notes?.[0]?.passenger_name || request.origin_address.split(',')[0]}
+                                                        </p>
                                                         <p className="text-xs text-muted-foreground">Pending Approval</p>
                                                     </div>
                                                 </div>

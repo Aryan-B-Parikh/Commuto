@@ -22,8 +22,206 @@ import {
     Inbox,
     TrendingUp,
     ChevronRight,
-    MessageSquare
+    MessageSquare,
+    Navigation2
 } from 'lucide-react';
+import { useRouteInfo } from '@/hooks/useRouteInfo';
+
+function MobileBidCard({ bid, statusConfig, tripStatusConfig }: {
+    bid: DriverBidWithTrip,
+    statusConfig: any,
+    tripStatusConfig: any
+}) {
+    const origin = React.useMemo(() => [Number(bid.origin_lat), Number(bid.origin_lng)] as [number, number], [bid.origin_lat, bid.origin_lng]);
+    const destination = React.useMemo(() => [Number(bid.dest_lat), Number(bid.dest_lng)] as [number, number], [bid.dest_lat, bid.dest_lng]);
+    const { distanceKm } = useRouteInfo(origin, destination);
+    const st = statusConfig[bid.status] || statusConfig.pending;
+    const ts = tripStatusConfig[bid.trip_status] || tripStatusConfig.pending;
+
+    return (
+        <motion.div variants={itemVariants} layout whileTap={{ scale: 0.98 }}>
+            <div className={`bg-card rounded-2xl border border-border overflow-hidden border-l-[3px] ${st.accent} hover:border-accent/20 transition-colors`}>
+                <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${st.bg}`}>
+                            {st.icon}
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${st.text}`}>
+                                {bid.status}
+                            </span>
+                        </div>
+                        <div className={`px-2 py-1 rounded-full ${ts.bg}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${ts.text}`}>
+                                {bid.trip_status.replace('_', ' ')}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className={`text-xl font-black tracking-tight ${bid.status === 'accepted' ? 'text-emerald-400' :
+                            bid.status === 'rejected' ? 'text-red-400 line-through' : 'text-indigo-400'
+                            }`}>
+                            {formatCurrency(bid.bid_amount)}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">per seat</p>
+                    </div>
+                </div>
+
+                <div className="px-4 py-3">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 border border-border/50">
+                        <div className="flex gap-3">
+                            <div className="flex flex-col items-center pt-0.5">
+                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
+                                <div className="w-0.5 flex-1 bg-gradient-to-b from-emerald-500/40 to-red-500/40 my-1 min-h-[20px]" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/20" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-2.5">
+                                <div>
+                                    <p className="text-[9px] text-emerald-500 font-bold uppercase tracking-wider">Pickup</p>
+                                    <p className="text-sm text-foreground font-medium truncate">{bid.origin_address}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[9px] text-red-500 font-bold uppercase tracking-wider">Drop-off</p>
+                                    <p className="text-sm text-foreground font-medium truncate">{bid.dest_address}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="px-4 pb-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
+                        <Navigation2 size={11} className="text-indigo-500" />
+                        <span className="text-[11px] font-semibold text-muted-foreground">{distanceKm} km</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
+                        <Users size={11} className="text-indigo-500" />
+                        <span className="text-[11px] font-semibold text-muted-foreground">{bid.total_seats} seats</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
+                        <Clock size={11} className="text-indigo-500" />
+                        <span className="text-[11px] font-semibold text-muted-foreground">
+                            {new Date(bid.start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} • {new Date(bid.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    </div>
+                </div>
+
+                {bid.passenger_notes && bid.passenger_notes.length > 0 && (
+                    <div className="px-4 pb-4 space-y-1">
+                        {bid.passenger_notes.map((pn, idx) => (
+                            <div key={idx} className="flex items-start gap-2 bg-muted/20 rounded-lg px-3 py-2 border border-border/30">
+                                <MessageSquare size={11} className="text-indigo-400 mt-0.5 shrink-0" />
+                                <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                                    <span className="font-bold text-foreground">{pn.passenger_name}:</span> {pn.notes}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </motion.div>
+    );
+}
+
+function DesktopBidCard({ bid, statusConfig, tripStatusConfig }: {
+    bid: DriverBidWithTrip,
+    statusConfig: any,
+    tripStatusConfig: any
+}) {
+    const origin = React.useMemo(() => [Number(bid.origin_lat), Number(bid.origin_lng)] as [number, number], [bid.origin_lat, bid.origin_lng]);
+    const destination = React.useMemo(() => [Number(bid.dest_lat), Number(bid.dest_lng)] as [number, number], [bid.dest_lat, bid.dest_lng]);
+    const { distanceKm } = useRouteInfo(origin, destination);
+    const st = statusConfig[bid.status] || statusConfig.pending;
+    const ts = tripStatusConfig[bid.trip_status] || tripStatusConfig.pending;
+
+    return (
+        <motion.div variants={itemVariants} layout>
+            <Card className="border-none shadow-sm hover:shadow-md transition-all p-6 relative overflow-hidden text-left">
+                <div className={`absolute top-0 left-0 w-1 h-full rounded-r-full ${bid.status === 'accepted' ? 'bg-emerald-500' :
+                    bid.status === 'rejected' ? 'bg-red-400' : 'bg-indigo-500'
+                    }`} />
+
+                <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${st.bg}`}>
+                                {st.icon}
+                                <span className={`text-[10px] font-bold uppercase tracking-widest ${st.text}`}>
+                                    {bid.status}
+                                </span>
+                            </div>
+                            <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${ts.bg}`}>
+                                <span className={`text-[10px] font-bold uppercase tracking-widest ${ts.text}`}>
+                                    Trip: {bid.trip_status.replace('_', ' ')}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2 mb-4">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-2 ring-indigo-500/20" />
+                                <p className="text-sm font-bold text-foreground truncate">{bid.origin_address}</p>
+                            </div>
+                            <div className="ml-[5px] w-[1px] h-3 bg-gradient-to-b from-indigo-400 to-red-400" />
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/20" />
+                                <p className="text-sm font-bold text-foreground truncate">{bid.dest_address}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                                <Navigation2 size={12} className="text-indigo-400" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{distanceKm} km</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Users size={12} className="text-indigo-400" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{bid.total_seats} Seats</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Clock size={12} className="text-indigo-400" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">
+                                    {new Date(bid.start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} • {new Date(bid.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </div>
+                        </div>
+
+                        {bid.passenger_notes && bid.passenger_notes.length > 0 && (
+                            <div className="mt-3 space-y-1.5">
+                                {bid.passenger_notes.map((pn, idx) => (
+                                    <div key={idx} className="flex items-start gap-2 bg-muted/40 rounded-xl px-3 py-2.5 border border-border font-medium">
+                                        <MessageSquare size={12} className="text-indigo-400 mt-0.5 shrink-0" />
+                                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                                            <span className="font-bold text-foreground">{pn.passenger_name}:</span> {pn.notes}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="text-right shrink-0">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Your Bid</p>
+                        <p className={`text-3xl font-black tracking-tight ${bid.status === 'accepted' ? 'text-emerald-400' :
+                            bid.status === 'rejected' ? 'text-red-400 line-through' : 'text-indigo-400'
+                            }`}>
+                            {formatCurrency(bid.bid_amount)}
+                        </p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Per Seat</p>
+                    </div>
+                </div>
+            </Card>
+        </motion.div>
+    );
+}
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.06 } }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    show: { opacity: 1, y: 0 }
+};
 
 export default function MyBidsPage() {
     const { showToast } = useToast() as any;
@@ -78,16 +276,6 @@ export default function MyBidsPage() {
         { key: 'accepted' as const, label: 'Accepted', count: acceptedCount },
         { key: 'rejected' as const, label: 'Rejected', count: rejectedCount },
     ];
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        show: { opacity: 1, transition: { staggerChildren: 0.06 } }
-    };
-
-    const itemVariants = {
-        hidden: { opacity: 0, y: 12 },
-        show: { opacity: 1, y: 0 }
-    };
 
     // ========================= RENDER =========================
     return (
@@ -205,106 +393,14 @@ export default function MyBidsPage() {
                         ) : (
                             <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-3">
                                 <AnimatePresence mode="popLayout">
-                                    {filtered.map(bid => {
-                                        const st = statusConfig[bid.status] || statusConfig.pending;
-                                        const ts = tripStatusConfig[bid.trip_status] || tripStatusConfig.pending;
-                                        const dist = calculateDistance(
-                                            { lat: bid.origin_lat, lng: bid.origin_lng },
-                                            { lat: bid.dest_lat, lng: bid.dest_lng }
-                                        ).toFixed(1);
-
-                                        return (
-                                            <motion.div
-                                                key={bid.id}
-                                                variants={itemVariants}
-                                                layout
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                {/* Premium Mobile Trip Card */}
-                                                <div className={`bg-card rounded-2xl border border-border overflow-hidden border-l-[3px] ${st.accent} hover:border-accent/20 transition-colors`}>
-                                                    {/* Card Header: Status + Bid Amount */}
-                                                    <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${st.bg}`}>
-                                                                {st.icon}
-                                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${st.text}`}>
-                                                                    {bid.status}
-                                                                </span>
-                                                            </div>
-                                                            <div className={`px-2 py-1 rounded-full ${ts.bg}`}>
-                                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${ts.text}`}>
-                                                                    {bid.trip_status.replace('_', ' ')}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className={`text-xl font-black tracking-tight ${bid.status === 'accepted' ? 'text-emerald-400' :
-                                                                bid.status === 'rejected' ? 'text-red-400 line-through' : 'text-indigo-400'
-                                                                }`}>
-                                                                {formatCurrency(bid.bid_amount)}
-                                                            </p>
-                                                            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">per seat</p>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Route Visualization */}
-                                                    <div className="px-4 py-3">
-                                                        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 border border-border/50">
-                                                            <div className="flex gap-3">
-                                                                <div className="flex flex-col items-center pt-0.5">
-                                                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
-                                                                    <div className="w-0.5 flex-1 bg-gradient-to-b from-emerald-500/40 to-red-500/40 my-1 min-h-[20px]" />
-                                                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/20" />
-                                                                </div>
-                                                                <div className="flex-1 min-w-0 space-y-2.5">
-                                                                    <div>
-                                                                        <p className="text-[9px] text-emerald-500 font-bold uppercase tracking-wider">Pickup</p>
-                                                                        <p className="text-sm text-foreground font-medium truncate">{bid.origin_address}</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[9px] text-red-500 font-bold uppercase tracking-wider">Drop-off</p>
-                                                                        <p className="text-sm text-foreground font-medium truncate">{bid.dest_address}</p>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Meta Row */}
-                                                    <div className="px-4 pb-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                                                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                            <Navigation size={11} className="text-indigo-500" />
-                                                            <span className="text-[11px] font-semibold text-muted-foreground">{dist} km</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                            <Users size={11} className="text-indigo-500" />
-                                                            <span className="text-[11px] font-semibold text-muted-foreground">{bid.total_seats} seats</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                            <Clock size={11} className="text-indigo-500" />
-                                                            <span className="text-[11px] font-semibold text-muted-foreground">
-                                                                {new Date(bid.start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} • {new Date(bid.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Passenger Notes */}
-                                                    {bid.passenger_notes && bid.passenger_notes.length > 0 && (
-                                                        <div className="mt-2 space-y-1">
-                                                            {bid.passenger_notes.map((pn, idx) => (
-                                                                <div key={idx} className="flex items-start gap-2 bg-muted/20 rounded-lg px-3 py-2 border border-border/30">
-                                                                    <MessageSquare size={11} className="text-indigo-400 mt-0.5 shrink-0" />
-                                                                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                                                                        <span className="font-bold text-foreground">{pn.passenger_name}:</span> {pn.notes}
-                                                                    </p>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </motion.div>
-                                        );
-                                    })}
+                                    {filtered.map(bid => (
+                                        <MobileBidCard
+                                            key={bid.id}
+                                            bid={bid}
+                                            statusConfig={statusConfig}
+                                            tripStatusConfig={tripStatusConfig}
+                                        />
+                                    ))}
                                 </AnimatePresence>
                             </motion.div>
                         )}
@@ -395,100 +491,14 @@ export default function MyBidsPage() {
                                 className="space-y-4"
                             >
                                 <AnimatePresence mode="popLayout">
-                                    {filtered.map(bid => {
-                                        const st = statusConfig[bid.status] || statusConfig.pending;
-                                        const ts = tripStatusConfig[bid.trip_status] || tripStatusConfig.pending;
-                                        const dist = calculateDistance(
-                                            { lat: bid.origin_lat, lng: bid.origin_lng },
-                                            { lat: bid.dest_lat, lng: bid.dest_lng }
-                                        ).toFixed(1);
-
-                                        return (
-                                            <motion.div key={bid.id} variants={itemVariants} layout>
-                                                <Card className="border-none shadow-sm hover:shadow-md transition-all p-6 relative overflow-hidden">
-                                                    {/* Left accent */}
-                                                    <div className={`absolute top-0 left-0 w-1 h-full rounded-r-full ${bid.status === 'accepted' ? 'bg-emerald-500' :
-                                                        bid.status === 'rejected' ? 'bg-red-400' : 'bg-indigo-500'
-                                                        }`} />
-
-                                                    <div className="flex items-start justify-between gap-6">
-                                                        {/* Left: Route Info */}
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-3 mb-4">
-                                                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${st.bg}`}>
-                                                                    {st.icon}
-                                                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${st.text}`}>
-                                                                        {bid.status}
-                                                                    </span>
-                                                                </div>
-                                                                <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${ts.bg}`}>
-                                                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${ts.text}`}>
-                                                                        Trip: {bid.trip_status.replace('_', ' ')}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Route */}
-                                                            <div className="space-y-2 mb-4">
-                                                                <div className="flex items-center gap-2.5">
-                                                                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-2 ring-indigo-500/20" />
-                                                                    <p className="text-sm font-bold text-foreground truncate">{bid.origin_address}</p>
-                                                                </div>
-                                                                <div className="ml-[5px] w-[1px] h-3 bg-gradient-to-b from-indigo-400 to-red-400" />
-                                                                <div className="flex items-center gap-2.5">
-                                                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/20" />
-                                                                    <p className="text-sm font-bold text-foreground truncate">{bid.dest_address}</p>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Meta */}
-                                                            <div className="flex items-center gap-4 text-[#9CA3AF]">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Navigation size={12} className="text-indigo-400" />
-                                                                    <span className="text-[10px] font-bold uppercase tracking-widest">{dist} km</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Users size={12} className="text-indigo-400" />
-                                                                    <span className="text-[10px] font-bold uppercase tracking-widest">{bid.total_seats} Seats</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Clock size={12} className="text-indigo-400" />
-                                                                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                                                                        {new Date(bid.start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} • {new Date(bid.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Passenger Notes */}
-                                                            {bid.passenger_notes && bid.passenger_notes.length > 0 && (
-                                                                <div className="mt-3 space-y-1.5">
-                                                                    {bid.passenger_notes.map((pn, idx) => (
-                                                                        <div key={idx} className="flex items-start gap-2 bg-[#1E293B]/40 rounded-xl px-3 py-2.5 border border-[#1E293B]/30">
-                                                                            <MessageSquare size={12} className="text-indigo-400 mt-0.5 shrink-0" />
-                                                                            <p className="text-xs text-[#9CA3AF] line-clamp-2 leading-relaxed">
-                                                                                <span className="font-bold text-[#F9FAFB]">{pn.passenger_name}:</span> {pn.notes}
-                                                                            </p>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Right: Bid Amount */}
-                                                        <div className="text-right shrink-0">
-                                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Your Bid</p>
-                                                            <p className={`text-3xl font-black tracking-tight ${bid.status === 'accepted' ? 'text-emerald-400' :
-                                                                bid.status === 'rejected' ? 'text-red-400 line-through' : 'text-indigo-400'
-                                                                }`}>
-                                                                {formatCurrency(bid.bid_amount)}
-                                                            </p>
-                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Per Seat</p>
-                                                        </div>
-                                                    </div>
-                                                </Card>
-                                            </motion.div>
-                                        );
-                                    })}
+                                    {filtered.map(bid => (
+                                        <DesktopBidCard
+                                            key={bid.id}
+                                            bid={bid}
+                                            statusConfig={statusConfig}
+                                            tripStatusConfig={tripStatusConfig}
+                                        />
+                                    ))}
                                 </AnimatePresence>
                             </motion.div>
                         )}

@@ -39,6 +39,8 @@ export function MapWidget({
     const [isSearching, setIsSearching] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
+    const justSelectedRef = useRef(false);
+    const searchMarkerRef = useRef<any>(null);
 
     // Handle clicks outside search suggestions
     useEffect(() => {
@@ -53,6 +55,10 @@ export function MapWidget({
 
     // Fetch autocomplete suggestions
     useEffect(() => {
+        if (justSelectedRef.current) {
+            justSelectedRef.current = false;
+            return;
+        }
         if (!searchQuery || searchQuery.length < 3) {
             setSuggestions([]);
             return;
@@ -77,33 +83,54 @@ export function MapWidget({
     }, [searchQuery]);
 
     const handleSelectLocation = async (prediction: any) => {
+        justSelectedRef.current = true;
         setSearchQuery(prediction.description);
+        setSuggestions([]);
         setShowSuggestions(false);
         setIsSearching(true);
 
         try {
-            const response = await fetch(
-                `https://api.olamaps.io/places/v1/geocode?address=${encodeURIComponent(prediction.description)}&api_key=${OLA_API_KEY}`
-            );
-            const data = await response.json();
+            let lat: number | null = null;
+            let lng: number | null = null;
 
-            if (data.geocodingResults && data.geocodingResults.length > 0) {
-                const { lat, lng } = data.geocodingResults[0].geometry.location;
-                if (mapRef.current) {
-                    mapRef.current.flyTo({
-                        center: [lng, lat],
-                        zoom: 15,
-                        duration: 2000
-                    });
+            // 1. Use coordinates directly from autocomplete prediction (most accurate)
+            if (prediction.geometry?.location) {
+                lat = prediction.geometry.location.lat;
+                lng = prediction.geometry.location.lng;
+            }
 
-                    // Add a temporary marker for the searched location
-                    new (window as any).maplibregl.Marker({ color: '#6366F1' })
-                        .setLngLat([lng, lat])
-                        .addTo(mapRef.current);
+            // 2. Fallback: geocode by address
+            if (lat === null || lng === null) {
+                const response = await fetch(
+                    `https://api.olamaps.io/places/v1/geocode?address=${encodeURIComponent(prediction.description)}&api_key=${OLA_API_KEY}`
+                );
+                const data = await response.json();
+                if (data.geocodingResults && data.geocodingResults.length > 0) {
+                    lat = data.geocodingResults[0].geometry.location.lat;
+                    lng = data.geocodingResults[0].geometry.location.lng;
                 }
             }
+
+            if (lat !== null && lng !== null && mapRef.current) {
+                // Remove previous search marker
+                if (searchMarkerRef.current) {
+                    searchMarkerRef.current.remove();
+                    searchMarkerRef.current = null;
+                }
+
+                mapRef.current.flyTo({
+                    center: [lng, lat],
+                    zoom: 14,
+                    duration: 2000
+                });
+
+                // Add marker and track it for cleanup
+                searchMarkerRef.current = new (window as any).maplibregl.Marker({ color: '#6366F1' })
+                    .setLngLat([lng, lat])
+                    .addTo(mapRef.current);
+            }
         } catch (err) {
-            console.error('Geocoding failed:', err);
+            console.error('Location search failed:', err);
         } finally {
             setIsSearching(false);
         }
@@ -254,11 +281,6 @@ export function MapWidget({
                         .setLngLat([destination[1], destination[0]])
                         .addTo(map);
                     map.flyTo({ center: [destination[1], destination[0]], zoom: 14 });
-                } else {
-                    // Default marker if no pickup/dest provided
-                    new maplibregl.Marker({ color: '#6366F1' })
-                        .setLngLat([center[1], center[0]])
-                        .addTo(map);
                 }
             });
 

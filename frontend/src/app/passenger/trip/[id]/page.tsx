@@ -23,6 +23,7 @@ import type { TripResponse, BidResponse } from '@/types/api';
 import type { Trip } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 import { useSocketEvent } from '@/hooks/useWebSocket';
+import { useRouteInfo } from '@/hooks/useRouteInfo';
 import dynamic from 'next/dynamic';
 import { TripReceiptCard } from '@/components/trip/TripReceiptCard';
 import { BiddingSection } from '@/components/trip/BiddingSection';
@@ -136,14 +137,6 @@ export default function PassengerTripDetailsPage() {
         }
     };
 
-    const distance = useMemo(() => {
-        if (!rawTrip) return '0.0';
-        return calculateDistance(
-            { lat: rawTrip.origin_lat, lng: rawTrip.origin_lng },
-            { lat: rawTrip.dest_lat, lng: rawTrip.dest_lng }
-        ).toFixed(1);
-    }, [rawTrip]);
-
     const passengerPos = useMemo(() => {
         if (!rawTrip) return undefined;
         return [Number(rawTrip.origin_lat), Number(rawTrip.origin_lng)] as [number, number];
@@ -153,6 +146,11 @@ export default function PassengerTripDetailsPage() {
         if (!rawTrip) return undefined;
         return [Number(rawTrip.dest_lat), Number(rawTrip.dest_lng)] as [number, number];
     }, [rawTrip]);
+
+    const { distanceKm, duration, routeName } = useRouteInfo(
+        passengerPos,
+        destinationPos
+    );
 
     const statusConfig: Record<string, { bg: string, text: string, label: string, dot: string }> = {
         pending: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Awaiting Bids', dot: 'bg-amber-500' },
@@ -264,7 +262,7 @@ export default function PassengerTripDetailsPage() {
                                             <Navigation size={14} className="text-indigo-400" />
                                             <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Distance</p>
                                         </div>
-                                        <p className="text-lg font-black text-[#F9FAFB]">{distance} km</p>
+                                        <p className="text-lg font-black text-[#F9FAFB]">{distanceKm} km</p>
                                     </div>
                                     <div className="text-center border-x border-[#1E293B]">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -338,7 +336,7 @@ export default function PassengerTripDetailsPage() {
                                     rawTrip={rawTrip}
                                     trip={trip}
                                     tripId={tripId}
-                                    distance={distance}
+                                    distance={distanceKm}
                                 />
                             )}
                         </div>

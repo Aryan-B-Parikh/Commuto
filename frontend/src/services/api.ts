@@ -27,16 +27,18 @@ api.interceptors.response.use(
     response => response,
     error => {
         if (error.response?.status === 401) {
-            // If it's a 401, the token might be invalid or expired.
-            // Avoid infinite loops for login/me requests
             const isAuthReq = error.config?.url?.includes('/auth/');
             if (!isAuthReq) {
+                console.warn('Session expired or unauthorized request to:', error.config?.url);
+                // Clear state and redirect only if necessary, or let the hook handle it
                 localStorage.removeItem('auth_token');
-                // Optional: window.location.href = '/login';
+                if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+                    window.location.href = '/login?expired=true';
+                }
             }
         }
 
-        // Don't log 401 errors for auth paths
+        // Detailed logging for non-401 errors
         if (error.response?.status !== 401) {
             console.error('API Error:', {
                 status: error.response?.status,
