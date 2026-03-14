@@ -26,7 +26,7 @@ export default function RideSharingPage() {
                     <button onClick={handleBack} className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-[#F9FAFB] active:bg-[#1E293B] transition-colors">
                         <ArrowLeft size={24} />
                     </button>
-                    <h1 className="text-lg font-bold text-[#F9FAFB] absolute left-1/2 -translate-x-1/2">Book Ride</h1>
+                    <h2 className="text-lg font-bold text-[#F9FAFB] absolute left-1/2 -translate-x-1/2">Book Ride</h2>
                     <div className="w-10"></div> {/* Spacer for centering */}
                 </div>
 
