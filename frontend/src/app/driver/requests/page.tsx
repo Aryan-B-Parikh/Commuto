@@ -23,8 +23,114 @@ import {
     Sparkles,
     ChevronRight,
     X,
-    MessageSquare
+    MessageSquare,
+    Navigation2
 } from 'lucide-react';
+import { useRouteInfo } from '@/hooks/useRouteInfo';
+
+function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
+    request: TripResponse,
+    index: number,
+    getTimeAgo: (date: string) => string,
+    handleAction: (id: string, action: 'approve' | 'reject') => void
+}) {
+    const origin = React.useMemo(() => [request.origin_lat, request.origin_lng] as [number, number], [request.origin_lat, request.origin_lng]);
+    const destination = React.useMemo(() => [request.dest_lat, request.dest_lng] as [number, number], [request.dest_lat, request.dest_lng]);
+    const { distanceKm } = useRouteInfo(origin, destination);
+
+    return (
+        <motion.div
+            key={request.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3, delay: index * 0.05 }}
+            className="group"
+        >
+            <div className="bg-[#111827] rounded-[24px] border border-[#1E293B] overflow-hidden hover:border-indigo-500/30 transition-all shadow-sm hover:shadow-xl hover:shadow-indigo-500/5">
+                {/* Header: Relative Time + Seats */}
+                <div className="px-5 py-4 flex items-center justify-between border-b border-[#1E293B]/50 bg-[#0B1020]/30">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                            <Clock size={14} className="text-indigo-400" />
+                        </div>
+                        <p className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-widest">
+                            Shared • {getTimeAgo(request.created_at)}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-indigo-500/10 px-2.5 py-1 rounded-full">
+                        <Users size={12} className="text-indigo-400" />
+                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-tighter">
+                            {request.total_seats} Seats
+                        </span>
+                    </div>
+                </div>
+
+                {/* Route Section */}
+                <div className="p-5">
+                    <div className="flex gap-4 mb-6">
+                        <div className="flex flex-col items-center pt-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-4 ring-indigo-500/10" />
+                            <div className="w-0.5 flex-1 bg-gradient-to-b from-indigo-500 to-red-500 my-1 min-h-[32px] opacity-20" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-500/10" />
+                        </div>
+                        <div className="flex-1 space-y-5">
+                            <div>
+                                <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">Pickup Address</p>
+                                <p className="text-sm font-bold text-[#F9FAFB] leading-snug line-clamp-1">{request.origin_address}</p>
+                            </div>
+                            <div>
+                                <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest mb-1.5">Destination</p>
+                                <p className="text-sm font-bold text-[#F9FAFB] leading-snug line-clamp-1">{request.dest_address}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats Strip */}
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="bg-[#0B1020]/50 rounded-2xl p-3 border border-[#1E293B]/50 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-indigo-400">
+                                <Navigation2 size={16} />
+                            </div>
+                            <div>
+                                <p className="text-[14px] font-black text-[#F9FAFB]">{distanceKm} km</p>
+                                <p className="text-[9px] font-bold text-[#6B7280] uppercase tracking-widest">Road Dist.</p>
+                            </div>
+                        </div>
+                        <div className="bg-[#0B1020]/50 rounded-2xl p-3 border border-[#1E293B]/50 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-indigo-400">
+                                <Clock size={16} />
+                            </div>
+                            <div>
+                                <p className="text-[14px] font-black text-[#F9FAFB]">
+                                    {new Date(request.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                                <p className="text-[9px] font-bold text-[#6B7280] uppercase tracking-widest">Pickup Time</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => handleAction(request.id, 'reject')}
+                            className="w-12 h-12 rounded-2xl bg-[#1E293B] hover:bg-red-500/10 text-[#6B7280] hover:text-red-400 flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-red-500/20"
+                        >
+                            <X size={20} />
+                        </button>
+                        <button
+                            onClick={() => handleAction(request.id, 'approve')}
+                            className="flex-1 h-12 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 group-hover:gap-3"
+                        >
+                            Place Your Bid
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
 
 export default function DriverRequestsPage() {
     const router = useRouter();
@@ -170,122 +276,15 @@ export default function DriverRequestsPage() {
                             /* ─── Request Cards ─── */
                         ) : requests.length > 0 ? (
                             <div className="space-y-4">
-                                {requests.map((request, index) => {
-                                    const dist = calculateDistance(
-                                        { lat: request.origin_lat, lng: request.origin_lng },
-                                        { lat: request.dest_lat, lng: request.dest_lng }
-                                    ).toFixed(1);
-                                    const estimatedFare = (request.price_per_seat || 0) * (request.seats_requested || 1);
-
-                                    return (
-                                        <motion.div
-                                            key={request.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, x: -100, scale: 0.95 }}
-                                            transition={{ duration: 0.25, delay: index * 0.06 }}
-                                            layout
-                                        >
-                                            <div className="bg-[#111827] rounded-2xl border border-[#1E293B] overflow-hidden hover:border-[#374151] transition-colors group">
-                                                {/* Card Header — ID + Time + Seats */}
-                                                <div className="px-5 pt-4 pb-3 flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center">
-                                                            <Users size={14} className="text-indigo-400" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-[#F9FAFB]">
-                                                                Rider #{request.id.substring(0, 6).toUpperCase()}
-                                                            </p>
-                                                            <p className="text-[10px] text-[#6B7280]">
-                                                                {request.seats_requested} seat{request.seats_requested > 1 ? 's' : ''} requested
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-[10px] font-bold text-[#6B7280] bg-[#1E293B] px-2 py-1 rounded-lg uppercase tracking-wider">
-                                                        {getTimeAgo(request.created_at || request.start_time)}
-                                                    </span>
-                                                </div>
-
-                                                {/* Route Section */}
-                                                <div className="px-5 pb-3">
-                                                    <div className="bg-[#0B1020] rounded-xl p-3.5 border border-[#1E293B]/50">
-                                                        <div className="flex gap-3">
-                                                            {/* Route dots + line */}
-                                                            <div className="flex flex-col items-center pt-1">
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
-                                                                <div className="w-0.5 flex-1 bg-gradient-to-b from-emerald-500/40 to-red-500/40 my-1 min-h-[24px]" />
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/20" />
-                                                            </div>
-                                                            {/* Addresses */}
-                                                            <div className="flex-1 min-w-0 space-y-3">
-                                                                <div>
-                                                                    <p className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-wider mb-0.5">Pickup</p>
-                                                                    <p className="text-sm text-[#F9FAFB] font-medium truncate">{request.origin_address}</p>
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-[10px] text-red-400/80 font-bold uppercase tracking-wider mb-0.5">Drop-off</p>
-                                                                    <p className="text-sm text-[#F9FAFB] font-medium truncate">{request.dest_address}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Passenger Notes Preview */}
-                                                {request.passenger_notes && request.passenger_notes.length > 0 && (
-                                                    <div className="px-5 pb-3 space-y-1.5">
-                                                        {request.passenger_notes.map((pn, idx) => (
-                                                            <div key={idx} className="flex items-start gap-2 bg-[#1E293B]/40 rounded-xl px-3 py-2 border border-[#1E293B]/30">
-                                                                <MessageSquare size={12} className="text-indigo-400 mt-0.5 shrink-0" />
-                                                                <p className="text-xs text-[#9CA3AF] line-clamp-2 leading-relaxed">
-                                                                    <span className="font-bold text-[#F9FAFB]">{pn.passenger_name}:</span> {pn.notes}
-                                                                </p>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                {/* Meta Row — Distance, Schedule, Fare */}
-                                                <div className="px-5 pb-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                                                    <div className="flex items-center gap-1.5 bg-[#1E293B]/50 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                        <Navigation size={12} className="text-indigo-400" />
-                                                        <span className="text-[11px] font-semibold text-[#9CA3AF]">{dist} km</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 bg-[#1E293B]/50 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                        <Clock size={12} className="text-indigo-400" />
-                                                        <span className="text-[11px] font-semibold text-[#9CA3AF]">
-                                                            {new Date(request.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                    </div>
-                                                    {estimatedFare > 0 && (
-                                                        <div className="flex items-center gap-1.5 bg-emerald-500/10 rounded-lg px-2.5 py-1.5 shrink-0">
-                                                            <span className="text-[11px] font-bold text-emerald-400">₹{estimatedFare.toFixed(0)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Action Buttons */}
-                                                <div className="px-5 pb-5 flex gap-3">
-                                                    <button
-                                                        onClick={() => handleAction(request.id, 'reject')}
-                                                        className="flex-1 h-12 rounded-xl bg-[#1E293B] hover:bg-[#374151] text-[#9CA3AF] hover:text-[#F9FAFB] font-bold text-sm transition-all active:scale-[0.97] flex items-center justify-center gap-2"
-                                                    >
-                                                        <X size={16} />
-                                                        Decline
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleAction(request.id, 'approve')}
-                                                        className="flex-[2] h-12 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm transition-all active:scale-[0.97] shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
-                                                    >
-                                                        Accept & Bid
-                                                        <ChevronRight size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
+                                {requests.map((request, index) => (
+                                    <RideRequestCard
+                                        key={request.id}
+                                        request={request}
+                                        index={index}
+                                        getTimeAgo={getTimeAgo}
+                                        handleAction={handleAction}
+                                    />
+                                ))}
                             </div>
 
                             /* ─── Empty State ─── */

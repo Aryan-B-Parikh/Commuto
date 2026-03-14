@@ -428,6 +428,7 @@ def get_my_trips(
         ).first()
         
         if booking:
+            trip.booking_id = str(booking.id)
             trip.booking_total_price = float(booking.total_price)
             trip.booking_payment_status = booking.payment_status
             trip.seats_requested = booking.seats_booked

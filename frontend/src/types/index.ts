@@ -20,6 +20,7 @@ export interface User {
     totalTrips?: number;
     verified: boolean;
     joinedDate: string;
+    licensePhotoUrl?: string; // Add this field
 }
 
 // Trip type

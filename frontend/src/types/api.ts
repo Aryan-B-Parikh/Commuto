@@ -13,6 +13,7 @@ export interface BackendUser {
     total_trips?: number;
     created_at: string;
     updated_at: string;
+    license_photo_url?: string;
 }
 
 export interface RegisterRequest {
@@ -52,6 +53,7 @@ export interface UserResponse {
     today_earnings?: number;
     online_hours?: number;
     created_at: string;
+    license_photo_url?: string;
 }
 
 // Trip Types matching backend
@@ -80,6 +82,7 @@ export interface TripResponse {
     dest_lng: number;
     vehicle_details?: string;
     bid_count?: number;
+    booking_id?: string;
     booking_total_price?: number;
     booking_payment_status?: string;
     notes?: string;

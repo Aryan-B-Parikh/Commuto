@@ -6,7 +6,8 @@ import { EditProfileForm } from '../../../components/profile/EditProfileForm';
 import { UserProfile, Gender } from '../../../types/profile';
 import { useAuth } from '../../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { authAPI } from '@/services/api';
+import { authAPI, paymentMethodsAPI } from '@/services/api';
+import { PaymentMethod } from '../../../types/profile';
 
 
 export default function EditProfilePage() {
@@ -23,51 +24,68 @@ export default function EditProfilePage() {
             return;
         }
 
-        // Map User to UserProfile
-        const profileData = {
-            id: user.id || '',
-            fullName: user.name || '',
-            email: user.email || '',
-            phone: user.phone || '',
-            avatar: user.avatar || '',
-            role: role as 'passenger' | 'driver',
-            gender: 'prefer-not-to-say' as Gender,
-            dateOfBirth: '',
-            bio: '',
-            address: '',
-            emergencyContact: {
-                name: '',
-                relationship: '',
-                phone: ''
-            },
-            preferences: {
-                maxPassengers: 1,
-                routeRadius: 10,
-                isAvailable: true
-            },
-            vehicle: role === 'driver' ? {
-                type: 'Sedan',
-                model: '',
-                plateNumber: '',
-                color: '',
-                seatCapacity: 4
-            } : undefined,
-            documents: role === 'driver' ? {
-                licenseNumber: '',
-                insuranceStatus: 'active',
-                registrationUrl: ''
-            } : undefined,
-            // Passenger specific fields
-            savedPlaces: [],
-            paymentMethods: [],
-            travelPreferences: [],
-            preferredPickupLocations: [],
-            accessibilityNeeds: false
+        const loadData = async () => {
+            try {
+                const methods = await paymentMethodsAPI.getMethods();
+
+                // Map User to UserProfile
+                const profileData = {
+                    id: user.id || '',
+                    fullName: user.name || '',
+                    email: user.email || '',
+                    phone: user.phone || '',
+                    avatar: user.avatar || '',
+                    role: role as 'passenger' | 'driver',
+                    gender: 'prefer-not-to-say' as Gender,
+                    dateOfBirth: '',
+                    bio: '',
+                    address: '',
+                    emergencyContact: {
+                        name: '',
+                        relationship: '',
+                        phone: ''
+                    },
+                    preferences: {
+                        maxPassengers: 1,
+                        routeRadius: 10,
+                        isAvailable: true
+                    },
+                    vehicle: role === 'driver' ? {
+                        type: 'Sedan',
+                        model: '',
+                        plateNumber: '',
+                        color: '',
+                        seatCapacity: 4
+                    } : undefined,
+                    documents: role === 'driver' ? {
+                        licenseNumber: (user as any).license_number || '',
+                        insuranceStatus: 'active',
+                        registrationUrl: '',
+                        licensePhotoUrl: user.licensePhotoUrl || ''
+                    } : undefined,
+                    // Passenger specific fields
+                    savedPlaces: [],
+                    paymentMethods: methods.map((m: any) => ({
+                        id: m.id,
+                        type: m.type as 'card' | 'wallet' | 'upi',
+                        provider: m.provider,
+                        last4: m.last4,
+                        isDefault: m.is_default
+                    })),
+                    travelPreferences: [],
+                    preferredPickupLocations: [],
+                    accessibilityNeeds: false
+                };
+
+                setCurrentData(profileData as any);
+                setLoading(false);
+            } catch (err) {
+                console.error('Failed to load payment methods:', err);
+                setLoading(false);
+            }
         };
 
-        setCurrentData(profileData as any);
-        setLoading(false);
-
+        loadData();
     }, [user, role, authLoading, router]);
 
     const handleSave = async (newData: UserProfile) => {
@@ -76,7 +94,8 @@ export default function EditProfilePage() {
                 full_name: newData.fullName,
                 phone: newData.phone,
                 avatar_url: newData.avatar,
-                license_number: newData.role === 'driver' ? (newData as any).documents?.licenseNumber : undefined
+                license_number: newData.role === 'driver' ? (newData as any).documents?.licenseNumber : undefined,
+                license_photo_url: newData.role === 'driver' ? (newData as any).documents?.licensePhotoUrl : undefined
             });
             if (refreshUser) await refreshUser();
             setCurrentData(newData);

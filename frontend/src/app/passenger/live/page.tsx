@@ -7,12 +7,13 @@ import {
     Phone,
     MessageSquare,
     AlertTriangle,
-    X,
-    ChevronUp,
     Car,
     Clock,
     Navigation,
-    Shield
+    Shield,
+    CheckCircle2,
+    ArrowRight,
+    Navigation2
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleGuard } from '@/components/auth/RoleGuard';
@@ -22,6 +23,12 @@ import { Button } from '@/components/ui/Button';
 import { useTripWebSocket } from '@/hooks/useTripWebSocket';
 import { tripsAPI } from '@/services/api';
 import { TripResponse } from '@/types/api';
+import type { Trip } from '@/types';
+import { TripPaymentModal } from '@/components/ride/TripPaymentModal';
+import { TripReceiptCard } from '@/components/trip/TripReceiptCard';
+import { transformTripResponse } from '@/utils/tripTransformers';
+import { calculateDistance } from '@/utils/geoUtils';
+import { useRouteInfo } from '@/hooks/useRouteInfo';
 import dynamic from 'next/dynamic';
 
 const TripMap = dynamic(() => import('@/components/map/TripMap'), {
@@ -33,8 +40,42 @@ export default function PassengerLivePage() {
     const { user } = useAuth();
     const router = useRouter();
     const [trip, setTrip] = useState<TripResponse | null>(null);
+    const [transformedTrip, setTransformedTrip] = useState<Trip | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isPanelExpanded, setIsPanelExpanded] = useState(true);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [showCompletionScreen, setShowCompletionScreen] = useState(false);
+
+    const {
+        isConnected,
+        lastLocation,
+        tripStatus
+    } = useTripWebSocket(trip?.id || null);
+
+    const passengerPos = useMemo(() => {
+        if (!trip) return undefined;
+        return [Number(trip.origin_lat), Number(trip.origin_lng)] as [number, number];
+    }, [trip]);
+
+    const destinationPos = useMemo(() => {
+        if (!trip) return undefined;
+        return [Number(trip.dest_lat), Number(trip.dest_lng)] as [number, number];
+    }, [trip]);
+
+    const driverPos = useMemo(() => {
+        if (lastLocation) return [lastLocation.lat, lastLocation.lng] as [number, number];
+        return undefined;
+    }, [lastLocation]);
+
+    const targetCoords = useMemo((): [number, number] | undefined => {
+        if (!trip) return undefined;
+        const isStarted = trip.status === 'active';
+        return isStarted ? destinationPos : passengerPos;
+    }, [trip, destinationPos, passengerPos]);
+
+    const { distanceKm, duration, routeName } = useRouteInfo(
+        driverPos || passengerPos,
+        targetCoords
+    );
 
     useEffect(() => {
         const fetchActiveTrip = async () => {
@@ -56,35 +97,38 @@ export default function PassengerLivePage() {
         fetchActiveTrip();
     }, [router]);
 
-    const {
-        isConnected,
-        lastLocation,
-        tripStatus
-    } = useTripWebSocket(trip?.id || null);
+    // Re-fetch full trip data when status changes to completed
+    const refetchTrip = async () => {
+        try {
+            const trips = await tripsAPI.getMyTrips();
+            const latest = trips.find(t => t.id === trip?.id);
+            if (latest) {
+                setTrip(latest);
+                setTransformedTrip(transformTripResponse(latest));
+                return latest;
+            }
+        } catch (err) {
+            console.error('Failed to refetch trip:', err);
+        }
+        return null;
+    };
 
     useEffect(() => {
         if (tripStatus && trip && trip.status !== tripStatus) {
             setTrip({ ...trip, status: tripStatus } as TripResponse);
             if (tripStatus === 'completed') {
-                setTimeout(() => router.push('/passenger/dashboard'), 3000);
+                // Don't auto-redirect — show payment + receipt instead
+                setShowCompletionScreen(true);
+                refetchTrip().then((latestTrip) => {
+                    if (latestTrip?.booking_id && latestTrip?.booking_payment_status === 'pending') {
+                        setIsPaymentModalOpen(true);
+                    }
+                });
             }
         }
-    }, [tripStatus, trip, router]);
+    }, [tripStatus, trip]);
 
-    const passengerPos = useMemo(() => {
-        if (!trip) return undefined;
-        return [Number(trip.origin_lat), Number(trip.origin_lng)] as [number, number];
-    }, [trip]);
 
-    const destinationPos = useMemo(() => {
-        if (!trip) return undefined;
-        return [Number(trip.dest_lat), Number(trip.dest_lng)] as [number, number];
-    }, [trip]);
-
-    const driverPos = useMemo(() => {
-        if (lastLocation) return [lastLocation.lat, lastLocation.lng] as [number, number];
-        return undefined;
-    }, [lastLocation]);
 
     if (isLoading) {
         return (
@@ -149,7 +193,7 @@ export default function PassengerLivePage() {
                                 <div className="flex items-center gap-2">
                                     <div className="text-right mr-2 lg:mr-4 hidden sm:block">
                                         <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest leading-none mb-1">Estimated Arrival</p>
-                                        <p className="text-lg lg:text-xl font-black text-indigo-400 italic tracking-tight leading-none">4 mins</p>
+                                        <p className="text-lg lg:text-xl font-black text-indigo-400 italic tracking-tight leading-none">{duration}</p>
                                     </div>
                                     <Button size="sm" variant="ghost" className="rounded-xl hover:bg-indigo-500/10 px-2 h-10 w-10">
                                         <Phone size={20} className="text-indigo-400" />
@@ -209,15 +253,27 @@ export default function PassengerLivePage() {
                                                 <Navigation size={24} />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest leading-none mb-1">On Route To</p>
-                                                <p className="text-sm font-bold text-[#F9FAFB] truncate max-w-[150px]">{trip.dest_address}</p>
+                                                <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest leading-none mb-1">
+                                                    {trip.status === 'active' ? 'On Route To' : 'Meeting Point'}
+                                                </p>
+                                                <p className="text-sm font-bold text-[#F9FAFB] truncate max-w-[150px]">
+                                                    {trip.status === 'active' ? trip.dest_address : trip.origin_address}
+                                                </p>
+                                                {routeName && (
+                                                    <p className="text-[10px] text-[#6B7280] font-medium mt-1 truncate max-w-[150px]">
+                                                        {routeName}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
 
                                         <div className="flex justify-center">
-                                            <div className="px-5 lg:px-6 py-2 bg-[#1E293B] rounded-2xl text-center border border-[#374151]">
-                                                <p className="text-[9px] font-bold text-[#6B7280] uppercase tracking-[0.2em] mb-0.5">Estimated Fare</p>
-                                                <p className="text-xl font-bold text-[#F9FAFB] italic tracking-tighter">${trip.price_per_seat || '24.50'}</p>
+                                            <div className="px-5 lg:px-6 py-2 bg-[#1E293B] rounded-2xl text-center border border-[#374151] flex flex-col items-center min-w-[120px]">
+                                                <div className="flex items-center gap-1 mb-0.5">
+                                                    <Navigation2 size={10} className="text-[#6B7280]" />
+                                                    <p className="text-[9px] font-bold text-[#6B7280] uppercase tracking-[0.2em]">Distance</p>
+                                                </div>
+                                                <p className="text-xl font-bold text-[#F9FAFB] italic tracking-tighter">{distanceKm} km</p>
                                             </div>
                                         </div>
 
@@ -235,6 +291,105 @@ export default function PassengerLivePage() {
                             </Card>
                         </motion.div>
                     </div>
+
+                    {/* ── Trip Completed Overlay ── */}
+                    <AnimatePresence>
+                        {showCompletionScreen && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 z-30 bg-[#0B1020]/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 overflow-y-auto"
+                            >
+                                <motion.div
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                                    className="w-full max-w-md space-y-6"
+                                >
+                                    {/* Success Header */}
+                                    <div className="text-center">
+                                        <motion.div
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            transition={{ type: 'spring', delay: 0.1, stiffness: 200, damping: 15 }}
+                                            className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4"
+                                        >
+                                            <CheckCircle2 size={40} className="text-emerald-400" />
+                                        </motion.div>
+                                        <h2 className="text-2xl font-black text-[#F9FAFB] mb-1">Trip Completed!</h2>
+                                        <p className="text-sm text-[#6B7280]">Thank you for riding with Commuto</p>
+                                    </div>
+
+                                    {/* Payment Button (if pending) */}
+                                    {trip?.booking_id && trip?.booking_payment_status === 'pending' && (
+                                        <motion.div
+                                            initial={{ y: 20, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            transition={{ delay: 0.2 }}
+                                        >
+                                            <Card className="border-none shadow-lg p-5 text-center">
+                                                <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-3">Payment Pending</p>
+                                                <p className="text-3xl font-black text-[#F9FAFB] mb-4">₹{(trip.booking_total_price ?? trip.price_per_seat ?? 0).toFixed(0)}</p>
+                                                <button
+                                                    onClick={() => setIsPaymentModalOpen(true)}
+                                                    className="w-full h-14 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98]"
+                                                >
+                                                    Pay Now
+                                                </button>
+                                            </Card>
+                                        </motion.div>
+                                    )}
+
+                                    {/* Receipt Card (always shown on completion) */}
+                                    {transformedTrip && trip && (
+                                        <motion.div
+                                            initial={{ y: 20, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            transition={{ delay: 0.3 }}
+                                        >
+                                            <TripReceiptCard
+                                                rawTrip={trip}
+                                                trip={transformedTrip}
+                                                tripId={trip.id}
+                                                distance={distanceKm}
+                                            />
+                                        </motion.div>
+                                    )}
+
+                                    {/* Back to Dashboard */}
+                                    <motion.div
+                                        initial={{ y: 20, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.4 }}
+                                    >
+                                        <button
+                                            onClick={() => router.push('/passenger/dashboard')}
+                                            className="w-full h-14 bg-[#1E293B] hover:bg-[#374151] text-[#F9FAFB] rounded-2xl font-bold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                        >
+                                            Back to Dashboard
+                                            <ArrowRight size={16} />
+                                        </button>
+                                    </motion.div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Payment Modal */}
+                    {trip?.booking_id && (
+                        <TripPaymentModal
+                            isOpen={isPaymentModalOpen}
+                            onClose={() => setIsPaymentModalOpen(false)}
+                            tripId={trip.id}
+                            bookingId={trip.booking_id}
+                            amount={trip.booking_total_price ?? trip.price_per_seat ?? 0}
+                            tripName={trip.dest_address?.split(',')[0] || 'Destination'}
+                            onSuccess={() => {
+                                refetchTrip();
+                            }}
+                        />
+                    )}
                 </div>
             </DashboardLayout>
         </RoleGuard>

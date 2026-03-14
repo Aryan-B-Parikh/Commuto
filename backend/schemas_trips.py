@@ -71,6 +71,7 @@ class TripResponse(BaseModel):
     bid_count: int = 0
     
     # User's booking info (if applicable)
+    booking_id: Optional[str] = None
     booking_total_price: Optional[float] = None
     booking_payment_status: Optional[str] = None
     

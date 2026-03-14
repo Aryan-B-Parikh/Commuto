@@ -23,9 +23,11 @@ import type { TripResponse, BidResponse } from '@/types/api';
 import type { Trip } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 import { useSocketEvent } from '@/hooks/useWebSocket';
+import { useRouteInfo } from '@/hooks/useRouteInfo';
 import dynamic from 'next/dynamic';
 import { TripReceiptCard } from '@/components/trip/TripReceiptCard';
 import { BiddingSection } from '@/components/trip/BiddingSection';
+import { TripPaymentModal } from '@/components/ride/TripPaymentModal';
 
 const MapWidget = dynamic(
     () => import('@/components/map/MapWidget').then(mod => mod.MapWidget),
@@ -41,6 +43,7 @@ export default function PassengerTripDetailsPage() {
     const [rawTrip, setRawTrip] = useState<TripResponse | null>(null);
     const [bids, setBids] = useState<BidResponse[]>([]);
     const [isAccepting, setIsAccepting] = useState<string | null>(null);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const tripId = params.id as string;
 
@@ -80,6 +83,37 @@ export default function PassengerTripDetailsPage() {
         }
     };
 
+    // Poll for trip status changes (e.g. driver completes the trip)
+    useEffect(() => {
+        if (!tripId || !rawTrip) return;
+        // Only poll if trip is active (not yet completed/cancelled)
+        if (['completed', 'cancelled'].includes(rawTrip.status)) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const allTrips = await tripsAPI.getMyTrips();
+                const latest = allTrips.find(t => t.id === tripId);
+                if (latest && latest.status !== rawTrip.status) {
+                    setRawTrip(latest);
+                    setTrip(transformTripResponse(latest));
+                }
+            } catch { /* silent */ }
+        }, 5000); // Poll every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [tripId, rawTrip?.status]);
+
+    // Auto-open payment modal when trip becomes completed with pending payment
+    useEffect(() => {
+        if (
+            rawTrip?.status === 'completed' &&
+            rawTrip?.booking_payment_status === 'pending' &&
+            rawTrip?.booking_id
+        ) {
+            setIsPaymentModalOpen(true);
+        }
+    }, [rawTrip?.status, rawTrip?.booking_payment_status]);
+
     useSocketEvent('new_bid', (data: any) => {
         console.log('New bid received:', data);
         setBids(prev => {
@@ -103,14 +137,6 @@ export default function PassengerTripDetailsPage() {
         }
     };
 
-    const distance = useMemo(() => {
-        if (!rawTrip) return '0.0';
-        return calculateDistance(
-            { lat: rawTrip.origin_lat, lng: rawTrip.origin_lng },
-            { lat: rawTrip.dest_lat, lng: rawTrip.dest_lng }
-        ).toFixed(1);
-    }, [rawTrip]);
-
     const passengerPos = useMemo(() => {
         if (!rawTrip) return undefined;
         return [Number(rawTrip.origin_lat), Number(rawTrip.origin_lng)] as [number, number];
@@ -120,6 +146,11 @@ export default function PassengerTripDetailsPage() {
         if (!rawTrip) return undefined;
         return [Number(rawTrip.dest_lat), Number(rawTrip.dest_lng)] as [number, number];
     }, [rawTrip]);
+
+    const { distanceKm, duration, routeName } = useRouteInfo(
+        passengerPos,
+        destinationPos
+    );
 
     const statusConfig: Record<string, { bg: string, text: string, label: string, dot: string }> = {
         pending: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Awaiting Bids', dot: 'bg-amber-500' },
@@ -231,7 +262,7 @@ export default function PassengerTripDetailsPage() {
                                             <Navigation size={14} className="text-indigo-400" />
                                             <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Distance</p>
                                         </div>
-                                        <p className="text-lg font-black text-[#F9FAFB]">{distance} km</p>
+                                        <p className="text-lg font-black text-[#F9FAFB]">{distanceKm} km</p>
                                     </div>
                                     <div className="text-center border-x border-[#1E293B]">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -305,11 +336,26 @@ export default function PassengerTripDetailsPage() {
                                     rawTrip={rawTrip}
                                     trip={trip}
                                     tripId={tripId}
-                                    distance={distance}
+                                    distance={distanceKm}
                                 />
                             )}
                         </div>
                     </div>
+
+                    {/* Auto-Payment Modal */}
+                    {rawTrip?.booking_id && (
+                        <TripPaymentModal
+                            isOpen={isPaymentModalOpen}
+                            onClose={() => setIsPaymentModalOpen(false)}
+                            tripId={tripId}
+                            bookingId={rawTrip.booking_id}
+                            amount={rawTrip.booking_total_price ?? rawTrip.price_per_seat ?? 0}
+                            tripName={rawTrip.dest_address?.split(',')[0] || 'Destination'}
+                            onSuccess={() => {
+                                fetchData(); // Refresh trip data after payment
+                            }}
+                        />
+                    )}
                 </motion.div>
             </DashboardLayout>
         </RoleGuard>
