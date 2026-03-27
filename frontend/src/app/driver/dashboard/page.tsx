@@ -61,10 +61,11 @@ export default function DriverDashboard() {
         fetchRequests();
     }, []);
 
-    const filteredRequests = requests.filter(request =>
-        request.origin_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        request.dest_address.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRequests = requests.filter(request => {
+        const originMatch = request.origin_address?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+        const destMatch = request.dest_address?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+        return originMatch || destMatch;
+    });
 
     return (
         <RoleGuard allowedRoles={['driver']}>
@@ -137,7 +138,7 @@ export default function DriverDashboard() {
 
                 {/* 3️⃣ MAP — Main Hero Section */}
                 <div className="flex-1 relative min-h-[65vh]">
-                    <MapWidget showSearch={true} />
+                    <MapWidget showSearch={true} searchValue={searchQuery} onSearchChange={setSearchQuery} />
 
                     {/* Scanning Overlay */}
                     {isOnline && (
@@ -265,21 +266,21 @@ export default function DriverDashboard() {
                         <div className="grid grid-cols-3 gap-3 mb-5">
                             <motion.div whileTap={{ scale: 0.95 }} className="bg-gradient-to-br from-indigo-500/15 to-indigo-600/5 rounded-2xl p-4 border border-indigo-500/15 text-center">
                                 <div className="w-9 h-9 rounded-xl bg-indigo-500/15 flex items-center justify-center mx-auto mb-2">
-                                    <DollarSign size={18} className="text-indigo-400" />
+                                    <DollarSign size={16} className="text-indigo-400" />
                                 </div>
                                 <p className="text-xl font-black text-foreground leading-none">{formatCurrency(earnings?.this_month || 0)}</p>
                                 <p className="text-[9px] text-muted-foreground/60 uppercase tracking-wider mt-1.5 font-bold">This Month</p>
                             </motion.div>
                             <motion.div whileTap={{ scale: 0.95 }} className="bg-gradient-to-br from-blue-500/15 to-blue-600/5 rounded-2xl p-4 border border-blue-500/15 text-center">
                                 <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center mx-auto mb-2">
-                                    <Car size={18} className="text-blue-400" />
+                                    <Car size={16} className="text-blue-400" />
                                 </div>
                                 <p className="text-xl font-black text-foreground leading-none">{earnings?.total_trips || 0}</p>
                                 <p className="text-[9px] text-muted-foreground/60 uppercase tracking-wider mt-1.5 font-bold">Total Trips</p>
                             </motion.div>
                             <motion.div whileTap={{ scale: 0.95 }} className="bg-gradient-to-br from-amber-500/15 to-amber-600/5 rounded-2xl p-4 border border-amber-500/15 text-center">
                                 <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center mx-auto mb-2">
-                                    <Star size={18} className="text-amber-400" />
+                                    <Star size={16} className="text-amber-400" />
                                 </div>
                                 <p className="text-xl font-black text-foreground leading-none">{formatCurrency(earnings?.avg_per_trip || 0)}</p>
                                 <p className="text-[9px] text-muted-foreground/60 uppercase tracking-wider mt-1.5 font-bold">Avg / Trip</p>
@@ -323,7 +324,7 @@ export default function DriverDashboard() {
                             value={formatCurrency(earnings?.today || 0)}
                             trend={(earnings?.today ?? 0) > 0 ? "Active today" : "No earnings yet"}
                             trendUp={(earnings?.today ?? 0) > 0}
-                            icon={<span className="text-2xl">💰</span>}
+                            icon={<span className="text-xl">💰</span>}
                             color="indigo"
                         />
                         <StatCard
@@ -331,14 +332,14 @@ export default function DriverDashboard() {
                             value={(earnings?.total_trips || 0).toString()}
                             trend="Lifetime trips"
                             trendUp={true}
-                            icon={<span className="text-2xl">🚗</span>}
+                            icon={<span className="text-xl">🚗</span>}
                             color="blue"
                         />
                         <StatCard
                             label="This Month"
                             value={formatCurrency(earnings?.this_month || 0)}
                             trend="Monthly revenue"
-                            icon={<span className="text-2xl">📊</span>}
+                            icon={<span className="text-xl">📊</span>}
                             color="purple"
                         />
                         <StatCard
@@ -346,7 +347,7 @@ export default function DriverDashboard() {
                             value={formatCurrency(earnings?.avg_per_trip || 0)}
                             trend={(earnings?.avg_per_trip ?? 0) > 0 ? "Per ride average" : "Complete trips to see"}
                             trendUp={(earnings?.avg_per_trip ?? 0) > 0}
-                            icon={<span className="text-2xl">⭐</span>}
+                            icon={<span className="text-xl">⭐</span>}
                             color="orange"
                         />
                     </div>
@@ -365,7 +366,7 @@ export default function DriverDashboard() {
                                 </div>
                             </div>
 
-                            <MapWidget showSearch={true} />
+                            <MapWidget showSearch={true} searchValue={searchQuery} onSearchChange={setSearchQuery} />
 
                             {/* "Scan for Riders" Overlay */}
                             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000]">

@@ -113,7 +113,7 @@ def get_driver_earnings(
 async def create_shared_ride(
     request: Request,
     trip_data: trip_schemas.SharedTripCreate,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
     """Create a public shared ride that others can join"""
@@ -272,7 +272,7 @@ class JoinRideBody(BaseModel):
 async def join_ride(
     trip_id: UUID,
     body: Optional[JoinRideBody] = None,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
     """Join a public shared ride"""
@@ -348,7 +348,7 @@ async def join_ride(
 @router.post("/{trip_id}/leave", status_code=status.HTTP_200_OK)
 async def leave_ride(
     trip_id: UUID,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
     """Leave a joined shared ride"""
@@ -729,7 +729,7 @@ def create_trip_payment_order(
     request: Request,
     trip_id: UUID,
     booking_id: UUID,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
     """Create a Razorpay order for a specific trip booking"""
@@ -798,7 +798,7 @@ def create_trip_payment_order(
 def verify_trip_payment(
     request: Request,
     payment_data: schemas.TripPaymentVerifyRequest,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
     """Verify Razorpay payment for a trip and credit the driver"""
@@ -888,7 +888,7 @@ def rate_driver(
     request: Request,
     trip_id: UUID,
     rating_data: schemas.DriverRatingRequest,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
     """Submit a rating for the driver after trip completion."""

@@ -76,20 +76,20 @@ export function Sidebar({
     const { user } = useAuth();
 
     const passengerLinks = [
-        { label: 'Overview', href: '/passenger/dashboard', icon: <LayoutDashboard size={22} strokeWidth={2.5} /> },
-        { label: 'Book a Ride', href: '/passenger/ride-sharing', icon: <Car size={22} strokeWidth={2.5} /> },
-        { label: 'My Trips', href: '/passenger/history', icon: <Clock size={22} strokeWidth={2.5} /> },
-        { label: 'Active Trips', href: '/passenger/live', icon: <MapPin size={22} strokeWidth={2.5} /> },
-        { label: 'Settings', href: '/profile', icon: <Settings size={22} strokeWidth={2.5} /> },
+        { label: 'Overview', href: '/passenger/dashboard', icon: <LayoutDashboard size={18} strokeWidth={2} /> },
+        { label: 'Book a Ride', href: '/passenger/ride-sharing', icon: <Car size={18} strokeWidth={2} /> },
+        { label: 'My Trips', href: '/passenger/history', icon: <Clock size={18} strokeWidth={2} /> },
+        { label: 'Active Trips', href: '/passenger/live', icon: <MapPin size={18} strokeWidth={2} /> },
+        { label: 'Settings', href: '/profile', icon: <Settings size={18} strokeWidth={2} /> },
     ];
 
     const driverLinks = [
-        { label: 'Overview', href: '/driver/dashboard', icon: <LayoutDashboard size={22} strokeWidth={2.5} /> },
-        { label: 'Route Requests', href: '/driver/requests', icon: <Mail size={22} strokeWidth={2.5} /> },
-        { label: 'My Routes', href: '/driver/routes', icon: <Map size={22} strokeWidth={2.5} /> },
-        { label: 'Live Trip', href: '/driver/live', icon: <Navigation size={22} strokeWidth={2.5} /> },
-        { label: 'Earnings', href: '/driver/earnings', icon: <CircleDollarSign size={22} strokeWidth={2.5} /> },
-        { label: 'Settings', href: '/profile', icon: <Settings size={22} strokeWidth={2.5} /> },
+        { label: 'Overview', href: '/driver/dashboard', icon: <LayoutDashboard size={18} strokeWidth={2} /> },
+        { label: 'Route Requests', href: '/driver/requests', icon: <Mail size={18} strokeWidth={2} /> },
+        { label: 'My Routes', href: '/driver/routes', icon: <Map size={18} strokeWidth={2} /> },
+        { label: 'Live Trip', href: '/driver/live', icon: <Navigation size={18} strokeWidth={2} /> },
+        { label: 'Earnings', href: '/driver/earnings', icon: <CircleDollarSign size={18} strokeWidth={2} /> },
+        { label: 'Settings', href: '/profile', icon: <Settings size={18} strokeWidth={2} /> },
     ];
 
     const links = userType === 'driver' ? driverLinks : passengerLinks;
@@ -105,7 +105,7 @@ export function Sidebar({
                     onClick={onToggleMini}
                     className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
                 >
-                    <Car size={24} strokeWidth={2.5} />
+                    <Car size={20} strokeWidth={2} />
                 </div>
                 {!isMini && (
                     <motion.div
@@ -148,7 +148,7 @@ export function Sidebar({
                         </div>
                     ) : (
                         <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-sm group-hover:bg-indigo-500 group-hover:text-white transition-all">
-                            {user?.name?.charAt(0).toUpperCase() || <User size={18} />}
+                            {user?.name?.charAt(0).toUpperCase() || <User size={16} />}
                         </div>
                     )}
                     {!isMini && (
@@ -167,7 +167,7 @@ export function Sidebar({
                             className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                             onClick={() => {/* logout logic will be handled by parent/useAuth */ }}
                         >
-                            <LogOut size={18} />
+                            <LogOut size={16} />
                         </button>
                     )}
                 </div>
