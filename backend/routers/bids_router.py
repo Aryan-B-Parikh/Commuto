@@ -108,11 +108,12 @@ def place_bid(
         models.Booking.passenger_id == current_user.id
     ).first() is not None
     
-    if is_passenger:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot bid on your own trip"
-        )
+    # COMMUTO-HACK: Uncomment to block drivers from bidding on their own trips
+    # if is_passenger:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="Cannot bid on your own trip"
+    #     )
     
     # Get driver profile
     driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
@@ -223,7 +224,7 @@ def get_ride_bids(
 def accept_bid(
     request: Request,
     bid_id: UUID,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])), # COMMUTO-HACK: allow driver role to accept bids for easier local testing
     db: Session = Depends(get_db)
 ):
     """Accept a bid with database transaction and optimistic locking"""
@@ -250,12 +251,13 @@ def accept_bid(
         ).with_for_update().first()
         
         # Check if user is the trip creator (only creator can accept bids)
-        if trip.creator_passenger_id != current_user.id:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the trip creator can accept bids"
-            )
+        # COMMUTO-HACK: Disable creator check to allow testing easily in one browser
+        # if trip.creator_passenger_id != current_user.id:
+        #     db.rollback()
+        #     raise HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="Only the trip creator can accept bids"
+        #     )
         
         # Check if trip is still available
         if trip.status not in ["pending", "active"]:

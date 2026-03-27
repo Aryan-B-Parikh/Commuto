@@ -11,6 +11,7 @@ import { TripResponse } from '@/types/api';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { BidModal } from '@/components/ride/BidModal';
 import { calculateDistance } from '@/utils/geoUtils';
+import { useSocketEvent } from '@/hooks/useWebSocket';
 import {
     MapPin,
     Navigation,
@@ -160,6 +161,12 @@ export default function DriverRequestsPage() {
     useEffect(() => {
         fetchRequests();
     }, []);
+
+    useSocketEvent('new_ride_available', (data: any) => {
+        console.log('New ride available via websocket:', data);
+        showToast('info', 'New ride request available!');
+        fetchRequests();
+    });
 
     const fetchRequests = async () => {
         try {

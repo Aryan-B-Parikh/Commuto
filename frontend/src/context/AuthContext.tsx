@@ -32,12 +32,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [role, setRoleState] = useState<UserRole>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const getPersistedRole = (): UserRole => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        const savedRole = localStorage.getItem('commuto_role');
+        if (savedRole === 'driver' || savedRole === 'passenger') {
+            return savedRole;
+        }
+
+        return null;
+    };
+
     // Load user from token on mount
     useEffect(() => {
         const loadUser = async () => {
             if (typeof window !== 'undefined') {
                 const token = localStorage.getItem('auth_token');
-                const savedRole = localStorage.getItem('commuto_role') as UserRole;
+                const savedRole = getPersistedRole();
 
                 if (savedRole) setRoleState(savedRole);
 
@@ -46,7 +59,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                         const userData = await authAPI.getCurrentUser();
                         const frontendUser = transformBackendUser(userData);
                         setUser(frontendUser);
-                        setRoleState(userData.role as UserRole);
+                        const effectiveRole = savedRole ?? (userData.role as UserRole);
+                        setRoleState(effectiveRole);
+                        if (effectiveRole) {
+                            localStorage.setItem('commuto_role', effectiveRole);
+                        }
                     } catch (error: any) {
                         // Only log real errors, not expected 401s (expired session)
                         if (error.response?.status !== 401) {
@@ -142,7 +159,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const userData = await authAPI.getCurrentUser();
             const frontendUser = transformBackendUser(userData);
             setUser(frontendUser);
-            setRole(userData.role as UserRole);
+            const savedRole = getPersistedRole();
+            setRole(savedRole ?? (userData.role as UserRole));
         } catch (error) {
             console.error('Failed to refresh user:', error);
         }
@@ -153,6 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
         if (typeof window !== 'undefined') {
             localStorage.removeItem('auth_token');
+            localStorage.removeItem('commuto_role');
         }
     }, []);
 

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -14,8 +14,9 @@ import {
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
-import { Card } from '@/components/ui/Card';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+import { Card } from '@/components/ui/Card';
 import { tripsAPI, bidsAPI } from '@/services/api';
 import { transformTripResponse } from '@/utils/tripTransformers';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -38,6 +39,7 @@ export default function PassengerTripDetailsPage() {
     const router = useRouter();
     const params = useParams();
     const { showToast } = useToast() as any;
+    const { user } = useAuth() as any;
     const [isLoading, setIsLoading] = useState(true);
     const [trip, setTrip] = useState<Trip | null>(null);
     const [rawTrip, setRawTrip] = useState<TripResponse | null>(null);
@@ -322,7 +324,7 @@ export default function PassengerTripDetailsPage() {
                             )}
 
                             {/* Driver Bids */}
-                            {bids.length > 0 && rawTrip?.status === 'pending' && (
+                            {bids.length > 0 && rawTrip?.status === 'pending' && rawTrip?.creator_passenger_id === user?.id && (
                                 <BiddingSection
                                     bids={bids}
                                     isAccepting={isAccepting}
