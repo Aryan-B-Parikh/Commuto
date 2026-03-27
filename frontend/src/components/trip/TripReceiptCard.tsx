@@ -60,17 +60,17 @@ export function TripReceiptCard({ rawTrip, trip, tripId, distance }: Props) {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #fff; color: #111; padding: 40px; max-width: 600px; margin: 0 auto; }
         .header { text-align: center; margin-bottom: 32px; border-bottom: 2px solid #6366F1; padding-bottom: 20px; }
-        .header h1 { font-size: 28px; font-weight: 800; color: #6366F1; letter-spacing: -0.5px; }
+        .header h1 { font-size: 28px; font-weight: bold; color: #6366F1; letter-spacing: -0.5px; }
         .header p { font-size: 12px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 2px; }
         .section { margin-bottom: 24px; }
-        .section-title { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+        .section-title { font-size: 10px; font-weight: normal; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
         .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
         .row:last-child { border-bottom: none; }
-        .row .label { font-size: 13px; color: #666; font-weight: 600; }
-        .row .value { font-size: 13px; color: #111; font-weight: 700; text-align: right; max-width: 60%; }
+        .row .label { font-size: 13px; color: #666; font-weight: normal; }
+        .row .value { font-size: 13px; color: #111; font-weight: bold; text-align: right; max-width: 60%; }
         .total-row { background: #f8f9fa; border-radius: 12px; padding: 16px 20px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
-        .total-row .label { font-size: 16px; font-weight: 800; color: #111; text-transform: uppercase; letter-spacing: 1px; }
-        .total-row .value { font-size: 24px; font-weight: 900; color: #059669; }
+        .total-row .label { font-size: 16px; font-weight: normal; color: #111; text-transform: uppercase; letter-spacing: 1px; }
+        .total-row .value { font-size: 24px; font-weight: bold; color: #059669; }
         .footer { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
         .footer p { font-size: 11px; color: #999; }
         .route-card { background: #f8f9fa; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
@@ -79,8 +79,8 @@ export function TripReceiptCard({ rawTrip, trip, tripId, distance }: Props) {
         .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
         .dot.pickup { background: #6366F1; }
         .dot.dest { background: #EF4444; }
-        .route-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-        .route-address { font-size: 13px; color: #111; font-weight: 600; margin-top: 2px; }
+        .route-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: normal; }
+        .route-address { font-size: 13px; color: #111; font-weight: bold; margin-top: 2px; }
         .line { width: 2px; height: 20px; background: #ddd; margin-left: 4px; }
         @media print { body { padding: 20px; } }
     </style>

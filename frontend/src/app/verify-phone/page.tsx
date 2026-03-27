@@ -101,7 +101,7 @@ export default function VerifyPhonePage() {
                     </>
                 ) : (
                     <>
-                        <h1 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Verify your phone</h1>
+                        <h2 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Verify your phone</h2>
                         <p className="text-[#9CA3AF] text-center mb-6">
                             We sent a 6-digit OTP to{' '}
                             <span className="text-[#F9FAFB] font-semibold">

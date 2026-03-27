@@ -67,7 +67,7 @@ export function DriverBottomNav() {
                                     }`}
                             >
                                 <Icon
-                                    size={isCenter ? 24 : 22}
+                                    size={isCenter ? 22 : 18}
                                     strokeWidth={1.8}
                                     className={`${isActive
                                             ? isCenter

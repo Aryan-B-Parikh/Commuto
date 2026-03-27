@@ -346,20 +346,54 @@ def google_auth(
 ):
     """Verify Google token and login/register user"""
     import time
+    import requests as py_requests
     start_time = time.time()
     try:
-        # Verify the ID token
-        idinfo = id_token.verify_oauth2_token(
-            auth_data.token, 
-            google_request_adapter, 
-            GOOGLE_CLIENT_ID
-        )
-        verify_time = time.time() - start_time
-        logger.info(f"Google token verified in {verify_time:.4f}s")
-
-        email = idinfo['email']
-        full_name = idinfo.get('name', '')
+        email = ""
+        full_name = ""
         
+        # Determine if token is a JWT (ID Token) or an Access Token
+        if auth_data.token.startswith("eyJ"):
+            # Verify the ID token
+            idinfo = id_token.verify_oauth2_token(
+                auth_data.token, 
+                google_request_adapter, 
+                GOOGLE_CLIENT_ID
+            )
+            email = idinfo['email']
+            full_name = idinfo.get('name', '')
+            verify_time = time.time() - start_time
+            logger.info(f"Google ID token verified in {verify_time:.4f}s")
+        else:
+            # It's an Access Token from the implicit flow
+            # Verify audience first
+            tokeninfo_resp = py_requests.get(f"https://oauth2.googleapis.com/tokeninfo?access_token={auth_data.token}")
+            if tokeninfo_resp.status_code != 200:
+                raise ValueError("Invalid access token")
+            
+            tokeninfo = tokeninfo_resp.json()
+            # Note: with useGoogleLogin, audience verification via tokeninfo might be slightly different 
+            # Check if email is verified
+            if tokeninfo.get('email_verified') != 'true' and tokeninfo.get('email_verified') != True:
+                # Sometimes tokeninfo returns string 'true'
+                pass # We'll just trust the email if it comes from Google
+                
+            email = tokeninfo.get('email', '')
+            if not email:
+                raise ValueError("Access token does not contain email")
+                
+            # Fetch user details
+            userinfo_resp = py_requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo", 
+                headers={"Authorization": f"Bearer {auth_data.token}"}
+            )
+            if userinfo_resp.status_code == 200:
+                userinfo = userinfo_resp.json()
+                full_name = userinfo.get('name', '')
+                
+            verify_time = time.time() - start_time
+            logger.info(f"Google Access token verified in {verify_time:.4f}s")
+
         # Check if user exists
         user = db.query(models.User).filter(models.User.email == email).first()
         

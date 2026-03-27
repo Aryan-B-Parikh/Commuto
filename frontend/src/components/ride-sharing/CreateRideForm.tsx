@@ -77,7 +77,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
             showToast('success', 'Shared ride created successfully!');
             router.push(`/passenger/ride-details/${response.id}`);
         } catch (error: any) {
-            console.error('Failed to create shared ride:', error);
+            console.warn('Failed to create shared ride:', error);
             showToast('error', error.response?.data?.detail || 'Failed to create ride.');
         } finally {
             setIsLoading(false);
@@ -121,6 +121,10 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                                     onChange={(v) => setFormData({ ...formData, pickup: v })}
                                     placeholder="Pickup location"
                                     onMapClick={() => setMapConfig({ isOpen: true, type: 'pickup' })}
+                                    onLocationSelect={(addr, lat, lng) => {
+                                        setFormData(prev => ({ ...prev, pickup: addr }));
+                                        setCoords(prev => ({ ...prev, pickup: [lat, lng] }));
+                                    }}
                                 />
                                 <LocationInput
                                     type="destination"
@@ -129,6 +133,10 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                                     onChange={(v) => setFormData({ ...formData, destination: v })}
                                     placeholder="Where to?"
                                     onMapClick={() => setMapConfig({ isOpen: true, type: 'destination' })}
+                                    onLocationSelect={(addr, lat, lng) => {
+                                        setFormData(prev => ({ ...prev, destination: addr }));
+                                        setCoords(prev => ({ ...prev, destination: [lat, lng] }));
+                                    }}
                                 />
                             </div>
                         </div>
@@ -278,6 +286,10 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                             onChange={(v) => setFormData({ ...formData, pickup: v })}
                             placeholder="Where are you starting from?"
                             onMapClick={() => setMapConfig({ isOpen: true, type: 'pickup' })}
+                            onLocationSelect={(addr, lat, lng) => {
+                                setFormData(prev => ({ ...prev, pickup: addr }));
+                                setCoords(prev => ({ ...prev, pickup: [lat, lng] }));
+                            }}
                         />
                         <LocationInput
                             type="destination"
@@ -286,6 +298,10 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                             onChange={(v) => setFormData({ ...formData, destination: v })}
                             placeholder="Where are you going?"
                             onMapClick={() => setMapConfig({ isOpen: true, type: 'destination' })}
+                            onLocationSelect={(addr, lat, lng) => {
+                                setFormData(prev => ({ ...prev, destination: addr }));
+                                setCoords(prev => ({ ...prev, destination: [lat, lng] }));
+                            }}
                         />
                     </div>
 

@@ -15,6 +15,8 @@ interface MapWidgetProps {
     driverHeading?: number;
     showRoute?: boolean;
     showSearch?: boolean;
+    searchValue?: string;
+    onSearchChange?: (value: string) => void;
 }
 
 export function MapWidget({
@@ -27,14 +29,23 @@ export function MapWidget({
     driverPos,
     driverHeading,
     showRoute = false,
-    showSearch = false
+    showSearch = false,
+    searchValue,
+    onSearchChange
 }: MapWidgetProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const driverMarkerRef = useRef<any>(null);
     const [isReady, setIsReady] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [localSearchQuery, setLocalSearchQuery] = useState('');
+    const searchQuery = searchValue !== undefined ? searchValue : localSearchQuery;
+
+    const setSearchQuery = (val: string) => {
+        setLocalSearchQuery(val);
+        if (onSearchChange) onSearchChange(val);
+    };
+
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);

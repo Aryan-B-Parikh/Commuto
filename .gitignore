@@ -74,3 +74,6 @@ htmlcov/
 
 #MDs
 tracker.md
+
+# AI Agent config (local only)
+.agent/

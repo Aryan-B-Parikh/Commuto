@@ -96,7 +96,7 @@ function VerifyEmailContent() {
                     </>
                 ) : (
                     <>
-                        <h1 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Verify your email</h1>
+                        <h2 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Verify your email</h2>
                         <p className="text-[#9CA3AF] text-center mb-6">
                             We sent a verification link to your email. Click it or paste the token below.
                         </p>

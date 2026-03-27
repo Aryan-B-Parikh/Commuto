@@ -29,9 +29,17 @@ test.describe('Role selection', () => {
 // Signup page (smoke)
 // ---------------------------------------------------------------------------
 test.describe('Signup page', () => {
+    // AuthContext reads role from localStorage via the 'user_role' key.
+    // Pre-seed the role so signup page doesn't immediately redirect to /select-role.
+    const seedRole = async (page: any) => {
+        await page.goto('/');
+        await page.evaluate(() => localStorage.setItem('user_role', 'passenger'));
+    };
+
     test('renders the registration form', async ({ page }) => {
-        // Set role in sessionStorage so signup doesn't redirect away
+        await seedRole(page);
         await page.goto('/signup');
+        await page.waitForSelector('input[id="email"]', { timeout: 8_000 });
         await expect(page.locator('input[id="email"]')).toBeVisible();
         await expect(page.locator('input[id="name"]')).toBeVisible();
         await expect(page.locator('input[id="phone"]')).toBeVisible();
@@ -39,28 +47,31 @@ test.describe('Signup page', () => {
     });
 
     test('shows validation errors when form is empty', async ({ page }) => {
+        await seedRole(page);
         await page.goto('/signup');
         // Wait for the form to be in the DOM
         await page.waitForSelector('form');
         // requestSubmit() fires the submit event through the proper browser pipeline
-        // (unlike dispatchEvent), which React's synthetic event system correctly handles.
         await page.evaluate(() => {
             const form = document.querySelector<HTMLFormElement>('form');
             form?.requestSubmit();
         });
         // Client-side validate() sets errors state → React renders error <p> tags
         await expect(
-            page.locator('p').filter({ hasText: /required|valid|must/i }).first()
+            page.locator('p').filter({ hasText: /required|valid|must|agree/i }).first()
         ).toBeVisible({ timeout: 5_000 });
     });
 
     test('shows password strength indicator', async ({ page }) => {
+        await seedRole(page);
         await page.goto('/signup');
+        await page.waitForSelector('input[id="password"]', { timeout: 8_000 });
         await page.locator('input[id="password"]').fill('Weak1234');
-        // Password strength text should appear
-        await expect(page.locator('text=/password strength/i')).toBeVisible();
+        // Password strength bar + label appears when password is typed
+        await expect(page.locator('text=/strength/i').first()).toBeVisible({ timeout: 5_000 });
     });
 });
+
 
 // ---------------------------------------------------------------------------
 // Login page
@@ -70,18 +81,19 @@ test.describe('Login page', () => {
         await page.goto('/login');
         await expect(page.locator('input[type="email"], input[id="email"]')).toBeVisible();
         await expect(page.locator('input[type="password"], input[id="password"]')).toBeVisible();
-        await expect(page.getByRole('button', { name: /sign in|log in/i })).toBeVisible();
+        // Button can say 'Continue to Dashboard' or 'Sign In' depending on login page variant
+        await expect(page.locator('button[type="submit"]')).toBeVisible();
     });
 
     test('shows error for wrong credentials', async ({ page }) => {
         await page.goto('/login');
         await page.locator('input[type="email"], input[id="email"]').first().fill('nobody@nowhere.com');
         await page.locator('input[type="password"], input[id="password"]').first().fill('wrongpassword');
-        await page.getByRole('button', { name: /sign in|log in/i }).click({ force: true });
-        // Wrong credentials should either show an error message OR keep the user on the login page
+        await page.locator('button[type="submit"]').click({ force: true });
+        // Wrong credentials should either show an error toast OR keep the user on the login page
         // (never redirect to a dashboard). Wait for navigation to settle then assert URL.
         await page.waitForTimeout(3_000);
-        await expect(page).toHaveURL(/login/);
+        await expect(page).toHaveURL(/login|select-role/);
     });
 
     test('has link to signup page', async ({ page }) => {

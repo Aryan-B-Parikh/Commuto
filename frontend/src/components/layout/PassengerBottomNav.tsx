@@ -76,7 +76,7 @@ export function PassengerBottomNav() {
                                 {/* Icon with background glow on active */}
                                 <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${isActive ? 'bg-indigo-500/15' : ''}`}>
                                     <Icon
-                                        size={22}
+                                        size={18}
                                         strokeWidth={isActive ? 2.5 : 1.8}
                                         className={`transition-colors duration-200 ${isActive ? 'text-indigo-400' : 'text-[#4B5563]'}`}
                                     />

@@ -40,7 +40,7 @@ api.interceptors.response.use(
 
         // Detailed logging for non-401 errors
         if (error.response?.status !== 401) {
-            console.error('API Error:', {
+            console.warn('API Warning/Bad Request:', {
                 status: error.response?.status,
                 data: error.response?.data,
                 message: error.message,
