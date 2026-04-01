@@ -8,6 +8,7 @@ export function useTripWebSocket(tripId: string | null) {
     const [newPassenger, setNewPassenger] = useState<any | null>(null);
     const socketRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const reconnectAttemptRef = useRef(0);
 
     const connect = useCallback(() => {
         if (!tripId) return;
@@ -16,16 +17,36 @@ export function useTripWebSocket(tripId: string | null) {
         const token = localStorage.getItem('auth_token');
         if (!token) return;
 
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const wsUrl = (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000').replace('http', 'ws');
         const ws = new WebSocket(`${wsUrl}/ws/trips/${tripId}?token=${token}`);
 
         ws.onopen = () => {
             console.log(`Trip WS Connected: ${tripId}`);
             setIsConnected(true);
+            reconnectAttemptRef.current = 0;
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
                 reconnectTimeoutRef.current = null;
             }
+
+            // Re-sync latest location snapshot after reconnect.
+            void fetch(`${apiUrl}/rides/${tripId}/locations`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+                .then(async (response) => {
+                    if (!response.ok) return;
+                    const history = await response.json();
+                    if (!Array.isArray(history) || history.length === 0) return;
+
+                    const latest = history[0];
+                    if (typeof latest.latitude === 'number' && typeof latest.longitude === 'number') {
+                        setLastLocation({ lat: latest.latitude, lng: latest.longitude });
+                    }
+                })
+                .catch(() => {
+                    // Best-effort resync; live websocket updates continue even if this fails.
+                });
         };
 
         ws.onmessage = (event) => {
@@ -51,12 +72,14 @@ export function useTripWebSocket(tripId: string | null) {
             setIsConnected(false);
             socketRef.current = null;
 
-            // Reconnect logic
+            // Exponential backoff reconnect logic.
             if (tripId) {
+                const delayMs = Math.min(30000, 1000 * Math.pow(2, reconnectAttemptRef.current));
+                reconnectAttemptRef.current += 1;
                 reconnectTimeoutRef.current = setTimeout(() => {
-                    console.log('Attempting Trip WS Reconnect...');
+                    console.log(`Attempting Trip WS Reconnect in ${delayMs}ms...`);
                     connect();
-                }, 3000);
+                }, delayMs);
             }
         };
 
@@ -82,6 +105,7 @@ export function useTripWebSocket(tripId: string | null) {
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
             }
+            reconnectAttemptRef.current = 0;
         };
     }, [tripId, connect]);
 

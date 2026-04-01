@@ -4,7 +4,7 @@ FastAPI-based backend for the Commuto ride-sharing application.
 
 ## Tech Stack
 - **Framework**: FastAPI
-- **Database**: PostgreSQL (Neon)
+- **Database**: Local PostgreSQL
 - **ORM**: SQLAlchemy
 - **Auth**: JWT (python-jose)
 - **WebSocket**: Native FastAPI support

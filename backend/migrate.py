@@ -1,6 +1,6 @@
 """
 Migration script: Add new columns to existing tables for Tiers 1-3.
-Run once to bring the NeonDB schema up to date with models.py.
+Run once to bring the local PostgreSQL schema up to date with models.py.
 """
 from database import engine
 from sqlalchemy import text

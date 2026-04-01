@@ -131,7 +131,7 @@ def test_user_registration():
         print("✅ ALL TESTS PASSED!")
         print("="*60)
         print("\n✨ User registration works correctly!")
-        print("✨ Data is being saved to the NeonDB database!")
+        print("✨ Data is being saved to the local PostgreSQL database!")
         
         return True
         

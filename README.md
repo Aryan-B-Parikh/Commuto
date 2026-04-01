@@ -13,7 +13,7 @@ This is a monorepo containing:
 
 ### Backend
 - **Framework**: FastAPI 0.115.0
-- **Database**: PostgreSQL (via Neon)
+- **Database**: Local PostgreSQL
 - **ORM**: SQLAlchemy 2.0
 - **Auth**: JWT tokens (python-jose) with bcrypt password hashing
 - **Rate Limiting**: SlowAPI with Redis support
@@ -58,7 +58,7 @@ commuto/
 
 - Python 3.12+
 - Node.js 20+
-- PostgreSQL database (or Neon account)
+- Local PostgreSQL database
 - Redis (optional, for distributed rate limiting)
 
 ### Backend Setup
@@ -82,7 +82,7 @@ commuto/
 
 4. Create a `.env` file in the `backend/` directory (see `.env.example`):
    ```env
-   DATABASE_URL=postgresql://user:password@host:port/database
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/commuto
    SECRET_KEY=your-secret-key-here
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -252,6 +252,18 @@ Backend tests are organized in the `tests/` directory:
 ```bash
 cd backend
 pytest tests/ -v
+```
+
+For a direct terminal end-to-end validation of critical user flows (identity, marketplace, OTP/tracking, wallet checks), run:
+
+```bash
+python verify_master_flow.py
+```
+
+Optional flags:
+
+```bash
+python verify_master_flow.py --base-url http://127.0.0.1:8000 --ws-url ws://127.0.0.1:8000 --timeout 20 --auth-delay 1.2
 ```
 
 Test coverage includes:

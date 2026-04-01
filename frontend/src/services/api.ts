@@ -224,13 +224,13 @@ export const bidsAPI = {
 
 // OTP APIs
 export const otpAPI = {
-    verifyOTP: async (tripId: string, otp: string): Promise<{ message: string }> => {
+    verifyOTP: async (tripId: string, otp: string): Promise<{ message: string; completion_otp: string }> => {
         const response = await api.post(`/rides/${tripId}/verify-otp`, { otp });
         return response.data;
     },
 
-    completeRide: async (tripId: string): Promise<{ message: string }> => {
-        const response = await api.post(`/rides/${tripId}/complete`);
+    completeRide: async (tripId: string, otp: string): Promise<{ message: string }> => {
+        const response = await api.post(`/rides/${tripId}/complete`, { otp });
         return response.data;
     },
 };

@@ -176,6 +176,10 @@ export function MapWidget({
             const response = await fetch(styleUrl);
             const style = await response.json();
 
+            if (!response.ok || !style.version) {
+                throw new Error('Invalid Ola Maps API Key or style response');
+            }
+
             if (style.layers) {
                 style.layers = style.layers.filter((l: any) => l.id !== '3d_model_data');
             }
@@ -303,9 +307,9 @@ export function MapWidget({
             });
 
             mapRef.current = map;
-        } catch (err) {
-            console.error('Ola Maps init failed:', err);
-            setError('Failed to load map. Please refresh.');
+        } catch (err: any) {
+            console.warn('Ola Maps init failed:', err.message);
+            setError(err.message === 'Invalid Ola Maps API Key or style response' ? 'Invalid Ola Maps API Key. Check .env.local' : 'Failed to load map. Please refresh.');
         }
     }, [center, zoom, interactive]);
 

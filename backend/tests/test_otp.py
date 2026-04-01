@@ -28,6 +28,7 @@ class TestOTP:
         assert data["message"] == "Ride started successfully"
         assert data["trip_id"] == trip_id
         assert "started_at" in data
+        assert "completion_otp" in data
     
     def test_verify_otp_invalid(self, client, auth_headers_passenger, auth_headers_driver, test_trip):
         """Test OTP verification with wrong OTP"""
@@ -44,7 +45,7 @@ class TestOTP:
         
         # Driver tries wrong OTP
         response = client.post(f"/rides/{trip_id}/verify-otp", json={
-            "otp": "000000"
+            "otp": "0000"
         }, headers=auth_headers_driver)
         
         assert response.status_code == 400
@@ -113,12 +114,17 @@ class TestOTP:
         otp = accept_response.json()["otp"]
         
         # Driver verifies OTP
-        client.post(f"/rides/{trip_id}/verify-otp", json={
+        start_response = client.post(f"/rides/{trip_id}/verify-otp", json={
             "otp": otp
         }, headers=auth_headers_driver)
+        completion_otp = start_response.json()["completion_otp"]
         
         # Driver completes the trip
-        response = client.post(f"/rides/{trip_id}/complete", headers=auth_headers_driver)
+        response = client.post(
+            f"/rides/{trip_id}/complete",
+            json={"otp": completion_otp},
+            headers=auth_headers_driver,
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -140,7 +146,11 @@ class TestOTP:
         client.post(f"/bids/{bid_id}/accept", headers=auth_headers_passenger)
         
         # Driver tries to complete without verifying OTP
-        response = client.post(f"/rides/{trip_id}/complete", headers=auth_headers_driver)
+        response = client.post(
+            f"/rides/{trip_id}/complete",
+            json={"otp": "1234"},
+            headers=auth_headers_driver,
+        )
         
         assert response.status_code == 400
         assert "OTP verification" in response.json()["detail"]
@@ -160,12 +170,17 @@ class TestOTP:
         otp = accept_response.json()["otp"]
         
         # Driver verifies OTP
-        client.post(f"/rides/{trip_id}/verify-otp", json={
+        start_response = client.post(f"/rides/{trip_id}/verify-otp", json={
             "otp": otp
         }, headers=auth_headers_driver)
+        completion_otp = start_response.json()["completion_otp"]
         
         # Passenger tries to complete trip
-        response = client.post(f"/rides/{trip_id}/complete", headers=auth_headers_passenger)
+        response = client.post(
+            f"/rides/{trip_id}/complete",
+            json={"otp": completion_otp},
+            headers=auth_headers_passenger,
+        )
         
         assert response.status_code == 403
 
@@ -190,7 +205,7 @@ class TestOTPRateLimiting:
         # Make 6 OTP verification attempts (limit is 5/minute)
         for i in range(6):
             response = client.post(f"/rides/{trip_id}/verify-otp", json={
-                "otp": otp if i == 0 else "000000"  # First is correct, rest are wrong
+                "otp": otp if i == 0 else "0000"  # First is correct, rest are wrong
             }, headers=auth_headers_driver)
         
         # The 6th request should be rate limited

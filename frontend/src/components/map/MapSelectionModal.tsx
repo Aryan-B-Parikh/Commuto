@@ -187,6 +187,10 @@ export function MapSelectionModal({
             const response = await fetch(styleUrl);
             const style = await response.json();
 
+            if (!response.ok || !style.version) {
+                throw new Error('Invalid Ola Maps API Key or style response');
+            }
+
             if (style.layers) {
                 style.layers = style.layers.filter((l: any) => l.id !== '3d_model_data');
             }
@@ -257,8 +261,8 @@ export function MapSelectionModal({
             });
 
             mapRef.current = map;
-        } catch (err) {
-            console.error('Ola Maps Modal init failed:', err);
+        } catch (err: any) {
+            console.warn('Ola Maps Modal init failed:', err.message);
         }
     }, [selectedPos, OLA_API_KEY]); // Added OLA_API_KEY to dependencies
 

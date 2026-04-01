@@ -9,12 +9,11 @@ For local development most features work without real credentials (the app falls
 
 | Variable | Description | Example |
 |---|---|---|
-| `DATABASE_URL` | Full connection string | `postgresql+asyncpg://user:pass@host/db` |
+| `DATABASE_URL` | Full connection string | `postgresql://user:pass@host:5432/db` |
 
 **Where to get it:**
 - Local: install PostgreSQL, create a DB, build the string yourself.
-- Cloud (recommended): [Neon](https://neon.tech) – free tier, instant provisioning.  
-  Copy the **connection string** from the Neon dashboard. Use the `asyncpg` driver variant.
+- Use a local connection string for development, e.g. `postgresql://postgres:password@localhost:5432/commuto`.
 
 ---
 
@@ -130,7 +129,7 @@ Google OAuth requires a real Client ID even in development. The `@react-oauth/go
 ### `backend/.env`
 ```env
 # Database
-DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/commuto
+DATABASE_URL=postgresql://postgres:password@localhost:5432/commuto
 
 # App
 SECRET_KEY=replace_with_32_char_random_hex

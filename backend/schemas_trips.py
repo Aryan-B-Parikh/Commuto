@@ -166,6 +166,7 @@ class OTPVerifyResponse(BaseModel):
     message: str
     trip_id: str
     started_at: datetime
+    completion_otp: str
 
 
 class TripCompleteResponse(BaseModel):

@@ -71,6 +71,10 @@ export default function TripMap({
                 const response = await fetch(styleUrl);
                 const style = await response.json();
 
+                if (!response.ok || !style.version) {
+                    throw new Error('Invalid Ola Maps API Key or style response');
+                }
+
                 if (style.layers) {
                     style.layers = style.layers.filter((l: any) => l.id !== '3d_model_data');
                 }
@@ -115,8 +119,8 @@ export default function TripMap({
                 });
 
                 mapRef.current = map;
-            } catch (err) {
-                console.error('Ola Trip Map fail:', err);
+            } catch (err: any) {
+                console.warn('Ola Trip Map fail:', err.message);
             }
         };
 

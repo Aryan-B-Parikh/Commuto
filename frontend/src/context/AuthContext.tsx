@@ -14,7 +14,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<User | null>;
-    register: (data: RegisterRequest) => Promise<User | null>;
+    register: (data: RegisterRequest) => Promise<User>;
     googleLogin: (credential: string, role?: string) => Promise<User | null>;
     logout: () => void;
     setRole: (role: UserRole) => void;
@@ -141,14 +141,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, [setRole]);
 
     // Real registration with backend API
-    const register = useCallback(async (data: RegisterRequest): Promise<User | null> => {
+    const register = useCallback(async (data: RegisterRequest): Promise<User> => {
         setIsLoading(true);
         try {
-            const userData = await authAPI.register(data);
-            const frontendUser = transformBackendUser(userData);
+            await authAPI.register(data);
 
             // Auto-login after registration
             const loggedInUser = await login(data.email, data.password);
+            if (!loggedInUser) {
+                throw new Error('Registration succeeded but auto-login failed');
+            }
 
             setIsLoading(false);
             return loggedInUser;
