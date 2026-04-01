@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 import logging
 from typing import Sequence
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
@@ -46,6 +47,7 @@ def process_ride_payments(
 
     passenger_ids = [b.passenger_id for b in billable]
     dest = trip.dest_address.split(",")[0]
+    total_collected = Decimal("0")
 
     # Lock all wallets in one round-trip
     existing_wallets: dict = {
@@ -68,10 +70,11 @@ def process_ride_payments(
             db.flush()
             existing_wallets[booking.passenger_id] = wallet
 
-        deduction = float(booking.total_price)
-        current_balance = float(wallet.balance)
+        deduction = Decimal(str(booking.total_price))
+        current_balance = Decimal(str(wallet.balance))
         actual_deduction = min(deduction, current_balance)
         owed = deduction - actual_deduction
+        total_collected += actual_deduction
 
         wallet.balance = current_balance - actual_deduction
 
@@ -84,7 +87,7 @@ def process_ride_payments(
             status="completed",
         ))
 
-        if owed > 0:
+        if owed > Decimal("0"):
             logger.warning(
                 "Passenger %s has insufficient balance for trip %s; "
                 "%.2f recorded as outstanding debt.",
@@ -100,3 +103,28 @@ def process_ride_payments(
                 description=f"Outstanding ride debt – {dest}",
                 status="pending",
             ))
+
+    # Credit the assigned driver with the amount actually collected from passengers.
+    if trip.driver_id and total_collected > Decimal("0"):
+        driver_wallet = db.query(models.Wallet).filter(
+            models.Wallet.user_id == trip.driver_id
+        ).with_for_update().first()
+
+        if not driver_wallet:
+            driver_wallet = models.Wallet(
+                id=uuid.uuid4(),
+                user_id=trip.driver_id,
+                balance=0,
+            )
+            db.add(driver_wallet)
+            db.flush()
+
+        driver_wallet.balance = Decimal(str(driver_wallet.balance)) + total_collected
+        db.add(models.Transaction(
+            id=uuid.uuid4(),
+            wallet_id=driver_wallet.id,
+            amount=total_collected,
+            type="credit",
+            description=f"Ride earnings – {dest}",
+            status="completed",
+        ))

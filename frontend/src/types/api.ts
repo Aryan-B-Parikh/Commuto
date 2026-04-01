@@ -1,4 +1,4 @@
-// Backend API Types (matching NeonDB schema exactly)
+// Backend API types matching the PostgreSQL schema
 
 export interface BackendUser {
     id: string;

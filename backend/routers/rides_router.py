@@ -494,7 +494,7 @@ def get_open_rides(
     # Get all pending rides excluding the ones above
     rides = db.query(models.Trip).filter(
         models.Trip.status.in_(["pending"]),
-        # ~models.Trip.id.in_(user_passenger_trips), # COMMUTO-HACK: Uncomment to block drivers from seeing their own trips
+        ~models.Trip.id.in_(user_passenger_trips),
         ~models.Trip.id.in_(driver_bidded_trips)
     ).all()
     
@@ -667,7 +667,23 @@ def update_location(
             detail="Can only update location for active trips"
         )
     
-    # Create location record
+    # Update latest coordinate snapshot
+    live_location = db.query(models.LiveLocation).filter(
+        models.LiveLocation.trip_id == trip_id
+    ).first()
+
+    if live_location:
+        live_location.latitude = location_data.lat
+        live_location.longitude = location_data.lng
+    else:
+        live_location = models.LiveLocation(
+            trip_id=trip_id,
+            latitude=location_data.lat,
+            longitude=location_data.lng,
+        )
+        db.add(live_location)
+
+    # Append location history point
     location = models.TripLocation(
         id=uuid.uuid4(),
         trip_id=trip_id,

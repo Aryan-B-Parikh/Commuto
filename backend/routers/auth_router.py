@@ -398,9 +398,13 @@ def google_auth(
         user = db.query(models.User).filter(models.User.email == email).first()
         
         if not user:
-            # Create a new user if not exists
-            # Use the requested role from frontend if provided, otherwise default to passenger
-            requested_role = auth_data.role if auth_data.role in ["passenger", "driver"] else "passenger"
+            # First-time Google sign-in must include explicit role selection.
+            requested_role = auth_data.role.strip().lower() if auth_data.role else None
+            if requested_role not in ["passenger", "driver"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Role selection required for first-time Google sign-in"
+                )
             
             user = models.User(
                 id=uuid.uuid4(),

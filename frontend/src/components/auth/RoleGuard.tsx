@@ -10,7 +10,7 @@ interface RoleGuardProps {
 }
 
 export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
-    const { user, role, isLoading, isAuthenticated } = useAuth();
+    const { role, isLoading, isAuthenticated } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -18,16 +18,14 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
             if (!isAuthenticated) {
                 router.push('/login');
             } else if (role && !allowedRoles.includes(role)) {
-                // COMMUTO-HACK: Disable redirecting for local testing
-                // router.push(`/${role}/dashboard`);
+                router.push(`/${role}/dashboard`);
             } else if (!role) {
                 router.push('/select-role');
             }
         }
     }, [isLoading, isAuthenticated, role, allowedRoles, router]);
 
-    // COMMUTO-HACK: Do not render loading state if they just have the "wrong" role for local testing
-    if (isLoading || !isAuthenticated || !role) {
+    if (isLoading || !isAuthenticated || !role || !allowedRoles.includes(role)) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">

@@ -352,9 +352,11 @@ export default function RideDetailsPage() {
                 {/* Sticky Bottom Pricing & CTA */}
                 <div className="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-[#1E293B] p-4 flex flex-col gap-3 z-50 pb-safe">
                     {/* Mobile OTP display */}
-                    {isMember && trip.start_otp && !trip.otp_verified && (
+                    {isMember && trip.start_otp && (!trip.otp_verified || trip.status === 'active') && (
                         <div className="flex flex-col items-center gap-1.5 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Share this OTP with your Driver</p>
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+                                {trip.otp_verified ? 'Share this Drop OTP with your Driver' : 'Share this OTP with your Driver'}
+                            </p>
                             <div className="flex gap-1.5">
                                 {trip.start_otp.split('').map((digit: string, i: number) => (
                                     <span key={i} className="w-9 h-11 bg-[#1E293B] rounded-lg flex items-center justify-center text-lg font-black text-white border border-[#374151]">
@@ -524,9 +526,11 @@ export default function RideDetailsPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        {isMember && trip.start_otp && !trip.otp_verified && (
+                                        {isMember && trip.start_otp && (!trip.otp_verified || trip.status === 'active') && (
                                             <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-center space-y-2">
-                                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Share this OTP with Driver at pickup</p>
+                                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+                                                    {trip.otp_verified ? 'Share this Drop OTP with Driver at destination' : 'Share this OTP with Driver at pickup'}
+                                                </p>
                                                 <div className="flex justify-center gap-2">
                                                     {trip.start_otp.split('').map((digit: string, i: number) => (
                                                         <span key={i} className="w-10 h-12 bg-[#1E293B] rounded-xl flex items-center justify-center text-xl font-black text-white border border-[#374151]">

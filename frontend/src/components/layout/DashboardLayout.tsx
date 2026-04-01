@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { PassengerBottomNav } from './PassengerBottomNav';
@@ -16,14 +17,16 @@ export function DashboardLayout({ children, userType, title = 'Dashboard', immer
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isSidebarMini, setIsSidebarMini] = useState(false);
     const { role, isAuthenticated, isLoading } = useAuth();
+    const router = useRouter();
 
     useEffect(() => {
         if (!isLoading && isAuthenticated && role && role !== userType) {
-            console.log(`Role mismatch: user is ${role} but accessing ${userType} module. Keeping current module.`);
+            console.log(`Role mismatch: user is ${role} but accessing ${userType} module. Redirecting...`);
+            router.push(`/${role}/dashboard`);
         }
-    }, [role, userType, isAuthenticated, isLoading]);
+    }, [role, userType, isAuthenticated, isLoading, router]);
 
-    if (isLoading) {
+    if (isLoading || (isAuthenticated && role && role !== userType)) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />

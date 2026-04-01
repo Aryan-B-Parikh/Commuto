@@ -6,14 +6,32 @@ from rate_limiter import rate_limit
 import models
 import schemas_trips as trip_schemas
 import auth
+import asyncio
 import uuid
 import random
 import logging
 from typing import List
 from uuid import UUID
+from routers.websocket_router import notify_new_bid, notify_bid_status_update
 
 router = APIRouter(prefix="/bids", tags=["Bidding"])
 logger = logging.getLogger(__name__)
+
+
+def _dispatch_websocket_notification(coro) -> None:
+    """Safely send websocket notifications from sync endpoints."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    try:
+        if loop and loop.is_running():
+            loop.create_task(coro)
+        else:
+            asyncio.run(coro)
+    except Exception as exc:
+        logger.warning(f"WebSocket notification failed: {exc}")
 
 
 @router.get("/my-bids", response_model=List[trip_schemas.DriverBidWithTrip])
@@ -107,13 +125,12 @@ def place_bid(
         models.Booking.trip_id == ride_id,
         models.Booking.passenger_id == current_user.id
     ).first() is not None
-    
-    # COMMUTO-HACK: Uncomment to block drivers from bidding on their own trips
-    # if is_passenger:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Cannot bid on your own trip"
-    #     )
+
+    if is_passenger:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot bid on your own trip"
+        )
     
     # Get driver profile
     driver = db.query(models.Driver).filter(models.Driver.user_id == current_user.id).first()
@@ -151,6 +168,23 @@ def place_bid(
         db.add(new_bid)
         db.commit()
         db.refresh(new_bid)
+
+        if trip.creator_passenger_id:
+            _dispatch_websocket_notification(
+                notify_new_bid(
+                    str(trip.creator_passenger_id),
+                    {
+                        "bid_id": str(new_bid.id),
+                        "trip_id": str(ride_id),
+                        "driver_id": str(current_user.id),
+                        "amount": float(new_bid.bid_amount),
+                        "status": new_bid.status,
+                        "message": new_bid.message,
+                        "is_counter_bid": False,
+                    },
+                )
+            )
+
         logger.info(f"Bid created: {new_bid.id} by driver {current_user.id} for trip {ride_id}")
         return new_bid
     except IntegrityError as e:
@@ -224,7 +258,7 @@ def get_ride_bids(
 def accept_bid(
     request: Request,
     bid_id: UUID,
-    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])), # COMMUTO-HACK: allow driver role to accept bids for easier local testing
+    current_user: models.User = Depends(auth.require_role(["passenger"])),
     db: Session = Depends(get_db)
 ):
     """Accept a bid with database transaction and optimistic locking"""
@@ -251,13 +285,12 @@ def accept_bid(
         ).with_for_update().first()
         
         # Check if user is the trip creator (only creator can accept bids)
-        # COMMUTO-HACK: Disable creator check to allow testing easily in one browser
-        # if trip.creator_passenger_id != current_user.id:
-        #     db.rollback()
-        #     raise HTTPException(
-        #         status_code=status.HTTP_403_FORBIDDEN,
-        #         detail="Only the trip creator can accept bids"
-        #     )
+        if trip.creator_passenger_id != current_user.id:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the trip creator can accept bids"
+            )
         
         # Check if trip is still available
         if trip.status not in ["pending", "active"]:
@@ -410,6 +443,21 @@ def counter_bid(
         db.add(counter_bid_obj)
         db.commit()
         db.refresh(counter_bid_obj)
+
+        _dispatch_websocket_notification(
+            notify_bid_status_update(
+                str(original_bid.driver_id),
+                {
+                    "type": "counter_bid",
+                    "counter_bid_id": str(counter_bid_obj.id),
+                    "parent_bid_id": str(original_bid.id),
+                    "trip_id": str(original_bid.trip_id),
+                    "amount": float(counter_bid_obj.bid_amount),
+                    "status": counter_bid_obj.status,
+                    "is_counter_bid": True,
+                },
+            )
+        )
         
         logger.info(f"Counter bid created: {counter_bid_obj.id} for trip {original_bid.trip_id}")
         

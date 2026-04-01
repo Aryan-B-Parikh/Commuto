@@ -101,7 +101,7 @@ export default function SignupPage() {
 
         try {
             const normalizedPhone = phone.replace(/\s+/g, '');
-            const loggedInUser = await register({
+            await register({
                 email,
                 password,
                 full_name: name,
@@ -109,19 +109,14 @@ export default function SignupPage() {
                 role: role as 'passenger' | 'driver',
             });
 
-            if (loggedInUser) {
-                showToast('success', 'Account created! Please verify your email.');
-                // Trigger verification email (non-blocking)
-                try {
-                    await authAPI.sendVerification();
-                } catch (_) {
-                    // best-effort; user can resend on the verify page
-                }
-                router.push('/verify-email');
-            } else {
-                showToast('error', 'Account created, but auto-login failed. Please log in manually.');
-                router.push('/login');
+            showToast('success', 'Account created! Please verify your email.');
+            // Trigger verification email (non-blocking)
+            try {
+                await authAPI.sendVerification();
+            } catch (_) {
+                // best-effort; user can resend on the verify page
             }
+            router.push('/verify-email');
         } catch (error: any) {
             showToast('error', getApiErrorMessage(error));
         }

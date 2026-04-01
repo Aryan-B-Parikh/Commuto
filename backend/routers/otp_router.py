@@ -64,7 +64,14 @@ def verify_otp_and_start_ride(
                 detail="Trip has been cancelled"
             )
         
-        # Verify OTP (now stored directly in trip)
+        if trip.otp_verified:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP already verified"
+            )
+
+        # Verify OTP (stored in trip while waiting for pickup).
         if trip.start_otp != otp_data.otp:
             db.rollback()
             logger.warning(f"Invalid OTP attempt for trip {trip_id} by driver {current_user.id}")
@@ -73,17 +80,14 @@ def verify_otp_and_start_ride(
                 detail="Invalid OTP"
             )
         
-        if trip.otp_verified:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OTP already verified"
-            )
-        
         # Mark OTP as verified and start ride
         trip.otp_verified = True
         trip.status = "active"
         trip.version += 1
+
+        # Generate a fresh completion OTP for drop-off verification.
+        completion_otp = ''.join([str(uuid.uuid4().int % 10) for _ in range(4)])
+        trip.start_otp = completion_otp
         
         started_at = datetime.utcnow()
         
@@ -94,7 +98,8 @@ def verify_otp_and_start_ride(
         return {
             "message": "Ride started successfully",
             "trip_id": str(trip.id),
-            "started_at": started_at
+            "started_at": started_at,
+            "completion_otp": completion_otp,
         }
         
     except HTTPException:
@@ -113,6 +118,7 @@ def verify_otp_and_start_ride(
 def complete_ride(
     request: Request,
     trip_id: UUID,
+    otp_data: trip_schemas.OTPVerify,
     current_user: models.User = Depends(auth.require_role(["driver"])),
     db: Session = Depends(get_db)
 ):
@@ -163,10 +169,19 @@ def complete_ride(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Trip has been cancelled"
             )
+
+        # Verify completion OTP from passenger before ending ride.
+        if trip.start_otp != otp_data.otp:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid completion OTP"
+            )
         
         # Complete ride
         completed_at = datetime.utcnow()
         trip.status = "completed"
+        trip.start_otp = None
         trip.version += 1
         
         # Update bookings

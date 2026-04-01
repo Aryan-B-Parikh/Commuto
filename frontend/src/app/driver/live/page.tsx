@@ -55,6 +55,7 @@ export default function DriverLivePage() {
     const hasShownRateLimitRef = useRef<boolean>(false);
     const tripRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [tripFetchRetryTick, setTripFetchRetryTick] = useState(0);
+    const hasShownDestinationPromptRef = useRef<boolean>(false);
 
     const targetCoords = useMemo((): [number, number] | undefined => {
         if (!trip) return undefined;
@@ -118,6 +119,33 @@ export default function DriverLivePage() {
         tripStatus
     } = useTripWebSocket(trip?.id || null);
 
+    const completeRideWithOtp = async () => {
+        if (!trip) return;
+
+        const enteredOtp = window.prompt('Enter 4-digit drop OTP from passenger to end this trip:');
+        if (!enteredOtp) {
+            showToast('error', 'Trip completion requires passenger drop OTP.');
+            return;
+        }
+
+        const otp = enteredOtp.trim();
+        if (!/^\d{4}$/.test(otp)) {
+            showToast('error', 'Drop OTP must be a valid 4-digit number.');
+            return;
+        }
+
+        setIsCompletingTrip(true);
+        try {
+            await otpAPI.completeRide(trip.id, otp);
+            setTrip(prev => (prev ? { ...prev, status: 'completed' } as TripResponse : prev));
+            showToast('success', "Trip completed!");
+        } catch (err: any) {
+            showToast('error', err.response?.data?.detail || "Failed to complete trip");
+        } finally {
+            setIsCompletingTrip(false);
+        }
+    };
+
     useEffect(() => {
         if (tripStatus && trip && trip.status !== tripStatus) {
             setTrip({ ...trip, status: tripStatus } as TripResponse);
@@ -174,16 +202,9 @@ export default function DriverLivePage() {
 
                     if (distToDest <= 0.05) {
                         hasCompletedRef.current = true;
-                        try {
-                            setIsCompletingTrip(true);
-                            await otpAPI.completeRide(trip.id);
-                            setTrip(prev => (prev ? { ...prev, status: 'completed' } as TripResponse : prev));
-                            showToast('success', "Destination reached! Trip auto-completed.");
-                        } catch (err: any) {
-                            hasCompletedRef.current = false;
-                            showToast('error', err.response?.data?.detail || "Failed to auto-complete trip");
-                        } finally {
-                            setIsCompletingTrip(false);
+                        if (!hasShownDestinationPromptRef.current) {
+                            hasShownDestinationPromptRef.current = true;
+                            showToast('success', "Destination reached! Ask passenger for drop OTP, then tap END TRIP.");
                         }
                     }
                 }
@@ -363,16 +384,7 @@ export default function DriverLivePage() {
                                                 disabled={isCompletingTrip}
                                                 onClick={async () => {
                                                     if (!confirm('Are you sure you want to complete this trip?')) return;
-                                                    setIsCompletingTrip(true);
-                                                    try {
-                                                        await otpAPI.completeRide(trip.id);
-                                                        setTrip(prev => (prev ? { ...prev, status: 'completed' } as TripResponse : prev));
-                                                        showToast('success', "Trip completed!");
-                                                    } catch (err: any) {
-                                                        showToast('error', err.response?.data?.detail || "Failed to complete trip");
-                                                    } finally {
-                                                        setIsCompletingTrip(false);
-                                                    }
+                                                    await completeRideWithOtp();
                                                 }}
                                                 className="flex-1 h-14 bg-white text-[#0B1020] rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
                                             >
@@ -447,7 +459,7 @@ export default function DriverLivePage() {
                         try {
                             await otpAPI.verifyOTP(trip.id, otp);
                             setTrip(prev => (prev ? { ...prev, status: 'active', otp_verified: true } as TripResponse : prev));
-                            showToast('success', "OTP Verified! Trip started.");
+                            showToast('success', "OTP Verified! Trip started. End trip will require drop OTP.");
                             setIsOTPModalOpen(false);
                         } catch (err: any) {
                             if (err.response?.status === 401) {
