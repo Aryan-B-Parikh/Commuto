@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer } from '@/components/trip/MapContainer';
 import { TripCard } from '@/components/trip/TripCard';
@@ -16,11 +16,19 @@ import { transformTripResponses } from '@/utils/tripTransformers';
 
 export default function PassengerSearchPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { showToast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterDate, setFilterDate] = useState('');
     const [trips, setTrips] = useState<TripResponse[]>([]);
+
+    useEffect(() => {
+        const initialQuery = searchParams.get('q');
+        if (initialQuery) {
+            setSearchQuery(initialQuery);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         const fetchTrips = async () => {
@@ -37,7 +45,7 @@ export default function PassengerSearchPage() {
         };
 
         fetchTrips();
-    }, []);
+    }, [showToast]);
 
     const filteredTrips = trips.filter(trip => {
         const matchesSearch = !searchQuery ||

@@ -1,10 +1,4 @@
-"""
-wallet_service – ride payment processing and ledger management.
-
-Extracted from otp_router.py so that the business rules around wallet
-deduction and debt tracking can be tested and changed independently of
-the HTTP layer.
-"""
+"""Wallet helpers for ride prepayment and settlement."""
 from __future__ import annotations
 
 import uuid
@@ -19,112 +13,173 @@ import models
 logger = logging.getLogger(__name__)
 
 
+def _to_decimal(value: object) -> Decimal:
+    if value is None:
+        return Decimal("0")
+    return Decimal(str(value))
+
+
+def get_or_create_wallet_for_update(db: Session, user_id) -> models.Wallet:
+    """Fetch a wallet row with FOR UPDATE lock, creating it if absent."""
+    wallet = db.query(models.Wallet).filter(
+        models.Wallet.user_id == user_id
+    ).with_for_update().first()
+
+    if wallet:
+        return wallet
+
+    wallet = models.Wallet(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        balance=Decimal("0"),
+    )
+    db.add(wallet)
+    db.flush()
+    return wallet
+
+
+def hold_wallet_funds_or_raise(
+    db: Session,
+    user_id,
+    amount,
+    description: str,
+    *,
+    transaction_type: str = "payment",
+) -> Decimal:
+    """Deduct funds immediately from a user's wallet.
+
+    Raises:
+        ValueError: if amount is invalid or wallet balance is insufficient.
+    """
+    debit_amount = _to_decimal(amount)
+    if debit_amount <= Decimal("0"):
+        raise ValueError("Amount must be greater than zero")
+
+    wallet = get_or_create_wallet_for_update(db, user_id)
+    current_balance = _to_decimal(wallet.balance)
+
+    if current_balance < debit_amount:
+        raise ValueError("Insufficient wallet balance")
+
+    wallet.balance = current_balance - debit_amount
+    db.add(models.Transaction(
+        id=uuid.uuid4(),
+        wallet_id=wallet.id,
+        amount=-debit_amount,
+        type=transaction_type,
+        description=description,
+        status="completed",
+    ))
+    return debit_amount
+
+
+def release_wallet_funds(
+    db: Session,
+    user_id,
+    amount,
+    description: str,
+    *,
+    transaction_type: str = "refund",
+) -> Decimal:
+    """Credit funds back to a user's wallet."""
+    credit_amount = _to_decimal(amount)
+    if credit_amount <= Decimal("0"):
+        return Decimal("0")
+
+    wallet = get_or_create_wallet_for_update(db, user_id)
+    wallet.balance = _to_decimal(wallet.balance) + credit_amount
+    db.add(models.Transaction(
+        id=uuid.uuid4(),
+        wallet_id=wallet.id,
+        amount=credit_amount,
+        type=transaction_type,
+        description=description,
+        status="completed",
+    ))
+    return credit_amount
+
+
+def reconcile_booking_hold(
+    db: Session,
+    booking: models.Booking,
+    new_total,
+    description_prefix: str,
+) -> None:
+    """Adjust wallet hold for a booking when fare changes.
+
+    Deducts additional amount when fare increases, or refunds when fare decreases.
+    """
+    current_total = _to_decimal(booking.total_price)
+    updated_total = _to_decimal(new_total)
+    delta = updated_total - current_total
+
+    if delta > Decimal("0"):
+        hold_wallet_funds_or_raise(
+            db,
+            booking.passenger_id,
+            delta,
+            f"{description_prefix} fare adjustment",
+        )
+    elif delta < Decimal("0"):
+        release_wallet_funds(
+            db,
+            booking.passenger_id,
+            -delta,
+            f"{description_prefix} fare adjustment refund",
+        )
+
+    booking.total_price = updated_total
+    booking.payment_status = "completed"
+
+
+def payout_driver_from_prepaid_bookings(
+    db: Session,
+    trip: models.Trip,
+    bookings: Sequence[models.Booking],
+) -> Decimal:
+    """Transfer collected prepaid booking amounts to the assigned driver."""
+    if not trip.driver_id:
+        return Decimal("0")
+
+    payable = Decimal("0")
+    for booking in bookings:
+        if booking.status == "cancelled":
+            continue
+        if booking.payment_status != "completed":
+            continue
+        amount = _to_decimal(booking.total_price)
+        if amount > Decimal("0"):
+            payable += amount
+
+    if payable <= Decimal("0"):
+        return Decimal("0")
+
+    driver_wallet = get_or_create_wallet_for_update(db, trip.driver_id)
+    driver_wallet.balance = _to_decimal(driver_wallet.balance) + payable
+
+    destination = (trip.dest_address or "Trip").split(",")[0]
+    db.add(models.Transaction(
+        id=uuid.uuid4(),
+        wallet_id=driver_wallet.id,
+        amount=payable,
+        type="credit",
+        description=f"Ride earnings - {destination}",
+        status="completed",
+    ))
+    return payable
+
+
 def process_ride_payments(
     db: Session,
     trip: models.Trip,
     bookings: Sequence[models.Booking],
 ) -> None:
-    """Deduct booking amounts from each passenger's wallet atomically.
+    """Backwards-compatible entrypoint for ride settlement.
 
-    Rules:
-    * All relevant wallets are locked in a single IN-clause query to minimise
-      round-trips and keep the holding lock time as short as possible.
-    * The recorded ``payment`` transaction always matches the *actual* cash
-      movement (capped at the available balance) so completed-transaction
-      sums equal the real balance change.
-    * When a passenger's balance is insufficient a separate ``debt``
-      transaction is created with a *positive* amount representing money
-      owed *to* the system.  Because it is ``pending`` and does not reduce
-      the wallet balance it does not violate the ledger invariant.
-    * Missing wallets are auto-created with a zero balance.
-
-    This function must be called within an active database transaction; the
-    caller is responsible for committing or rolling back.
+    New behavior assumes bookings are prepaid and only releases payout
+    to the driver when ride completion is successful.
     """
-    billable = [b for b in bookings if b.total_price and b.total_price > 0]
-    if not billable:
-        return
-
-    passenger_ids = [b.passenger_id for b in billable]
-    dest = trip.dest_address.split(",")[0]
-    total_collected = Decimal("0")
-
-    # Lock all wallets in one round-trip
-    existing_wallets: dict = {
-        w.user_id: w
-        for w in db.query(models.Wallet)
-        .filter(models.Wallet.user_id.in_(passenger_ids))
-        .with_for_update()
-        .all()
-    }
-
-    for booking in billable:
-        wallet = existing_wallets.get(booking.passenger_id)
-        if not wallet:
-            wallet = models.Wallet(
-                id=uuid.uuid4(),
-                user_id=booking.passenger_id,
-                balance=0,
-            )
-            db.add(wallet)
-            db.flush()
-            existing_wallets[booking.passenger_id] = wallet
-
-        deduction = Decimal(str(booking.total_price))
-        current_balance = Decimal(str(wallet.balance))
-        actual_deduction = min(deduction, current_balance)
-        owed = deduction - actual_deduction
-        total_collected += actual_deduction
-
-        wallet.balance = current_balance - actual_deduction
-
-        db.add(models.Transaction(
-            id=uuid.uuid4(),
-            wallet_id=wallet.id,
-            amount=-actual_deduction,
-            type="payment",
-            description=f"Ride payment – {dest}",
-            status="completed",
-        ))
-
-        if owed > Decimal("0"):
-            logger.warning(
-                "Passenger %s has insufficient balance for trip %s; "
-                "%.2f recorded as outstanding debt.",
-                booking.passenger_id,
-                trip.id,
-                owed,
-            )
-            db.add(models.Transaction(
-                id=uuid.uuid4(),
-                wallet_id=wallet.id,
-                amount=owed,   # positive: money *owed to* the system, no balance impact
-                type="debt",
-                description=f"Outstanding ride debt – {dest}",
-                status="pending",
-            ))
-
-    # Credit the assigned driver with the amount actually collected from passengers.
-    if trip.driver_id and total_collected > Decimal("0"):
-        driver_wallet = db.query(models.Wallet).filter(
-            models.Wallet.user_id == trip.driver_id
-        ).with_for_update().first()
-
-        if not driver_wallet:
-            driver_wallet = models.Wallet(
-                id=uuid.uuid4(),
-                user_id=trip.driver_id,
-                balance=0,
-            )
-            db.add(driver_wallet)
-            db.flush()
-
-        driver_wallet.balance = Decimal(str(driver_wallet.balance)) + total_collected
-        db.add(models.Transaction(
-            id=uuid.uuid4(),
-            wallet_id=driver_wallet.id,
-            amount=total_collected,
-            type="credit",
-            description=f"Ride earnings – {dest}",
-            status="completed",
-        ))
+    unpaid = [b for b in bookings if b.status != "cancelled" and b.payment_status != "completed"]
+    if unpaid:
+        raise ValueError("Cannot settle ride with unpaid bookings")
+    payout_driver_from_prepaid_bookings(db, trip, bookings)

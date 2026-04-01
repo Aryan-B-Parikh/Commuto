@@ -13,13 +13,10 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 import logging
 from websocket_manager import manager
-from fastapi import BackgroundTasks
-import os
-import hmac
-import hashlib
 import schemas
 from services.rating_service import apply_driver_rating
 from services.billing_service import get_trip_receipt as _build_receipt
+from services.wallet_service import hold_wallet_funds_or_raise, release_wallet_funds
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
@@ -167,7 +164,7 @@ async def create_shared_ride(
         seats_booked=1,
         total_price=trip_data.price_per_seat,
         status="confirmed",
-        payment_status="pending",
+        payment_status="completed",
         notes=trip_data.notes.strip()[:500] if trip_data.notes else None
     )
     
@@ -180,9 +177,19 @@ async def create_shared_ride(
     )
     
     try:
+        db.begin_nested()
+
         db.add(new_trip)
         db.add(booking)
         db.add(trip_passenger)
+
+        hold_wallet_funds_or_raise(
+            db,
+            current_user.id,
+            trip_data.price_per_seat,
+            f"Trip prepayment hold - {trip_data.to_location.address.split(',')[0]}",
+        )
+
         db.commit()
         db.refresh(new_trip)
         
@@ -200,6 +207,12 @@ async def create_shared_ride(
         })
         
         return new_trip
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{exc}. Add money to wallet before creating the ride.",
+        )
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating shared trip: {str(e)}")
@@ -312,13 +325,20 @@ async def join_ride(
             seats_booked=1,
             total_price=trip.price_per_seat,
             status="confirmed",
-            payment_status="pending",
+            payment_status="completed",
             notes=join_notes
         )
         
         # Update trip
         trip.available_seats -= 1
         trip.version += 1
+
+        hold_wallet_funds_or_raise(
+            db,
+            current_user.id,
+            trip.price_per_seat,
+            f"Trip prepayment hold - {trip.dest_address.split(',')[0]}",
+        )
         
         db.add(tp)
         db.add(booking)
@@ -337,6 +357,12 @@ async def join_ride(
         })
         
         return {"message": "Successfully joined ride", "available_seats": trip.available_seats}
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{exc}. Add money to wallet before joining this ride.",
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -371,12 +397,23 @@ async def leave_ride(
         
         if not tp:
             raise HTTPException(status_code=400, detail="Not a passenger in this ride")
-        
-        # Remove booking
-        db.query(models.Booking).filter(
+
+        booking = db.query(models.Booking).filter(
             models.Booking.trip_id == trip_id,
             models.Booking.passenger_id == current_user.id
-        ).delete()
+        ).with_for_update().first()
+
+        if booking and booking.payment_status == "completed" and booking.total_price and booking.total_price > 0:
+            release_wallet_funds(
+                db,
+                current_user.id,
+                booking.total_price,
+                f"Trip refund - left ride to {trip.dest_address.split(',')[0]}",
+            )
+        
+        # Remove booking
+        if booking:
+            db.delete(booking)
         
         # Remove TripPassenger
         db.delete(tp)
@@ -596,6 +633,13 @@ def cancel_ride(
         ).all()
         
         for booking in bookings:
+            if booking.payment_status == "completed" and booking.total_price and booking.total_price > 0:
+                release_wallet_funds(
+                    db,
+                    booking.passenger_id,
+                    booking.total_price,
+                    f"Trip refund - cancelled ride to {trip.dest_address.split(',')[0]}",
+                )
             booking.status = "cancelled"
             booking.payment_status = "cancelled"
         
@@ -760,65 +804,11 @@ def create_trip_payment_order(
     current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
-    """Create a Razorpay order for a specific trip booking"""
-    import razorpay
-    
-    key_id = os.getenv("RAZORPAY_KEY_ID")
-    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
-    
-    if not key_id or not key_secret:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Payment service not configured"
-        )
-    
-    # Verify booking exists and belongs to user
-    booking = db.query(models.Booking).filter(
-        models.Booking.id == booking_id,
-        models.Booking.trip_id == trip_id,
-        models.Booking.passenger_id == current_user.id
-    ).first()
-    
-    if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found")
-    
-    if booking.payment_status == "completed":
-        raise HTTPException(status_code=400, detail="Booking already paid")
-
-    try:
-        client = razorpay.Client(auth=(key_id, key_secret))
-        
-        amount_paise = int(booking.total_price * 100)
-        
-        order_data = {
-            "amount": amount_paise,
-            "currency": "INR",
-            "receipt": f"t_{str(trip_id)[:20]}_{str(booking_id)[:10]}",
-            "notes": {
-                "trip_id": str(trip_id),
-                "booking_id": str(booking_id),
-                "passenger_id": str(current_user.id),
-                "purpose": "trip_payment"
-            }
-        }
-        
-        order = client.order.create(data=order_data)
-        
-        # Store order ID in booking (if we had a field, otherwise we can just return it)
-        # Assuming we might want to track this. For now just return it.
-        
-        return {
-            "order_id": order["id"],
-            "amount": amount_paise,
-            "currency": "INR",
-            "key": key_id,
-            "trip_id": trip_id,
-            "booking_id": booking_id
-        }
-        
-    except Exception as e:
-        logger.error(f"Error creating Razorpay trip order: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to create payment order")
+    """Legacy endpoint disabled by wallet-first prepayment policy."""
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Direct trip payments are disabled. Add money to wallet and prepay while creating or joining rides.",
+    )
 
 
 @router.post("/verify-trip-payment")
@@ -829,73 +819,11 @@ def verify_trip_payment(
     current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
-    """Verify Razorpay payment for a trip and credit the driver"""
-    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
-    
-    if not key_secret:
-        raise HTTPException(status_code=503, detail="Payment service not configured")
-    
-    try:
-        # 1. Verify signature
-        message = f"{payment_data.razorpay_order_id}|{payment_data.razorpay_payment_id}"
-        expected_signature = hmac.new(
-            key_secret.encode(),
-            message.encode(),
-            hashlib.sha256
-        ).hexdigest()
-        
-        if expected_signature != payment_data.razorpay_signature:
-            raise HTTPException(status_code=400, detail="Invalid payment signature")
-        
-        # 2. Get booking and trip
-        booking = db.query(models.Booking).filter(
-            models.Booking.id == payment_data.booking_id,
-            models.Booking.passenger_id == current_user.id
-        ).first()
-        
-        if not booking:
-            raise HTTPException(status_code=404, detail="Booking not found")
-        
-        trip = db.query(models.Trip).filter(models.Trip.id == booking.trip_id).first()
-        if not trip:
-            raise HTTPException(status_code=404, detail="Trip not found")
-
-        # 3. Update status
-        booking.payment_status = "completed"
-        
-        # 4. Credit Driver Wallet
-        if trip.driver_id:
-            from routers.wallet_router import get_or_create_wallet
-            from decimal import Decimal
-            
-            driver_wallet = get_or_create_wallet(trip.driver_id, db)
-            amount = Decimal(str(booking.total_price))
-            driver_wallet.balance += amount
-            
-            # Create earning transaction for driver
-            transaction = models.Transaction(
-                wallet_id=driver_wallet.id,
-                amount=amount,
-                type="credit",
-                description=f"Earning from Trip: {trip.origin_address.split(',')[0]} to {trip.dest_address.split(',')[0]}",
-                status="completed",
-                razorpay_order_id=payment_data.razorpay_order_id,
-                razorpay_payment_id=payment_data.razorpay_payment_id
-            )
-            db.add(transaction)
-        
-        db.commit()
-        
-        logger.info(f"Trip payment verified: {payment_data.booking_id}. Driver {trip.driver_id} credited.")
-        
-        return {"status": "success", "message": "Payment verified and driver credited"}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error verifying trip payment: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to verify payment")
+    """Legacy endpoint disabled by wallet-first prepayment policy."""
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Trip payment verification is disabled. Driver payout happens automatically when a prepaid ride ends.",
+    )
 
 
 @router.get("/{trip_id}/receipt")

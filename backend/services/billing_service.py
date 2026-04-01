@@ -4,16 +4,11 @@ billing_service – trip receipt generation.
 Extracted from rides_router.py so that receipt aggregation logic can be
 unit-tested independently of the FastAPI request context.
 
-Note on ``total_price`` vs. actual wallet deduction
-----------------------------------------------------
-``total_price`` is the amount *charged* to the passenger (booking price).
-Due to the wallet debt-tracking mechanism in wallet_service, the actual
-amount deducted from the wallet is ``min(wallet_balance, total_price)``
-at the time of payment.  Until a dedicated ``paid_amount`` column is added
-to the Booking model, consumers should use ``payment_status`` to determine
-whether the booking was fully settled: a status of ``"completed"`` means
-wallet deduction matched ``total_price``; ``"pending"`` indicates a partial
-or outstanding balance.
+Note on ``total_price`` and prepayment
+-------------------------------------
+``total_price`` is the amount held from the passenger wallet when a booking
+is created/joined (and adjusted if accepted bid price changes). Driver payout
+is released only when ride completion succeeds.
 """
 from __future__ import annotations
 
@@ -85,8 +80,8 @@ def get_trip_receipt(
     # Total price calculation
     # For a driver receipt: sum all non-cancelled bookings (earnings view).
     # For a passenger receipt: use booking.total_price (what was billed).
-    # The field is intentionally named ``total_price`` (not ``total_paid``) to
-    # avoid implying a full wallet deduction when a debt may exist.
+    # The field is intentionally named ``total_price`` (not ``total_paid``)
+    # because it represents the booking charge amount, not a payout event.
     if is_driver and not booking:
         total_price = float(
             db.query(sql_func.sum(models.Booking.total_price))

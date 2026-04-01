@@ -2,10 +2,26 @@ import argparse
 import sys
 import time
 import uuid
+import os
+import hmac
+import hashlib
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any
 
 import requests
+
+ROOT = Path(__file__).resolve().parent
+BACKEND_DIR = ROOT / "backend"
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+try:
+    from database import SessionLocal
+    import models
+except Exception:
+    SessionLocal = None
+    models = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -22,6 +38,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--bid-amount", type=float, default=140.0, help="Driver bid amount")
     parser.add_argument("--price-per-seat", type=float, default=130.0, help="Shared ride price per seat")
+    parser.add_argument("--seed-balance", type=float, default=1000.0, help="Wallet balance to seed for creator/joiner")
+    parser.add_argument(
+        "--razorpay-secret",
+        default=os.getenv("RAZORPAY_KEY_SECRET", ""),
+        help="Razorpay secret used for local API top-up fallback when DB seeding is unavailable",
+    )
     return parser.parse_args()
 
 
@@ -90,6 +112,73 @@ def register_and_login(
     return {"email": email, "auth": f"Bearer {token}"}
 
 
+def seed_wallet_by_email(email: str, amount: float) -> bool:
+    if SessionLocal is None or models is None:
+        return False
+
+    db = SessionLocal()
+    try:
+        user = db.query(models.User).filter(models.User.email == email).first()
+        if not user:
+            return False
+
+        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == user.id).first()
+        if not wallet:
+            wallet = models.Wallet(user_id=user.id, balance=amount)
+            db.add(wallet)
+        else:
+            wallet.balance = amount
+        db.commit()
+        return True
+    except Exception:
+        db.rollback()
+        return False
+    finally:
+        db.close()
+
+
+def fund_wallet_via_api(base_url: str, timeout: float, auth_header: str, amount: float, secret: str) -> bool:
+    if not secret:
+        return False
+
+    headers = {"Authorization": auth_header}
+    order_data = must_ok(
+        request(
+            base_url,
+            timeout,
+            "POST",
+            "/wallet/add-money",
+            headers=headers,
+            json={"amount": amount},
+        ),
+        "wallet add-money",
+    )
+    order_id = order_data.get("order_id")
+    if not order_id:
+        return False
+
+    payment_id = f"pay_{uuid.uuid4().hex[:12]}"
+    message = f"{order_id}|{payment_id}".encode()
+    signature = hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
+
+    verify = must_ok(
+        request(
+            base_url,
+            timeout,
+            "POST",
+            "/wallet/verify-payment",
+            headers=headers,
+            json={
+                "razorpay_order_id": order_id,
+                "razorpay_payment_id": payment_id,
+                "razorpay_signature": signature,
+            },
+        ),
+        "wallet verify-payment",
+    )
+    return verify.get("status") == "success"
+
+
 def verify_full_flow() -> int:
     args = parse_args()
     base_url = args.base_url.rstrip("/")
@@ -111,6 +200,32 @@ def verify_full_flow() -> int:
         creator_headers = {"Authorization": creator["auth"]}
         joiner_headers = {"Authorization": joiner["auth"]}
         driver_headers = {"Authorization": driver["auth"]}
+
+        creator_seeded = seed_wallet_by_email(creator["email"], args.seed_balance)
+        joiner_seeded = seed_wallet_by_email(joiner["email"], args.seed_balance)
+        driver_seeded = seed_wallet_by_email(driver["email"], 0.0)
+        if creator_seeded and joiner_seeded and driver_seeded:
+            print("PASS wallet-seed: creator/joiner funded for prepay flow")
+        else:
+            print("WARN wallet-seed: direct DB seeding unavailable, attempting API top-up fallback")
+            creator_funded = fund_wallet_via_api(
+                base_url,
+                args.timeout,
+                creator["auth"],
+                args.seed_balance,
+                args.razorpay_secret,
+            )
+            joiner_funded = fund_wallet_via_api(
+                base_url,
+                args.timeout,
+                joiner["auth"],
+                args.seed_balance,
+                args.razorpay_secret,
+            )
+            if creator_funded and joiner_funded:
+                print("PASS wallet-topup: API fallback funded creator/joiner")
+            else:
+                print("WARN wallet-topup: fallback unavailable; ensure wallets are funded before running")
 
         trip_date = datetime.utcnow() + timedelta(days=1)
         create_payload = {

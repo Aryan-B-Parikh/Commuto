@@ -9,7 +9,7 @@ from uuid import UUID
 from datetime import datetime
 import logging
 import uuid
-from services.wallet_service import process_ride_payments
+from services.wallet_service import payout_driver_from_prepaid_bookings
 
 router = APIRouter(prefix="/rides", tags=["OTP & Trip Completion"])
 logger = logging.getLogger(__name__)
@@ -69,6 +69,18 @@ def verify_otp_and_start_ride(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="OTP already verified"
+            )
+
+        unpaid_bookings = db.query(models.Booking).filter(
+            models.Booking.trip_id == trip_id,
+            models.Booking.status != "cancelled",
+            models.Booking.payment_status != "completed",
+        ).count()
+        if unpaid_bookings > 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="All passengers must add money to wallet and prepay before starting the ride",
             )
 
         # Verify OTP (stored in trip while waiting for pickup).
@@ -188,10 +200,21 @@ def complete_ride(
         bookings = db.query(models.Booking).filter(
             models.Booking.trip_id == trip_id
         ).all()
+
+        unpaid_bookings = [
+            booking
+            for booking in bookings
+            if booking.status != "cancelled" and booking.payment_status != "completed"
+        ]
+        if unpaid_bookings:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ride cannot be completed until all passenger payments are settled",
+            )
         
         for booking in bookings:
             booking.status = "completed"
-            booking.payment_status = "completed"
         
         # Update driver trip count
         driver = db.query(models.Driver).filter(
@@ -201,9 +224,8 @@ def complete_ride(
         if driver:
             driver.total_trips += 1
         
-        # Delegate payment processing to the service layer.
-        # All wallet locking, ledger balancing, and debt recording is handled there.
-        process_ride_payments(db, trip, bookings)
+        payout_driver_from_prepaid_bookings(db, trip, bookings)
+        trip.payment_status = "completed"
 
         db.commit()
         
@@ -215,6 +237,12 @@ def complete_ride(
             "completed_at": completed_at
         }
         
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
     except HTTPException:
         raise
     except Exception as e:

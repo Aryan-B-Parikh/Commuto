@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 from database import Base, get_db
 from main import app
 from datetime import datetime, timedelta
+import models
 
 # Use in-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -61,7 +62,7 @@ def client(db):
 
 
 @pytest.fixture
-def test_passenger(client):
+def test_passenger(client, db):
     """Create a test passenger user"""
     response = client.post("/auth/register", json={
         "email": "passenger@test.com",
@@ -70,11 +71,21 @@ def test_passenger(client):
         "phone": "+1234567890",
         "role": "passenger"
     })
+
+    user = db.query(models.User).filter(models.User.email == "passenger@test.com").first()
+    if user:
+        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == user.id).first()
+        if not wallet:
+            db.add(models.Wallet(user_id=user.id, balance=1000.0))
+        else:
+            wallet.balance = 1000.0
+        db.commit()
+
     return response.json()
 
 
 @pytest.fixture
-def test_driver(client):
+def test_driver(client, db):
     """Create a test driver user with vehicle"""
     response = client.post("/auth/register", json={
         "email": "driver@test.com",
@@ -88,6 +99,16 @@ def test_driver(client):
         "vehicle_plate": "ABC123",
         "vehicle_capacity": 4
     })
+
+    user = db.query(models.User).filter(models.User.email == "driver@test.com").first()
+    if user:
+        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == user.id).first()
+        if not wallet:
+            db.add(models.Wallet(user_id=user.id, balance=0.0))
+        else:
+            wallet.balance = 0.0
+        db.commit()
+
     return response.json()
 
 
