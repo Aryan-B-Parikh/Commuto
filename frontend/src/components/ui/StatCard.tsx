@@ -20,18 +20,18 @@ export function StatCard({ label, value, trend, trendUp, icon, color = 'indigo' 
     };
 
     return (
-        <div className="bg-card p-4 lg:p-6 rounded-2xl border border-card-border shadow-sm shadow-black/20 flex items-start justify-between hover:border-card-border/80 transition-all duration-300">
+        <div className="bg-card p-3 lg:p-4 rounded-2xl border border-card-border shadow-sm shadow-black/20 flex items-start justify-between hover:border-card-border/80 transition-all duration-300">
             <div>
-                <p className="text-sm font-medium text-muted-foreground">{label}</p>
-                <h3 className="text-xl lg:text-2xl font-bold text-foreground mt-1">{value}</h3>
+                <p className="text-xs lg:text-sm font-medium text-muted-foreground">{label}</p>
+                <h3 className="text-lg lg:text-xl font-bold text-foreground mt-1">{value}</h3>
                 {trend && (
-                    <p className={`text-xs mt-2 font-medium flex items-center gap-1 ${trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <p className={`text-[11px] mt-1.5 font-medium flex items-center gap-1 ${trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
                         <span>{trendUp ? '↑' : '↓'}</span>
                         {trend}
                     </p>
                 )}
             </div>
-            <div className={`p-3 rounded-xl ${colorClasses[color]}`}>
+            <div className={`p-2.5 rounded-xl ${colorClasses[color]}`}>
                 {icon}
             </div>
         </div>

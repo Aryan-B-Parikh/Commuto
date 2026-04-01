@@ -11,6 +11,7 @@ import { TripResponse } from '@/types/api';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { BidModal } from '@/components/ride/BidModal';
 import { calculateDistance } from '@/utils/geoUtils';
+import { useSocketEvent } from '@/hooks/useWebSocket';
 import {
     MapPin,
     Navigation,
@@ -27,6 +28,7 @@ import {
     Navigation2
 } from 'lucide-react';
 import { useRouteInfo } from '@/hooks/useRouteInfo';
+import { useAuth } from '@/hooks/useAuth';
 
 function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
     request: TripResponse,
@@ -134,11 +136,13 @@ function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
 
 export default function DriverRequestsPage() {
     const router = useRouter();
+    const { role } = useAuth();
     const { showToast } = useToast() as any;
     const [requests, setRequests] = useState<TripResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedTrip, setSelectedTrip] = useState<TripResponse | null>(null);
     const [isBidModalOpen, setIsBidModalOpen] = useState(false);
+    const [watchAcceptedTrip, setWatchAcceptedTrip] = useState(false);
 
     // === BUSINESS LOGIC (UNCHANGED) ===
     const getIgnoredIds = (): string[] => {
@@ -161,13 +165,34 @@ export default function DriverRequestsPage() {
         fetchRequests();
     }, []);
 
+    useSocketEvent('new_ride_available', (data: any) => {
+        console.log('New ride available via websocket:', data);
+        showToast('info', 'New ride request available!');
+        fetchRequests();
+    });
+
     const fetchRequests = async () => {
         try {
             setIsLoading(true);
             const data = await tripsAPI.getOpenRides();
             const ignored = getIgnoredIds();
             setRequests(data.filter(r => !ignored.includes(r.id)));
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.response?.status === 403) {
+                showToast('error', 'Access denied for ride requests. Redirecting...');
+                if (role === 'passenger') {
+                    router.replace('/passenger/dashboard');
+                } else {
+                    router.replace('/select-role');
+                }
+                return;
+            }
+
+            if (error?.response?.status === 429) {
+                showToast('error', 'Too many requests. Please wait a few seconds and refresh.');
+                return;
+            }
+
             console.error('Failed to fetch requests:', error);
             showToast('error', 'Failed to load requests.');
         } finally {
@@ -191,7 +216,33 @@ export default function DriverRequestsPage() {
         if (selectedTrip) {
             setRequests(prev => prev.filter(r => r.id !== selectedTrip.id));
         }
+        setWatchAcceptedTrip(true);
+        showToast('info', 'Bid placed. Waiting for passenger acceptance...');
     };
+
+    useEffect(() => {
+        if (!watchAcceptedTrip) return;
+
+        const checkAcceptedTrip = async () => {
+            try {
+                const trips = await tripsAPI.getDriverTrips();
+                const liveTrip = trips.find((t: TripResponse) => ['bid_accepted', 'driver_assigned', 'active'].includes(t.status));
+                if (liveTrip) {
+                    router.push('/driver/live');
+                }
+            } catch (error: any) {
+                // Ignore expected rate limits during background polling.
+                if (error?.response?.status !== 429) {
+                    console.error('Failed to check accepted trip:', error);
+                }
+            }
+        };
+
+        checkAcceptedTrip();
+        const interval = setInterval(checkAcceptedTrip, 8000);
+
+        return () => clearInterval(interval);
+    }, [watchAcceptedTrip, router]);
 
     // Calculate time-ago for display
     const getTimeAgo = (dateStr: string) => {

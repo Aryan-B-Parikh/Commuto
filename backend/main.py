@@ -25,15 +25,20 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Commuto API", version="1.0.0")
 
 # CORS Configuration from environment
-allow_origins = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
+allow_origins = os.getenv(
+    "CORS_ALLOW_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
+).split(",")
 allow_origins = [origin.strip() for origin in allow_origins]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
+    # Allow local/LAN dev origins even when API is accessed via local IP.
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.[0-9]{1,3}\.[0-9]{1,3})(:\d+)?$",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Centralized error handling middleware

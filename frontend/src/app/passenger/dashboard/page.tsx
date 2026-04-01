@@ -157,7 +157,7 @@ export default function PassengerDashboard() {
                     {/* Floating Quick Action */}
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-32px)]">
                         <Link href="/passenger/ride-sharing">
-                            <div className="bg-card/90 backdrop-blur-xl p-4 rounded-2xl border border-card-border shadow-lg flex items-center gap-3">
+                            <div className="bg-card/90 backdrop-blur-xl p-4 rounded-md border border-card-border shadow-lg flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
                                     <Search size={20} />
                                 </div>
@@ -195,7 +195,7 @@ export default function PassengerDashboard() {
                         {/* Quick Stats Grid */}
                         <div className="grid grid-cols-3 gap-3 mb-6">
                             {computedStats.map((stat, i) => (
-                                <div key={i} className="bg-muted/50 rounded-2xl p-3 border border-card-border text-center">
+                                <div key={i} className="bg-muted/50 rounded-md p-3 border border-card-border text-center">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2 ${stat.color}`}>
                                         {React.cloneElement(stat.icon as React.ReactElement<any>, { size: 16 })}
                                     </div>
@@ -214,10 +214,10 @@ export default function PassengerDashboard() {
 
                             <div className="space-y-3">
                                 {isLoading ? (
-                                    [1, 2].map(i => <div key={i} className="h-20 bg-muted/30 rounded-2xl animate-pulse" />)
+                                    [1, 2].map(i => <div key={i} className="h-20 bg-muted/30 rounded-md animate-pulse" />)
                                 ) : trips.length > 0 ? (
                                     trips.slice(0, 3).map((trip, i) => (
-                                        <div key={i} className="bg-background/50 p-4 rounded-2xl border border-card-border flex items-center gap-3">
+                                        <div key={i} className="bg-background/50 p-4 rounded-md border border-card-border flex items-center gap-3">
                                             <div className={`p-2.5 rounded-xl ${trip.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
                                                 {trip.status === 'completed' ? <ShieldCheck size={18} /> : <Activity size={18} />}
                                             </div>
@@ -237,7 +237,7 @@ export default function PassengerDashboard() {
                         </div>
 
                         {/* Safety Card */}
-                        <div className="bg-indigo-600 rounded-2xl p-4 text-white relative overflow-hidden">
+                        <div className="bg-indigo-600 rounded-md p-4 text-white relative overflow-hidden">
                             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
                             <div className="relative z-10 flex items-center gap-3">
                                 <ShieldCheck size={24} />
@@ -261,7 +261,7 @@ export default function PassengerDashboard() {
                         initial="hidden"
                         animate="show"
                         variants={containerVariants}
-                        className="max-w-7xl mx-auto space-y-6 lg:space-y-10 pb-12"
+                        className="max-w-7xl mx-auto pt-3 lg:pt-5 space-y-8 lg:space-y-12 pb-12"
                     >
                         {/* Welcome Section */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -290,10 +290,10 @@ export default function PassengerDashboard() {
                         </div>
 
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-7">
                             {computedStats.map((stat, i) => (
                                 <motion.div key={i} variants={itemVariants}>
-                                    <Card className="p-5 lg:p-6 border-none shadow-sm hover:shadow-md transition-all group overflow-hidden relative text-left">
+                                    <Card className="rounded-md p-5 lg:p-6 border-none shadow-sm hover:shadow-md transition-all group overflow-hidden relative text-left">
                                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
                                             {React.cloneElement(stat.icon as React.ReactElement<any>, { size: 80 })}
                                         </div>
@@ -330,11 +330,11 @@ export default function PassengerDashboard() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <Link href="/passenger/ride-sharing" className="group h-full">
-                                        <Card className="bg-indigo-600 border-none p-6 lg:p-8 h-full flex flex-col justify-between relative overflow-hidden group-hover:shadow-2xl group-hover:shadow-indigo-500/30 transition-all cursor-pointer">
+                                        <Card className="rounded-md bg-indigo-600 border-none p-6 lg:p-8 h-full flex flex-col justify-between relative overflow-hidden group-hover:shadow-2xl group-hover:shadow-indigo-500/30 transition-all cursor-pointer">
                                             <div className="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-125 transition-transform" />
 
                                             <div className="relative z-10">
-                                                <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl w-fit mb-6 text-white border border-white/20 group-hover:rotate-6 transition-transform">
+                                                <div className="p-4 bg-white/10 backdrop-blur-md rounded-md w-fit mb-6 text-white border border-white/20 group-hover:rotate-6 transition-transform">
                                                     <PlusCircle size={32} />
                                                 </div>
                                                 <h4 className="text-xl lg:text-2xl font-bold text-white tracking-tight leading-none">Find a Ride</h4>
@@ -354,7 +354,7 @@ export default function PassengerDashboard() {
                                             { label: 'Active Trips', desc: 'Real-time GPS tracking', href: '/passenger/live', icon: <MapPin size={24} />, color: 'indigo' },
                                         ].map((action, i) => (
                                             <Link key={i} href={action.href}>
-                                                <Card className="p-5 lg:p-6 border-none shadow-sm hover:shadow-md hover:border-indigo-500/20 border border-[#1E293B] transition-all cursor-pointer flex items-center justify-between group">
+                                                <Card className="rounded-md p-5 lg:p-6 border-none shadow-sm hover:shadow-md hover:border-indigo-500/20 border border-[#1E293B] transition-all cursor-pointer flex items-center justify-between group">
                                                     <div className="flex items-center gap-4">
                                                         <div className="p-3 bg-muted rounded-xl text-indigo-400 font-bold group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                                                             {action.icon}
@@ -386,19 +386,19 @@ export default function PassengerDashboard() {
                                     <div className="space-y-3">
                                         {isLoading ? (
                                             [1, 2, 3].map(i => (
-                                                <div key={i} className="h-20 w-full bg-muted animate-pulse rounded-2xl" />
+                                                <div key={i} className="h-20 w-full bg-muted animate-pulse rounded-md" />
                                             ))
                                         ) : trips.length === 0 ? (
-                                            <div className="py-12 text-center bg-muted/30 rounded-3xl border-2 border-dashed border-card-border">
+                                            <div className="py-12 text-center bg-muted/30 rounded-md border-2 border-dashed border-card-border">
                                                 <p className="text-sm font-medium text-muted-foreground">No recent activity detected.</p>
                                             </div>
                                         ) : (
                                             trips.slice(0, 3).map((trip, i) => (
                                                 <motion.div key={i} variants={itemVariants}>
                                                     <Link href={`/passenger/trip/${trip.id}`}>
-                                                        <Card className="px-4 lg:px-6 py-4 border-none shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-pointer group">
+                                                        <Card className="rounded-md px-4 lg:px-6 py-4 border-none shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-pointer group">
                                                             <div className="flex items-center gap-3 lg:gap-5 flex-1 min-w-0">
-                                                                <div className={`p-3 lg:p-4 rounded-2xl flex items-center justify-center flex-shrink-0 ${trip.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                                                                <div className={`p-3 lg:p-4 rounded-md flex items-center justify-center flex-shrink-0 ${trip.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>
                                                                     {trip.status === 'completed' ? <ShieldCheck size={20} /> : <Activity size={20} />}
                                                                 </div>
                                                                 <div className="min-w-0">
@@ -445,7 +445,7 @@ export default function PassengerDashboard() {
                             <div className="lg:col-span-4 space-y-6">
                                 {/* Safety Section */}
                                 <motion.div variants={itemVariants}>
-                                    <Card className="p-5 lg:p-6 border-none shadow-sm relative overflow-hidden group">
+                                    <Card className="rounded-md p-5 lg:p-6 border-none shadow-sm relative overflow-hidden group">
                                         <div className="absolute top-0 left-0 w-1 bg-indigo-500 h-full" />
                                         <div className="relative z-10">
                                             <div className="flex items-center gap-3 mb-4">
@@ -476,7 +476,7 @@ export default function PassengerDashboard() {
 
                                 {/* Community Card */}
                                 <motion.div variants={itemVariants}>
-                                    <div className="bg-card rounded-3xl p-5 lg:p-6 text-foreground shadow-2xl relative overflow-hidden group border border-card-border">
+                                    <div className="bg-card rounded-md p-5 lg:p-6 text-foreground shadow-2xl relative overflow-hidden group border border-card-border">
                                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
                                             <TrendingUp size={120} />
                                         </div>
@@ -486,7 +486,7 @@ export default function PassengerDashboard() {
                                             <p className="text-xs text-muted-foreground font-medium leading-relaxed mb-6">
                                                 Join 5,000+ commuters who reduced over 12 tons of CO2 this month alone.
                                             </p>
-                                            <div className="flex items-center gap-3 py-3 px-4 bg-white/5 rounded-2xl border border-white/10 w-fit transition-all group-hover:bg-white/10">
+                                            <div className="flex items-center gap-3 py-3 px-4 bg-white/5 rounded-md border border-white/10 w-fit transition-all group-hover:bg-white/10">
                                                 <div className="p-2 bg-emerald-500 rounded-lg text-white">
                                                     <Leaf size={16} />
                                                 </div>

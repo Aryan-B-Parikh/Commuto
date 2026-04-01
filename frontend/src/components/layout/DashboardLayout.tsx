@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { PassengerBottomNav } from './PassengerBottomNav';
@@ -17,16 +16,14 @@ export function DashboardLayout({ children, userType, title = 'Dashboard', immer
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isSidebarMini, setIsSidebarMini] = useState(false);
     const { role, isAuthenticated, isLoading } = useAuth();
-    const router = useRouter();
 
     useEffect(() => {
         if (!isLoading && isAuthenticated && role && role !== userType) {
-            console.log(`Role mismatch: user is ${role} but accessing ${userType} module. Redirecting...`);
-            router.push(`/${role}/dashboard`);
+            console.log(`Role mismatch: user is ${role} but accessing ${userType} module. Keeping current module.`);
         }
-    }, [role, userType, isAuthenticated, isLoading, router]);
+    }, [role, userType, isAuthenticated, isLoading]);
 
-    if (isLoading || (isAuthenticated && role && role !== userType)) {
+    if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -67,7 +64,7 @@ export function DashboardLayout({ children, userType, title = 'Dashboard', immer
                 )}
 
                 {/* Content area — extra bottom padding on mobile for bottom nav */}
-                <div className="flex-1 animate-fadeIn">
+                <div className="flex-1 animate-fadeIn pt-4 lg:pt-6 px-3 lg:px-6 2xl:px-8">
                     {children}
                 </div>
             </main>

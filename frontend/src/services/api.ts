@@ -26,6 +26,16 @@ axiosRetry(api, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 api.interceptors.response.use(
     response => response,
     error => {
+        const isNetworkError = !error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error');
+
+        if (isNetworkError) {
+            console.warn('API network unavailable:', {
+                message: error.message,
+                url: error.config?.url
+            });
+            return Promise.reject(error);
+        }
+
         if (error.response?.status === 401) {
             const isAuthReq = error.config?.url?.includes('/auth/');
             if (!isAuthReq) {

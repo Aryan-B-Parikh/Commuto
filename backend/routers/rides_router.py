@@ -481,9 +481,21 @@ def get_open_rides(
 ):
     """Get all open rides available for bidding"""
     
-    # Get all pending rides
+    # Identify trips where the current user is a passenger
+    user_passenger_trips = db.query(models.Booking.trip_id).filter(
+        models.Booking.passenger_id == current_user.id
+    ).subquery()
+    
+    # Identify trips where the current driver has already placed a bid
+    driver_bidded_trips = db.query(models.TripBid.trip_id).filter(
+        models.TripBid.driver_id == current_user.id
+    ).subquery()
+
+    # Get all pending rides excluding the ones above
     rides = db.query(models.Trip).filter(
-        models.Trip.status.in_(["pending"])
+        models.Trip.status.in_(["pending"]),
+        # ~models.Trip.id.in_(user_passenger_trips), # COMMUTO-HACK: Uncomment to block drivers from seeing their own trips
+        ~models.Trip.id.in_(driver_bidded_trips)
     ).all()
     
     for ride in rides:

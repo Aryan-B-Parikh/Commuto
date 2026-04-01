@@ -20,7 +20,7 @@ export default function DriverDashboard() {
     const router = useRouter();
     const [requests, setRequests] = useState<TripResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const { showToast } = useToast() as any;
     const [earnings, setEarnings] = useState<any>(null);
     const [isOnline, setIsOnline] = useState(true);
@@ -49,6 +49,21 @@ export default function DriverDashboard() {
                 setRequests(data.filter(r => !ignoredIds.includes(r.id)));
                 setEarnings(earningsData);
             } catch (error: any) {
+                if (error?.response?.status === 403) {
+                    showToast('error', 'Access denied for driver dashboard. Redirecting...');
+                    if (role === 'passenger') {
+                        router.replace('/passenger/dashboard');
+                    } else {
+                        router.replace('/select-role');
+                    }
+                    return;
+                }
+
+                if (error?.response?.status === 429) {
+                    showToast('error', 'Too many requests. Please wait a few seconds and refresh.');
+                    return;
+                }
+
                 if (error?.response?.status !== 401) {
                     console.error('Failed to fetch requests:', error);
                     showToast('error', 'Failed to load requests.');
@@ -59,7 +74,7 @@ export default function DriverDashboard() {
         };
 
         fetchRequests();
-    }, []);
+    }, [router, role, showToast]);
 
     const filteredRequests = requests.filter(request => {
         const originMatch = request.origin_address?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
@@ -316,9 +331,10 @@ export default function DriverDashboard() {
             {/* ====================== DESKTOP LAYOUT (UNCHANGED) ====================== */}
             <div className="hidden lg:block">
                 <DashboardLayout userType="driver" title="Driver Command Center">
+                    <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 pb-12">
 
                     {/* Stats Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                         <StatCard
                             label="Today's Earnings"
                             value={formatCurrency(earnings?.today || 0)}
@@ -469,6 +485,7 @@ export default function DriverDashboard() {
                             </div>
 
                         </div>
+                    </div>
                     </div>
                 </DashboardLayout>
             </div>

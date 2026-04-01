@@ -248,7 +248,7 @@ export default function LoginPage() {
                 <div className="absolute inset-0 opacity-40">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#4F46E5_0%,transparent_50%)]" />
                     <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.8))]" />
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[length:6px_6px] opacity-20" />
                 </div>
 
                 {/* Floating Elements / UI Preview */}
