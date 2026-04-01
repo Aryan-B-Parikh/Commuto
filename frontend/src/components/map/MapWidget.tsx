@@ -149,7 +149,8 @@ export function MapWidget({
 
     // Dynamically import mapbox-gl only on client side to avoid SSR issues
     const initMap = useCallback(async () => {
-        if (!mapContainerRef.current || mapRef.current) return;
+        const containerEl = mapContainerRef.current;
+        if (!containerEl || mapRef.current) return;
         if (!OLA_API_KEY) {
             setError('Ola Maps API Key missing. Check your .env.local file.');
             return;
@@ -179,8 +180,14 @@ export function MapWidget({
                 style.layers = style.layers.filter((l: any) => l.id !== '3d_model_data');
             }
 
+            // In React strict mode/navigation transitions, async init may finish after unmount.
+            // Re-validate container before constructing the map instance.
+            if (!(containerEl instanceof HTMLElement) || !containerEl.isConnected || mapContainerRef.current !== containerEl) {
+                return;
+            }
+
             const map = new maplibregl.Map({
-                container: mapContainerRef.current,
+                container: containerEl,
                 style: style, // Use the patched style object
                 center: [center[1], center[0]], // [lng, lat] for maplibre
                 zoom: zoom,

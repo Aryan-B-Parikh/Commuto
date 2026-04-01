@@ -50,6 +50,11 @@ export default function DriverLivePage() {
     const [heading, setHeading] = useState<number>(0);
     const locationWatchRef = useRef<number | null>(null);
     const hasCompletedRef = useRef<boolean>(false);
+    const hasShownGpsErrorRef = useRef<boolean>(false);
+    const completionRedirectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasShownRateLimitRef = useRef<boolean>(false);
+    const tripRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [tripFetchRetryTick, setTripFetchRetryTick] = useState(0);
 
     const targetCoords = useMemo((): [number, number] | undefined => {
         if (!trip) return undefined;
@@ -70,6 +75,7 @@ export default function DriverLivePage() {
 
             try {
                 const trips = await tripsAPI.getDriverTrips();
+                hasShownRateLimitRef.current = false;
                 const active = trips.find(t => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
                 if (active) {
                     setTrip(active);
@@ -77,6 +83,17 @@ export default function DriverLivePage() {
                     router.push('/driver/dashboard');
                 }
             } catch (error: any) {
+                if (error.response?.status === 429) {
+                    if (!hasShownRateLimitRef.current) {
+                        showToast('error', 'Too many requests. Retrying live trip sync...');
+                        hasShownRateLimitRef.current = true;
+                    }
+                    tripRetryTimeoutRef.current = setTimeout(() => {
+                        setTripFetchRetryTick((v) => v + 1);
+                    }, 1500);
+                    return;
+                }
+
                 if (error.response?.status !== 401) {
                     console.error('Failed to fetch active driver trip:', error);
                 }
@@ -86,7 +103,13 @@ export default function DriverLivePage() {
         };
 
         fetchActiveTrip();
-    }, [router, user, isAuthLoading]);
+        return () => {
+            if (tripRetryTimeoutRef.current) {
+                clearTimeout(tripRetryTimeoutRef.current);
+                tripRetryTimeoutRef.current = null;
+            }
+        };
+    }, [router, user, isAuthLoading, tripFetchRetryTick]);
 
     const {
         isConnected,
@@ -98,11 +121,25 @@ export default function DriverLivePage() {
     useEffect(() => {
         if (tripStatus && trip && trip.status !== tripStatus) {
             setTrip({ ...trip, status: tripStatus } as TripResponse);
-            if (tripStatus === 'completed') {
-                setTimeout(() => router.push('/driver/dashboard'), 3000);
-            }
         }
     }, [tripStatus, trip, router]);
+
+    useEffect(() => {
+        if (trip?.status !== 'completed' || completionRedirectTimeoutRef.current) {
+            return;
+        }
+
+        completionRedirectTimeoutRef.current = setTimeout(() => {
+            router.replace('/driver/dashboard');
+        }, 1200);
+
+        return () => {
+            if (completionRedirectTimeoutRef.current) {
+                clearTimeout(completionRedirectTimeoutRef.current);
+                completionRedirectTimeoutRef.current = null;
+            }
+        };
+    }, [trip?.status, router]);
 
     useEffect(() => {
         if (!isConnected || !trip || hasCompletedRef.current) return;
@@ -120,6 +157,7 @@ export default function DriverLivePage() {
             async (position) => {
                 const { latitude, longitude, heading: newHeading } = position.coords;
                 const newPos: [number, number] = [latitude, longitude];
+                hasShownGpsErrorRef.current = false;
 
                 setDriverPos(newPos);
                 if (newHeading !== null) {
@@ -139,6 +177,7 @@ export default function DriverLivePage() {
                         try {
                             setIsCompletingTrip(true);
                             await otpAPI.completeRide(trip.id);
+                            setTrip(prev => (prev ? { ...prev, status: 'completed' } as TripResponse : prev));
                             showToast('success', "Destination reached! Trip auto-completed.");
                         } catch (err: any) {
                             hasCompletedRef.current = false;
@@ -149,8 +188,26 @@ export default function DriverLivePage() {
                     }
                 }
             },
-            (error) => {
-                console.error("GPS Error:", error);
+            (error: GeolocationPositionError) => {
+                const gpsMessageByCode: Record<number, string> = {
+                    1: 'Location permission denied. Please allow location access for live trip tracking.',
+                    2: 'Location unavailable. Check GPS/network and try again.',
+                    3: 'Location request timed out. Retrying...'
+                };
+
+                const friendlyMessage = gpsMessageByCode[error.code] || 'Unable to get GPS location.';
+
+                // Some environments print GeolocationPositionError as {} in console.
+                console.error('GPS Error:', {
+                    code: error.code,
+                    message: error.message || friendlyMessage,
+                    friendlyMessage
+                });
+
+                if (!hasShownGpsErrorRef.current) {
+                    showToast('error', friendlyMessage);
+                    hasShownGpsErrorRef.current = true;
+                }
             },
             {
                 enableHighAccuracy: true,
@@ -183,153 +240,157 @@ export default function DriverLivePage() {
 
     return (
         <RoleGuard allowedRoles={['driver']}>
-            <DashboardLayout userType="driver" title="Live Navigation" immersive={true}>
-                <div className="relative h-screen w-full bg-[#0B1020] overflow-hidden">
-                    <div className="absolute inset-0 z-0">
-                        <MapWidget
-                            driverPos={driverPos}
-                            driverHeading={heading}
-                            pickup={passengerPos}
-                            destination={destinationPos}
-                            showRoute={true}
-                        />
-                    </div>
-
-                    <div className="absolute top-4 left-4 right-4 z-20 flex justify-center">
-                        <motion.div
-                            initial={{ y: -20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            className="w-full max-w-xl"
-                        >
-                            <div className="bg-[#111827]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl p-4 shadow-2xl flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
-                                        <User size={24} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5">Pickup Passenger</p>
-                                        <h4 className="font-bold text-[#F9FAFB] text-sm truncate max-w-[150px] md:max-w-none">
-                                            {trip.passenger_notes?.[0]?.passenger_name || 'Rider'}
-                                        </h4>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button className="w-10 h-10 rounded-xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] hover:bg-[#334155] transition-colors">
-                                        <Phone size={18} />
-                                    </button>
-                                    <button className="w-10 h-10 rounded-xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] hover:bg-[#334155] transition-colors">
-                                        <MessageSquare size={18} />
-                                    </button>
-                                </div>
+            <DashboardLayout userType="driver" title="Ride Details">
+                <div className="max-w-6xl mx-auto pb-12 space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Driver Live Navigation</div>
+                        {isConnected && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold ring-1 ring-emerald-500/20">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Live Updates Active
                             </div>
-                        </motion.div>
+                        )}
                     </div>
 
-                    <div className="absolute bottom-6 left-4 right-4 z-20 flex justify-center">
-                        <motion.div
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            className="w-full max-w-xl space-y-4"
-                        >
-                            <div className="bg-[#111827] border border-[#1E293B] rounded-[2rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <MapPin size={14} className="text-red-500" />
-                                            <p className="font-bold text-[#F9FAFB] text-base truncate">
-                                                {trip.status === 'active' ? trip.dest_address.split(',')[0] : 'To Pickup Point'}
-                                            </p>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                        <div className="lg:col-span-2 space-y-6">
+                            <Card className="overflow-hidden border-0 shadow-2xl shadow-indigo-500/5">
+                                <div className="h-[300px] lg:h-[430px] w-full relative">
+                                    <MapWidget
+                                        driverPos={driverPos}
+                                        driverHeading={heading}
+                                        pickup={passengerPos}
+                                        destination={destinationPos}
+                                        showRoute={true}
+                                    />
+
+                                    <div className="absolute top-4 left-4 right-4">
+                                        <div className="bg-[#111827]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl p-4 shadow-2xl flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+                                                    <User size={24} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5">Pickup Passenger</p>
+                                                    <h4 className="font-bold text-[#F9FAFB] text-sm truncate max-w-[170px] md:max-w-none">
+                                                        {trip.passenger_notes?.[0]?.passenger_name || 'Rider'}
+                                                    </h4>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button className="w-10 h-10 rounded-xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] hover:bg-[#334155] transition-colors">
+                                                    <Phone size={18} />
+                                                </button>
+                                                <button className="w-10 h-10 rounded-xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] hover:bg-[#334155] transition-colors">
+                                                    <MessageSquare size={18} />
+                                                </button>
+                                            </div>
                                         </div>
-                                        {routeName && (
-                                            <p className="text-[10px] text-[#6B7280] font-medium truncate">
-                                                {routeName}
-                                            </p>
+                                    </div>
+                                </div>
+
+                                <div className="p-5 lg:p-6 bg-[#111827] space-y-4">
+                                    <div className="bg-[#0B1020] border border-[#1E293B] rounded-2xl p-5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <MapPin size={14} className="text-red-500" />
+                                                    <p className="font-bold text-[#F9FAFB] text-base truncate">
+                                                        {trip.status === 'active' ? trip.dest_address.split(',')[0] : 'To Pickup Point'}
+                                                    </p>
+                                                </div>
+                                                {routeName && (
+                                                    <p className="text-[10px] text-[#6B7280] font-medium truncate">
+                                                        {routeName}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="text-right border-l border-[#1E293B] pl-6 ml-6">
+                                                <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Arrival</p>
+                                                <div className="flex flex-col items-end">
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <Clock size={12} className="text-indigo-400" />
+                                                        <p className="font-black text-indigo-400 text-lg leading-none italic">{duration}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Navigation2 size={10} className="text-[#6B7280]" />
+                                                        <p className="text-[10px] font-bold text-[#6B7280]">{distanceKm} km</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => {
+                                                const targetLat = currentStatus === 'active' ? trip.dest_lat : trip.origin_lat;
+                                                const targetLng = currentStatus === 'active' ? trip.dest_lng : trip.origin_lng;
+                                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}&travelmode=driving`, '_blank');
+                                            }}
+                                            className="w-14 h-14 rounded-2xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] shrink-0 border border-[#374151] active:scale-95 transition-transform"
+                                        >
+                                            <Navigation size={24} className="rotate-45" />
+                                        </button>
+
+                                        {currentStatus === 'bid_accepted' && (
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await updateStatus('driver_assigned');
+                                                        setTrip(prev => (prev ? { ...prev, status: 'driver_assigned' } as TripResponse : prev));
+                                                        showToast('success', "Status updated: You've arrived!");
+                                                    } catch (err) {
+                                                        showToast('error', "Failed to update arrival status");
+                                                    }
+                                                }}
+                                                className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition-all"
+                                            >
+                                                I HAVE ARRIVED
+                                            </button>
+                                        )}
+                                        {currentStatus === 'driver_assigned' && (
+                                            <button
+                                                onClick={() => setIsOTPModalOpen(true)}
+                                                className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                                            >
+                                                <Car size={20} />
+                                                START TRIP
+                                            </button>
+                                        )}
+                                        {currentStatus === 'active' && (
+                                            <button
+                                                disabled={isCompletingTrip}
+                                                onClick={async () => {
+                                                    if (!confirm('Are you sure you want to complete this trip?')) return;
+                                                    setIsCompletingTrip(true);
+                                                    try {
+                                                        await otpAPI.completeRide(trip.id);
+                                                        setTrip(prev => (prev ? { ...prev, status: 'completed' } as TripResponse : prev));
+                                                        showToast('success', "Trip completed!");
+                                                    } catch (err: any) {
+                                                        showToast('error', err.response?.data?.detail || "Failed to complete trip");
+                                                    } finally {
+                                                        setIsCompletingTrip(false);
+                                                    }
+                                                }}
+                                                className="flex-1 h-14 bg-white text-[#0B1020] rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
+                                            >
+                                                {isCompletingTrip ? 'ENDING...' : 'END TRIP'}
+                                            </button>
+                                        )}
+                                        {currentStatus === 'completed' && (
+                                            <div className="flex-1 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center font-black uppercase tracking-widest text-sm italic">
+                                                TRIP FINISHED
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="text-right border-l border-[#1E293B] pl-6 ml-6">
-                                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Arrival</p>
-                                        <div className="flex flex-col items-end">
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <Clock size={12} className="text-indigo-400" />
-                                                <p className="font-black text-indigo-400 text-lg leading-none italic">{duration}</p>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <Navigation2 size={10} className="text-[#6B7280]" />
-                                                <p className="text-[10px] font-bold text-[#6B7280]">{distanceKm} km</p>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
+                            </Card>
+                        </div>
 
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => {
-                                        const targetLat = currentStatus === 'active' ? trip.dest_lat : trip.origin_lat;
-                                        const targetLng = currentStatus === 'active' ? trip.dest_lng : trip.origin_lng;
-                                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}&travelmode=driving`, '_blank');
-                                    }}
-                                    className="w-14 h-14 rounded-2xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] shrink-0 border border-[#374151] active:scale-95 transition-transform"
-                                >
-                                    <Navigation size={24} className="rotate-45" />
-                                </button>
-
-                                {currentStatus === 'bid_accepted' && (
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                await updateStatus('driver_assigned');
-                                                showToast('success', "Status updated: You've arrived!");
-                                            } catch (err) {
-                                                showToast('error', "Failed to update arrival status");
-                                            }
-                                        }}
-                                        className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition-all"
-                                    >
-                                        I HAVE ARRIVED
-                                    </button>
-                                )}
-                                {currentStatus === 'driver_assigned' && (
-                                    <button
-                                        onClick={() => setIsOTPModalOpen(true)}
-                                        className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                                    >
-                                        <Car size={20} />
-                                        START TRIP
-                                    </button>
-                                )}
-                                {currentStatus === 'active' && (
-                                    <button
-                                        disabled={isCompletingTrip}
-                                        onClick={async () => {
-                                            if (!confirm('Are you sure you want to complete this trip?')) return;
-                                            setIsCompletingTrip(true);
-                                            try {
-                                                await otpAPI.completeRide(trip.id);
-                                                showToast('success', "Trip completed!");
-                                            } catch (err: any) {
-                                                showToast('error', err.response?.data?.detail || "Failed to complete trip");
-                                            } finally {
-                                                setIsCompletingTrip(false);
-                                            }
-                                        }}
-                                        className="flex-1 h-14 bg-white text-[#0B1020] rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
-                                    >
-                                        {isCompletingTrip ? 'COMPLETING...' : 'COMPLETE TRIP'}
-                                    </button>
-                                )}
-                                {currentStatus === 'completed' && (
-                                    <div className="flex-1 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center font-black uppercase tracking-widest text-sm italic">
-                                        TRIP FINISHED
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
-
-                    <div className="hidden lg:block absolute right-6 top-24 bottom-24 w-80 z-20">
-                        <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="h-full">
-                            <Card className="h-full bg-[#111827]/95 border-none shadow-2xl backdrop-blur-xl p-6 flex flex-col gap-8">
+                        <motion.div initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-6">
+                            <Card className="bg-[#111827]/95 border-none shadow-2xl backdrop-blur-xl p-6 flex flex-col gap-8">
                                 <div>
                                     <h3 className="text-sm font-black text-[#F9FAFB] uppercase tracking-[0.2em] mb-4">Trip Timeline</h3>
                                     <div className="space-y-6">
@@ -364,6 +425,15 @@ export default function DriverLivePage() {
                                     <p className="text-[10px] text-[#6B7280] leading-relaxed">Your location is being broadcasted to our safety center.</p>
                                 </div>
                             </Card>
+                            <Card className="p-5 lg:p-6 border-t-4 border-t-indigo-500 shadow-xl shadow-indigo-500/10">
+                                <p className="text-xs font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">Trip Status</p>
+                                <p className="text-2xl font-black text-indigo-400 uppercase tracking-wide mb-4">{currentStatus.replace('_', ' ')}</p>
+                                <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-center">
+                                    <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">
+                                        {currentStatus === 'completed' ? 'Trip Closed' : 'Live Tracking Enabled'}
+                                    </span>
+                                </div>
+                            </Card>
                         </motion.div>
                     </div>
                 </div>
@@ -376,6 +446,7 @@ export default function DriverLivePage() {
                         setIsVerifyingOTP(true);
                         try {
                             await otpAPI.verifyOTP(trip.id, otp);
+                            setTrip(prev => (prev ? { ...prev, status: 'active', otp_verified: true } as TripResponse : prev));
                             showToast('success', "OTP Verified! Trip started.");
                             setIsOTPModalOpen(false);
                         } catch (err: any) {

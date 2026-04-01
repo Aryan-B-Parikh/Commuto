@@ -99,28 +99,8 @@ export function Sidebar({
             className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar flex flex-col z-50 transition-all duration-500 ease-[cubic-bezier(0.4, 0, 0.2, 1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'
                 } ${isMini ? 'w-[88px]' : 'w-[260px]'}`}
         >
-            {/* Logo Area */}
-            <div className={`p-6 flex items-center gap-3 transition-all duration-500 ${isMini ? 'justify-center px-2' : ''}`}>
-                <div
-                    onClick={onToggleMini}
-                    className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-                >
-                    <Car size={20} strokeWidth={2} />
-                </div>
-                {!isMini && (
-                    <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex flex-col"
-                    >
-                        <span className="text-xl font-black tracking-tighter text-foreground leading-none">COMMUTO</span>
-                        <span className="text-[10px] font-bold text-indigo-400 tracking-[0.2em] mt-0.5">PLATFORM</span>
-                    </motion.div>
-                )}
-            </div>
-
             {/* Navigation */}
-            <nav className="flex-1 py-6 overflow-y-auto scrollbar-hide">
+            <nav className="flex-1 pt-6 pb-6 overflow-y-auto scrollbar-hide">
                 {!isMini && (
                     <div className="px-6 mb-4 text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] opacity-50">
                         Main Menu

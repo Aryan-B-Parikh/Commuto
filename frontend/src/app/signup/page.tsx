@@ -74,6 +74,20 @@ export default function SignupPage() {
         return Object.keys(newErrors).length === 0;
     };
 
+    const getApiErrorMessage = (error: any): string => {
+        const detail = error?.response?.data?.detail;
+        if (Array.isArray(detail)) {
+            return detail.map((d: any) => d?.msg || String(d)).join(', ');
+        }
+        if (typeof detail === 'string' && detail.trim()) {
+            return detail;
+        }
+        if (typeof error?.message === 'string' && error.message.trim()) {
+            return error.message;
+        }
+        return 'Registration failed. Please try again.';
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -85,25 +99,31 @@ export default function SignupPage() {
             return;
         }
 
-        const loggedInUser = await register({
-            email,
-            password,
-            full_name: name,
-            phone,
-            role: role as 'passenger' | 'driver',
-        });
+        try {
+            const normalizedPhone = phone.replace(/\s+/g, '');
+            const loggedInUser = await register({
+                email,
+                password,
+                full_name: name,
+                phone: normalizedPhone,
+                role: role as 'passenger' | 'driver',
+            });
 
-        if (loggedInUser) {
-            showToast('success', 'Account created! Please verify your email.');
-            // Trigger verification email (non-blocking)
-            try {
-                await authAPI.sendVerification();
-            } catch (_) {
-                // best-effort; user can resend on the verify page
+            if (loggedInUser) {
+                showToast('success', 'Account created! Please verify your email.');
+                // Trigger verification email (non-blocking)
+                try {
+                    await authAPI.sendVerification();
+                } catch (_) {
+                    // best-effort; user can resend on the verify page
+                }
+                router.push('/verify-email');
+            } else {
+                showToast('error', 'Account created, but auto-login failed. Please log in manually.');
+                router.push('/login');
             }
-            router.push('/verify-email');
-        } else {
-            showToast('error', 'Registration failed. Please try again.');
+        } catch (error: any) {
+            showToast('error', getApiErrorMessage(error));
         }
     };
 
@@ -147,7 +167,7 @@ export default function SignupPage() {
                 <div className="absolute inset-0 opacity-40">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#4F46E5_0%,transparent_50%)]" />
                     <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.8))]" />
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[length:6px_6px] opacity-20" />
                 </div>
 
                 <div className="absolute inset-0 flex items-center justify-center p-20">

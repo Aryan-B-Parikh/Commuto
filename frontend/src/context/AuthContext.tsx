@@ -45,31 +45,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return null;
     };
 
+    const getRoleFromPathname = (): UserRole => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        const path = window.location.pathname;
+        if (path.startsWith('/driver')) {
+            return 'driver';
+        }
+        if (path.startsWith('/passenger')) {
+            return 'passenger';
+        }
+        return null;
+    };
+
     // Load user from token on mount
     useEffect(() => {
         const loadUser = async () => {
             if (typeof window !== 'undefined') {
                 const token = localStorage.getItem('auth_token');
                 const savedRole = getPersistedRole();
+                const routeRole = getRoleFromPathname();
 
-                if (savedRole) setRoleState(savedRole);
+                if (routeRole || savedRole) setRoleState(routeRole ?? savedRole);
 
                 if (token) {
                     try {
                         const userData = await authAPI.getCurrentUser();
                         const frontendUser = transformBackendUser(userData);
                         setUser(frontendUser);
-                        const effectiveRole = savedRole ?? (userData.role as UserRole);
+                        // Use backend role as source of truth; saved role is only a fallback.
+                        const backendRole = userData.role as UserRole;
+                        const effectiveRole = routeRole ?? backendRole ?? savedRole;
                         setRoleState(effectiveRole);
                         if (effectiveRole) {
                             localStorage.setItem('commuto_role', effectiveRole);
                         }
                     } catch (error: any) {
-                        // Only log real errors, not expected 401s (expired session)
-                        if (error.response?.status !== 401) {
+                        const status = error?.response?.status;
+                        const isNetworkError = !error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error');
+
+                        if (isNetworkError) {
+                            console.warn('Auth check skipped: backend unreachable.');
+                            setUser(null);
+                        } else if (status !== 401) {
                             console.error('Failed to load user:', error);
                         }
-                        localStorage.removeItem('auth_token');
+
+                        // Clear persisted auth only on actual unauthorized response.
+                        if (status === 401) {
+                            localStorage.removeItem('auth_token');
+                            localStorage.removeItem('commuto_role');
+                        }
                     }
                 }
                 setIsLoading(false);
@@ -127,7 +155,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
             console.error('Registration failed:', error);
             setIsLoading(false);
-            return null;
+            throw error;
         }
     }, [login]);
 
@@ -160,7 +188,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const frontendUser = transformBackendUser(userData);
             setUser(frontendUser);
             const savedRole = getPersistedRole();
-            setRole(savedRole ?? (userData.role as UserRole));
+            const routeRole = getRoleFromPathname();
+            const backendRole = userData.role as UserRole;
+            setRole(routeRole ?? backendRole ?? savedRole);
         } catch (error) {
             console.error('Failed to refresh user:', error);
         }
