@@ -23,6 +23,9 @@ MIGRATIONS = [
     
     # --- Trip table: passenger notes ---
     "ALTER TABLE trips ADD COLUMN IF NOT EXISTS notes TEXT",
+
+    # --- Trip table: completion OTP ---
+    "ALTER TABLE trips ADD COLUMN IF NOT EXISTS completion_otp VARCHAR(6)",
     
     # --- TripBid table: driver message ---
     "ALTER TABLE trip_bids ADD COLUMN IF NOT EXISTS message VARCHAR(500)",

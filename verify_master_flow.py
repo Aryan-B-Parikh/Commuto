@@ -414,13 +414,17 @@ class MasterFlowVerifier:
 
         # Google OAuth behavior (code-level check for role prompt)
         auth_router_src = (BACKEND_DIR / "routers" / "auth_router.py").read_text(encoding="utf-8", errors="ignore")
-        if 'requested_role = auth_data.role if auth_data.role in ["passenger", "driver"] else "passenger"' in auth_router_src:
+        default_role_pattern = 'requested_role = auth_data.role if auth_data.role in ["passenger", "driver"] else "passenger"'
+        if default_role_pattern in auth_router_src:
             self.report.fail(
                 "Identity.GoogleOAuthRoleSelection",
                 "Backend auto-assigns default passenger role when role is missing instead of forcing explicit role selection",
             )
         else:
-            self.report.pass_("Identity.GoogleOAuthRoleSelection", "No default-role auto assignment pattern detected")
+            self.report.skip(
+                "Identity.GoogleOAuthRoleSelection",
+                "Static source check is best-effort; validate /auth/google behavior in an integration test",
+            )
 
         # ---- Marketplace flow ----
         try:

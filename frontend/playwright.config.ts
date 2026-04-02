@@ -7,6 +7,9 @@ import { defineConfig, devices } from '@playwright/test';
  * Run all tests:   npm run test:e2e
  * Open interactive UI: npm run test:e2e:ui
  */
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+const basePort = new URL(baseURL).port || '3000';
+
 export default defineConfig({
     testDir: './tests/e2e',
     fullyParallel: true,
@@ -16,7 +19,7 @@ export default defineConfig({
     reporter: [['html', { outputFolder: 'playwright-report' }], ['list']],
 
     use: {
-        baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+        baseURL,
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
     },
@@ -44,8 +47,8 @@ export default defineConfig({
     webServer: process.env.CI
         ? undefined
         : {
-              command: 'npm run dev',
-              url: 'http://localhost:3000',
+              command: process.env.PLAYWRIGHT_DEV_COMMAND || `npm run dev -- --port ${basePort}`,
+              url: baseURL,
               reuseExistingServer: true,
               timeout: 120_000,
           },

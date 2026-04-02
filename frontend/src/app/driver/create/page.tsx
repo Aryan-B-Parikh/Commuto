@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/hooks/useToast';
 import { formatCurrency } from '@/utils/formatters';
+import { tripsAPI } from '@/services/api';
 
 export default function DriverCreatePage() {
     const router = useRouter();
@@ -20,7 +21,7 @@ export default function DriverCreatePage() {
         date: '',
         time: '',
         seats: 3,
-        pricePerSeat: 12,
+        totalPrice: 40,
         vehicleType: 'sedan',
         vehicleNumber: '',
         notes: '',
@@ -34,12 +35,38 @@ export default function DriverCreatePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        showToast('success', 'Trip published successfully!');
-        router.push('/driver/dashboard');
+        try {
+            const payload = {
+                from_location: {
+                    address: formData.from,
+                    lat: 19.0760, // Mock lat for Mumbai
+                    lng: 72.8777, // Mock lng for Mumbai
+                },
+                to_location: {
+                    address: formData.to,
+                    lat: 18.5204, // Mock lat for Pune
+                    lng: 73.8567, // Mock lng for Pune
+                },
+                date: formData.date,
+                time: formData.time,
+                total_seats: formData.seats,
+                total_price: formData.totalPrice,
+                notes: formData.notes
+            };
+
+            await tripsAPI.createSharedRide(payload);
+            showToast('success', 'Trip published successfully!');
+            router.push('/driver/dashboard');
+        } catch (error: any) {
+            console.error('Failed to create trip:', error);
+            showToast('error', error?.response?.data?.detail || 'Failed to publish trip. Check your wallet balance.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const estimatedEarnings = formData.pricePerSeat * formData.seats;
+    const estimatedEarnings = formData.totalPrice;
+    const perSeatPrice = formData.totalPrice / (formData.seats + 1); // Split among driver + passengers
 
     return (
         <div className="min-h-screen bg-[#0B1020]">
@@ -111,8 +138,9 @@ export default function DriverCreatePage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#9CA3AF] mb-1">Price per Seat ($)</label>
-                                <input type="number" name="pricePerSeat" value={formData.pricePerSeat} onChange={handleChange} min="1" className="w-full px-4 py-3 rounded-xl border border-[#1E293B] bg-[#1E293B]/30 text-[#F9FAFB] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all" required />
+                                <label className="block text-sm font-medium text-[#9CA3AF] mb-1">Total Trip Price ($)</label>
+                                <input type="number" name="totalPrice" value={formData.totalPrice} onChange={handleChange} min="1" className="w-full px-4 py-3 rounded-xl border border-[#1E293B] bg-[#1E293B]/30 text-[#F9FAFB] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all" required />
+                                <p className="mt-2 text-xs text-[#6B7280]">This will be divided among all passengers joined.</p>
                             </div>
                         </div>
                     </Card>
@@ -142,10 +170,13 @@ export default function DriverCreatePage() {
                             <Card className="bg-emerald-500/10 border-emerald-500/20">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-emerald-400">Potential Earnings</p>
-                                        <p className="text-xs text-emerald-400/70">{formData.seats} seats × {formatCurrency(formData.pricePerSeat)}</p>
+                                        <p className="text-sm text-emerald-400">Total Ride Cost</p>
+                                        <p className="text-xs text-emerald-400/70">Split between you + {formData.seats} passengers</p>
                                     </div>
-                                    <p className="text-2xl font-bold text-emerald-400">{formatCurrency(estimatedEarnings)}</p>
+                                    <div className="text-right">
+                                        <p className="text-2xl font-bold text-emerald-400">{formatCurrency(estimatedEarnings)}</p>
+                                        <p className="text-xs text-emerald-400/60">approx. {formatCurrency(perSeatPrice)} each</p>
+                                    </div>
                                 </div>
                             </Card>
                         </motion.div>

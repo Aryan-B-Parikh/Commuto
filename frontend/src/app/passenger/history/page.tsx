@@ -70,7 +70,7 @@ export default function PassengerHistoryPage() {
             case 'completed': return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', icon: <CheckCircle2 size={12} /> };
             case 'cancelled': return { bg: 'bg-red-500/20', text: 'text-red-400', icon: <XCircle size={12} /> };
             case 'active':
-            case 'pending': return { bg: 'bg-indigo-500/20', text: 'text-indigo-400', icon: <Clock size={12} /> };
+            case 'pending': return { bg: 'bg-teal-500/20', text: 'text-teal-400', icon: <Clock size={12} /> };
             default: return { bg: 'bg-[#1E293B]', text: 'text-[#9CA3AF]', icon: null };
         }
     };
@@ -101,7 +101,7 @@ export default function PassengerHistoryPage() {
                                 key={filter}
                                 onClick={() => setActiveFilter(filter as any)}
                                 className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold capitalize transition-colors border ${activeFilter === filter
-                                    ? 'bg-indigo-600 text-white border-indigo-500'
+                                    ? 'bg-teal-600 text-white border-teal-500'
                                     : 'bg-[#111827] text-[#9CA3AF] border-[#1E293B] hover:bg-[#1E293B]'
                                     }`}
                             >
@@ -130,11 +130,11 @@ export default function PassengerHistoryPage() {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: i * 0.05 }}
                                             whileTap={{ scale: 0.98 }}
-                                            className="bg-[#111827] rounded-2xl p-4 flex items-center gap-4 border border-[#1E293B] shadow-sm relative overflow-hidden"
+                                            className="bg-[#111827] rounded-sm p-4 flex items-center gap-4 border border-[#1E293B] shadow-sm relative overflow-hidden"
                                         >
                                             {/* Left: Icon Avatar */}
                                             <div className="w-12 h-12 rounded-full bg-[#1E293B] flex items-center justify-center flex-shrink-0 text-[#9CA3AF] border border-[#374151]">
-                                                {trip.status === 'completed' ? <CheckCircle2 size={24} className="text-emerald-400" /> : <Navigation size={22} className="text-indigo-400" />}
+                                                {trip.status === 'completed' ? <CheckCircle2 size={24} className="text-emerald-400" /> : <Navigation size={22} className="text-teal-400" />}
                                             </div>
 
                                             {/* Center: Details */}
@@ -181,7 +181,7 @@ export default function PassengerHistoryPage() {
                             <div className="flex justify-between items-center mb-4 lg:mb-6">
                                 <h2 className="text-xl font-bold text-[#F9FAFB]">Recent Rides</h2>
                                 <div className="flex gap-2">
-                                    <span className="text-sm font-bold text-indigo-400 px-3 py-1 bg-indigo-500/10 rounded-full">{completedTrips.length} Completed</span>
+                                    <span className="text-sm font-bold text-teal-400 px-3 py-1 bg-teal-500/10 rounded-full">{completedTrips.length} Completed</span>
                                 </div>
                             </div>
 
@@ -220,7 +220,7 @@ export default function PassengerHistoryPage() {
                                                                     <h3 className="font-bold text-[#F9FAFB] truncate">
                                                                         {trip.status === 'pending' ? `Request to ${trip.to.name}` : trip.driver.name}
                                                                     </h3>
-                                                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 ml-2 ${trip.status === 'completed' ? 'bg-indigo-500/15 text-indigo-400' :
+                                                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 ml-2 ${trip.status === 'completed' ? 'bg-teal-500/15 text-teal-400' :
                                                                         trip.status === 'active' ? 'bg-blue-500/15 text-blue-400' :
                                                                             'bg-[#1E293B] text-[#6B7280]'
                                                                         }`}>
@@ -275,7 +275,7 @@ export default function PassengerHistoryPage() {
 
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">📉</div>
+                                            <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400">📉</div>
                                             <p className="text-sm font-bold text-[#6B7280] uppercase">CO₂ Saved</p>
                                         </div>
                                         <p className="text-xl font-black text-[#F9FAFB]">{co2Saved} kg</p>
@@ -283,7 +283,7 @@ export default function PassengerHistoryPage() {
 
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">🤝</div>
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">🤝</div>
                                             <p className="text-sm font-bold text-[#6B7280] uppercase">Co-riders</p>
                                         </div>
                                         <p className="text-xl font-black text-[#F9FAFB]">{coRiders}</p>
@@ -300,10 +300,10 @@ export default function PassengerHistoryPage() {
                                 </div>
                             </Card>
 
-                            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-5 lg:p-6 rounded-2xl text-white shadow-lg overflow-hidden relative group">
+                            <div className="bg-gradient-to-br from-teal-600 to-teal-800 p-5 lg:p-6 rounded-sm text-white shadow-lg overflow-hidden relative group">
                                 <div className="relative z-10">
                                     <h4 className="font-black text-xl mb-2 italic tracking-tighter">FREE TRIP AWAITS!</h4>
-                                    <p className="text-sm text-indigo-200 leading-snug mb-4">Complete 3 more rides this month to unlock your 50% discount voucher.</p>
+                                    <p className="text-sm text-teal-200 leading-snug mb-4">Complete 3 more rides this month to unlock your 50% discount voucher.</p>
                                     <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
                                         <div className="h-full bg-white rounded-full" style={{ width: '66%' }} />
                                     </div>

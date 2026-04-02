@@ -18,8 +18,15 @@ export const metadata: Metadata = {
   authors: [{ name: "Commuto" }],
   openGraph: {
     title: "Commuto - Smart Ride Sharing",
-    description: "Share your ride, share the journey.",
+    description: "Share your ride, share the journey. Connect with fellow commuters, split costs, and reduce emissions.",
     type: "website",
+    url: "https://commuto.smart",
+    siteName: "Commuto",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Commuto - Smart Ride Sharing",
+    description: "Share your ride, share the journey. Connect with fellow commuters, split costs, and reduce emissions.",
   },
 };
 
@@ -34,7 +41,7 @@ export default function RootLayout({
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased transition-colors duration-300`}>
         <ThemeProvider>
           <GoogleOAuthProvider clientId={googleClientId}>

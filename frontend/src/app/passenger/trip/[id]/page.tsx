@@ -189,6 +189,15 @@ export default function PassengerTripDetailsPage() {
     if (!trip) return null;
 
     const dt = formatDateTime(trip.date, trip.time);
+    const showPickupOtp = Boolean(rawTrip?.start_otp && !rawTrip?.otp_verified);
+    const showCompletionOtp = Boolean(rawTrip?.completion_otp && rawTrip?.otp_verified && rawTrip?.status === 'active');
+    const otpValue = showCompletionOtp ? rawTrip?.completion_otp : rawTrip?.start_otp;
+    const otpLabel = showCompletionOtp
+        ? 'Share this Drop OTP with your Driver at destination'
+        : 'Share this OTP with your Driver at pickup';
+    const otpHint = showCompletionOtp
+        ? 'Only share when you have reached your destination'
+        : 'Only share when you are seated in the vehicle';
 
     return (
         <RoleGuard allowedRoles={['passenger']}>
@@ -301,20 +310,20 @@ export default function PassengerTripDetailsPage() {
                             </Card>
 
                             {/* OTP Display (after bid accepted) */}
-                            {rawTrip?.start_otp && (!rawTrip?.otp_verified || rawTrip?.status === 'active') && (
+                            {(showPickupOtp || showCompletionOtp) && (
                                 <Card className="border-none shadow-sm p-5 lg:p-6">
                                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">
-                                        {rawTrip.otp_verified ? 'Share this Drop OTP with your Driver at destination' : 'Share this OTP with your Driver at pickup'}
+                                        {otpLabel}
                                     </p>
                                     <div className="flex justify-center gap-2">
-                                        {rawTrip.start_otp.split('').map((digit: string, i: number) => (
+                                        {otpValue?.split('').map((digit: string, i: number) => (
                                             <span key={i} className="w-12 h-14 bg-[#1E293B] rounded-xl flex items-center justify-center text-2xl font-black text-white border border-[#374151]">
                                                 {digit}
                                             </span>
                                         ))}
                                     </div>
                                     <p className="text-[10px] text-[#6B7280] text-center mt-3">
-                                        {rawTrip.otp_verified ? 'Only share when you have reached your destination' : 'Only share when you are seated in the vehicle'}
+                                        {otpHint}
                                     </p>
                                 </Card>
                             )}

@@ -26,8 +26,15 @@ def hash_password(password: str) -> str:
     password_bytes = password.encode('utf-8')
     if len(password_bytes) > 72:
         password_bytes = password_bytes[:72]
-    # Use 4 rounds for faster tests/local dev, 12 for production
-    rounds = 4 if os.getenv("APP_ENV", "development") in ["development", "test"] else 12
+    # Use 4 rounds for faster tests/local dev, production-strength rounds otherwise.
+    app_env = os.getenv("APP_ENV", "production")
+    if app_env in ["development", "test"]:
+        rounds = 4
+    else:
+        try:
+            rounds = int(os.getenv("BCRYPT_ROUNDS", "12"))
+        except ValueError:
+            rounds = 12
     salt = bcrypt.gensalt(rounds=rounds)
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode('utf-8')

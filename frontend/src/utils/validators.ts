@@ -1,13 +1,27 @@
 // Email validation
 export const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    // Stricter regex for valid TLD, no consecutive dots, etc.
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email) && !email.includes('..');
 };
 
 // Phone validation
 export const isValidPhone = (phone: string): boolean => {
-    const phoneRegex = /^\+?[\d\s-]{10,}$/;
-    return phoneRegex.test(phone);
+    // Remove common prefixes and non-digit characters
+    const cleaned = phone.replace(/[\s\-\+\(\)]/g, '');
+    let target = cleaned;
+    
+    if (cleaned.startsWith('91') && cleaned.length === 12) {
+        target = cleaned.slice(2);
+    }
+    
+    // Must be 10 digits starting with 6, 7, 8, or 9
+    if (!/^[6-9]\d{9}$/.test(target)) return false;
+    
+    // Check for repetitive digits (e.g., 1111111111)
+    if (new Set(target).size === 1) return false;
+    
+    return true;
 };
 
 // Password validation (min 8 chars, 1 uppercase, 1 lowercase, 1 number)

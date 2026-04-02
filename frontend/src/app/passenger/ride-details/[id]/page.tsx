@@ -129,6 +129,12 @@ export default function RideDetailsPage() {
 
     const isMember = trip?.passengers?.some((p: any) => p.id === user?.id) || trip?.creator_passenger_id === user?.id || false;
     const isCreator = trip?.creator_passenger_id === user?.id || false;
+    const showPickupOtp = Boolean(isMember && trip?.start_otp && !trip?.otp_verified);
+    const showCompletionOtp = Boolean(isMember && trip?.completion_otp && trip?.otp_verified && trip?.status === 'active');
+    const otpValue = showCompletionOtp ? trip?.completion_otp : trip?.start_otp;
+    const otpLabel = showCompletionOtp
+        ? 'Share this Drop OTP with your Driver'
+        : 'Share this OTP with your Driver';
 
     // Fetch bids when user is a member
     useEffect(() => {
@@ -352,13 +358,13 @@ export default function RideDetailsPage() {
                 {/* Sticky Bottom Pricing & CTA */}
                 <div className="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-[#1E293B] p-4 flex flex-col gap-3 z-50 pb-safe">
                     {/* Mobile OTP display */}
-                    {isMember && trip.start_otp && (!trip.otp_verified || trip.status === 'active') && (
+                    {(showPickupOtp || showCompletionOtp) && (
                         <div className="flex flex-col items-center gap-1.5 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
                             <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
-                                {trip.otp_verified ? 'Share this Drop OTP with your Driver' : 'Share this OTP with your Driver'}
+                                {otpLabel}
                             </p>
                             <div className="flex gap-1.5">
-                                {trip.start_otp.split('').map((digit: string, i: number) => (
+                                {otpValue?.split('').map((digit: string, i: number) => (
                                     <span key={i} className="w-9 h-11 bg-[#1E293B] rounded-lg flex items-center justify-center text-lg font-black text-white border border-[#374151]">
                                         {digit}
                                     </span>
@@ -374,8 +380,11 @@ export default function RideDetailsPage() {
                     )}
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-2xl font-black text-[#F9FAFB]">{formatCurrency(trip.price_per_seat)}</p>
-                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase">Per Seat</p>
+                            <p className="text-2xl font-black text-[#F9FAFB]">{formatCurrency(trip.total_price)}</p>
+                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase">Total Ride Price</p>
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase mt-0.5">
+                                {formatCurrency(trip.price_per_seat)} each
+                            </p>
                         </div>
 
                         {isMember ? (
@@ -520,19 +529,24 @@ export default function RideDetailsPage() {
                                 <Card className="p-6 lg:p-8 border-t-4 border-t-indigo-500 shadow-xl shadow-indigo-500/10">
                                     <div className="text-center mb-6 lg:mb-8">
                                         <p className="text-4xl lg:text-5xl font-black text-indigo-400 mb-2">
-                                            {formatCurrency(trip.price_per_seat)}
+                                            {formatCurrency(trip.total_price)}
                                         </p>
-                                        <p className="text-sm font-bold text-[#9CA3AF] uppercase tracking-widest">Fair Share Price</p>
+                                        <div className="flex flex-col items-center">
+                                            <p className="text-sm font-bold text-[#F9FAFB] uppercase tracking-widest">Total Ride Price</p>
+                                            <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mt-1">
+                                                {formatCurrency(trip.price_per_seat)} Per Person
+                                            </p>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-4">
-                                        {isMember && trip.start_otp && (!trip.otp_verified || trip.status === 'active') && (
+                                        {(showPickupOtp || showCompletionOtp) && (
                                             <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-center space-y-2">
                                                 <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
-                                                    {trip.otp_verified ? 'Share this Drop OTP with Driver at destination' : 'Share this OTP with Driver at pickup'}
+                                                    {showCompletionOtp ? 'Share this Drop OTP with Driver at destination' : 'Share this OTP with Driver at pickup'}
                                                 </p>
                                                 <div className="flex justify-center gap-2">
-                                                    {trip.start_otp.split('').map((digit: string, i: number) => (
+                                                    {otpValue?.split('').map((digit: string, i: number) => (
                                                         <span key={i} className="w-10 h-12 bg-[#1E293B] rounded-xl flex items-center justify-center text-xl font-black text-white border border-[#374151]">
                                                             {digit}
                                                         </span>

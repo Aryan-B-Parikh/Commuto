@@ -40,6 +40,7 @@ export function transformTripResponse(trip: TripResponse): Trip {
             role: 'driver',
             rating: trip.driver_rating || 0,
             verified: !!trip.driver_name,
+            profileCompleted: true,
             avatar: trip.driver_avatar || '',
             totalTrips: 0,
             phone: '',

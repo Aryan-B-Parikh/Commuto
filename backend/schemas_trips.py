@@ -32,9 +32,9 @@ class SharedTripCreate(BaseModel):
     to_location: LocationCreate
     date: str
     time: str
-    total_seats: int = Field(ge=1, le=8)
-    price_per_seat: float = Field(gt=0)
-    notes: Optional[str] = None
+    total_seats: int = Field(ge=1, le=4)
+    total_price: float = Field(gt=0)
+    notes: Optional[str] = Field(default=None, max_length=500)
 
 
 class PassengerNote(BaseModel):
@@ -57,10 +57,12 @@ class TripResponse(BaseModel):
     seats_requested: Optional[int] = None
     total_seats: int
     available_seats: int
+    total_price: Optional[float] = None
     price_per_seat: Optional[float] = None
     status: str
     notes: Optional[str] = None
     start_otp: Optional[str] = None
+    completion_otp: Optional[str] = None
     otp_verified: bool = False
     created_at: datetime
     
@@ -96,7 +98,7 @@ class TripCancellationResponse(BaseModel):
 # Bid Schemas
 class BidCreate(BaseModel):
     amount: float = Field(gt=0)
-    message: Optional[str] = None
+    message: Optional[str] = Field(default=None, max_length=500)
 
 
 class BidResponse(BaseModel):
@@ -131,6 +133,7 @@ class DriverBidWithTrip(BaseModel):
     trip_status: str
     start_time: datetime
     total_seats: int
+    total_price: Optional[float] = None
     price_per_seat: Optional[float] = None
     notes: Optional[str] = None
     passenger_notes: List[PassengerNote] = []
@@ -159,7 +162,7 @@ class BidAcceptResponse(BaseModel):
 
 # OTP Schema
 class OTPVerify(BaseModel):
-    otp: str = Field(min_length=4, max_length=4)
+    otp: str = Field(min_length=6, max_length=6)
 
 
 class OTPVerifyResponse(BaseModel):

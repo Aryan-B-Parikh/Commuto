@@ -27,7 +27,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
         date: '',
         time: '',
         seats: 3,
-        price: '',
+        totalPrice: '',
         notes: ''
     });
 
@@ -69,7 +69,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                 date: formData.date,
                 time: formData.time,
                 total_seats: formData.seats,
-                price_per_seat: parseFloat(formData.price),
+                total_price: parseFloat(formData.totalPrice),
                 notes: formData.notes
             };
 
@@ -220,13 +220,13 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                                         <div className="p-5 space-y-4">
                                             <div className="space-y-2">
                                                 <label className="text-xs font-bold text-[#9CA3AF] uppercase ml-1 flex items-center gap-1">
-                                                    <IndianRupee size={12} /> Price per seat
+                                                    <IndianRupee size={12} /> Total Ride Price
                                                 </label>
                                                 <input
                                                     type="number"
-                                                    placeholder="₹ 0"
-                                                    value={formData.price}
-                                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                                    placeholder="₹ Total Price"
+                                                    value={formData.totalPrice}
+                                                    onChange={(e) => setFormData({ ...formData, totalPrice: e.target.value })}
                                                     className="w-full px-4 py-3 bg-[#1E293B]/50 border border-[#374151] rounded-xl text-[#F9FAFB] focus:border-indigo-500 focus:outline-none"
                                                     required
                                                 />
@@ -349,13 +349,13 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-[#9CA3AF] uppercase tracking-wider ml-1">
-                                Price per Seat
+                                Total Ride Price
                             </label>
                             <input
                                 type="number"
-                                placeholder="₹ / Seat"
-                                value={formData.price}
-                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                placeholder="₹ Total Price"
+                                value={formData.totalPrice}
+                                onChange={(e) => setFormData({ ...formData, totalPrice: e.target.value })}
                                 className="w-full px-4 py-3 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-xl text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                                 required
                             />

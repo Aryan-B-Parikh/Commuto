@@ -9,7 +9,8 @@ from uuid import UUID
 from datetime import datetime
 import logging
 import uuid
-from services.wallet_service import payout_driver_from_prepaid_bookings
+from typing import Optional
+from services.wallet_service import payout_driver_from_prepaid_bookings, collect_ride_payments
 
 router = APIRouter(prefix="/rides", tags=["OTP & Trip Completion"])
 logger = logging.getLogger(__name__)
@@ -71,17 +72,8 @@ def verify_otp_and_start_ride(
                 detail="OTP already verified"
             )
 
-        unpaid_bookings = db.query(models.Booking).filter(
-            models.Booking.trip_id == trip_id,
-            models.Booking.status != "cancelled",
-            models.Booking.payment_status != "completed",
-        ).count()
-        if unpaid_bookings > 0:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="All passengers must add money to wallet and prepay before starting the ride",
-            )
+        # In post-ride model, we don't check for prepayment here, but check balance
+        # if we want to be safe. For now, just allow starting.
 
         # Verify OTP (stored in trip while waiting for pickup).
         if trip.start_otp != otp_data.otp:
@@ -97,9 +89,10 @@ def verify_otp_and_start_ride(
         trip.status = "active"
         trip.version += 1
 
-        # Generate a fresh completion OTP for drop-off verification.
-        completion_otp = ''.join([str(uuid.uuid4().int % 10) for _ in range(4)])
-        trip.start_otp = completion_otp
+        # Generate a fresh 6-digit completion OTP for drop-off verification.
+        completion_otp = f"{uuid.uuid4().int % 1000000:06d}"
+        trip.completion_otp = completion_otp
+        trip.start_otp = None
         
         started_at = datetime.utcnow()
         
@@ -130,7 +123,7 @@ def verify_otp_and_start_ride(
 def complete_ride(
     request: Request,
     trip_id: UUID,
-    otp_data: trip_schemas.OTPVerify,
+    otp_data: Optional[trip_schemas.OTPVerify] = None,
     current_user: models.User = Depends(auth.require_role(["driver"])),
     db: Session = Depends(get_db)
 ):
@@ -182,8 +175,22 @@ def complete_ride(
                 detail="Trip has been cancelled"
             )
 
+        if otp_data is None:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Completion OTP is required to complete the ride"
+            )
+
+        if not trip.completion_otp:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Completion OTP is not available for this trip"
+            )
+
         # Verify completion OTP from passenger before ending ride.
-        if trip.start_otp != otp_data.otp:
+        if trip.completion_otp != otp_data.otp:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -194,6 +201,7 @@ def complete_ride(
         completed_at = datetime.utcnow()
         trip.status = "completed"
         trip.start_otp = None
+        trip.completion_otp = None
         trip.version += 1
         
         # Update bookings
@@ -201,17 +209,7 @@ def complete_ride(
             models.Booking.trip_id == trip_id
         ).all()
 
-        unpaid_bookings = [
-            booking
-            for booking in bookings
-            if booking.status != "cancelled" and booking.payment_status != "completed"
-        ]
-        if unpaid_bookings:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ride cannot be completed until all passenger payments are settled",
-            )
+        # In post-ride model, payments are NOT 'completed' yet. We collect them now.
         
         for booking in bookings:
             booking.status = "completed"
@@ -224,7 +222,8 @@ def complete_ride(
         if driver:
             driver.total_trips += 1
         
-        payout_driver_from_prepaid_bookings(db, trip, bookings)
+        # Post-ride payment collection
+        collect_ride_payments(db, trip, bookings)
         trip.payment_status = "completed"
 
         db.commit()

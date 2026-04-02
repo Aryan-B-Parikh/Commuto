@@ -12,15 +12,30 @@ export interface User {
     name: string;
     email: string;
     phone: string;
-    avatar?: string;  // Make optional to handle empty values
-    role?: 'passenger' | 'driver';  // Add role field
+    full_name?: string;     // Explicit matching for profile form
+    phone_number?: string;
+    avatar?: string;
+    role?: 'passenger' | 'driver';
     rating: number;
     todayEarnings?: number;
     onlineHours?: number;
     totalTrips?: number;
     verified: boolean;
+    profileCompleted: boolean;
     joinedDate: string;
-    licensePhotoUrl?: string; // Add this field
+    licensePhotoUrl?: string;
+    gender?: string;
+    date_of_birth?: string;
+    bio?: string;
+    address?: string;
+    emergency_contact?: {
+        name: string;
+        relationship: string;
+        phone: string;
+    };
+    travel_preferences?: string[];
+    accessibility_needs?: boolean;
+    license_number?: string;
 }
 
 // Trip type

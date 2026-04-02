@@ -104,32 +104,76 @@ def reconcile_booking_hold(
     booking: models.Booking,
     new_total,
     description_prefix: str,
+    *,
+    blocking: bool = True
 ) -> None:
-    """Adjust wallet hold for a booking when fare changes.
-
-    Deducts additional amount when fare increases, or refunds when fare decreases.
+    """Update the booking fare without performing immediate wallet transactions.
+    
+    Since we shifted to post-ride deduction, this function only updates the 
+    database record so the final charge at the end of the trip is correct.
     """
-    current_total = _to_decimal(booking.total_price)
     updated_total = _to_decimal(new_total)
-    delta = updated_total - current_total
-
-    if delta > Decimal("0"):
-        hold_wallet_funds_or_raise(
-            db,
-            booking.passenger_id,
-            delta,
-            f"{description_prefix} fare adjustment",
-        )
-    elif delta < Decimal("0"):
-        release_wallet_funds(
-            db,
-            booking.passenger_id,
-            -delta,
-            f"{description_prefix} fare adjustment refund",
-        )
-
     booking.total_price = updated_total
-    booking.payment_status = "completed"
+    # Payment status remains 'pending' or 'completed' depending on context,
+    # but for post-ride payments, we keep it as 'pending' until the ride ends.
+    booking.payment_status = "pending"
+
+
+def collect_ride_payments(
+    db: Session,
+    trip: models.Trip,
+    bookings: Sequence[models.Booking],
+) -> Decimal:
+    """Collect final fares from all passengers and payout the driver at trip completion.
+    
+    This is called at the end of the ride (OTP completion).
+    """
+    if not trip.driver_id:
+        return Decimal("0")
+
+    total_collected = Decimal("0")
+    
+    for booking in bookings:
+        if booking.status == "cancelled":
+            continue
+            
+        fare = _to_decimal(booking.total_price)
+        if fare <= 0:
+            continue
+            
+        try:
+            # Deduct from passenger
+            hold_wallet_funds_or_raise(
+                db,
+                booking.passenger_id,
+                fare,
+                f"Ride payment - {trip.dest_address.split(',')[0]}",
+                transaction_type="payment"
+            )
+            booking.payment_status = "completed"
+            total_collected += fare
+        except ValueError as e:
+            logger.error(f"Failed to collect payment from passenger {booking.passenger_id}: {str(e)}")
+            # In a production system, we might mark the booking as 'debt' or 'unpaid'
+            booking.payment_status = "failed"
+
+    if total_collected <= 0:
+        return Decimal("0")
+
+    # Credit the driver
+    driver_wallet = get_or_create_wallet_for_update(db, trip.driver_id)
+    driver_wallet.balance = _to_decimal(driver_wallet.balance) + total_collected
+
+    db.add(models.Transaction(
+        id=uuid.uuid4(),
+        wallet_id=driver_wallet.id,
+        amount=total_collected,
+        type="credit",
+        description=f"Ride earnings (Post-ride) - {trip.dest_address.split(',')[0]}",
+        status="completed",
+    ))
+    
+    return total_collected
 
 
 def payout_driver_from_prepaid_bookings(
@@ -153,6 +197,13 @@ def payout_driver_from_prepaid_bookings(
 
     if payable <= Decimal("0"):
         return Decimal("0")
+
+    # CAP: Ensure driver doesn't get more than the trip total price
+    # to avoid rounding artifacts (e.g. 33.34 * 3 = 100.02)
+    max_payable = _to_decimal(trip.total_price)
+    if payable > max_payable:
+        logger.info(f"Capping driver payout from {payable} to {max_payable} (trip total)")
+        payable = max_payable
 
     driver_wallet = get_or_create_wallet_for_update(db, trip.driver_id)
     driver_wallet.balance = _to_decimal(driver_wallet.balance) + payable

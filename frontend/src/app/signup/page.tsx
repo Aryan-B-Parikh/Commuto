@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { isValidEmail, isValidName, getPasswordStrength } from '@/utils/validators';
+import { isValidEmail, isValidName, getPasswordStrength, isValidPhone } from '@/utils/validators';
 import { authAPI } from '@/services/api';
 import { useGoogleLogin } from '@react-oauth/google';
 
@@ -56,8 +56,8 @@ export default function SignupPage() {
 
         if (!phone) {
             newErrors.phone = 'Phone number is required';
-        } else if (phone.length < 10) {
-            newErrors.phone = 'Please enter a valid phone number';
+        } else if (!isValidPhone(phone)) {
+            newErrors.phone = 'Please enter a valid Indian mobile number (e.g. 9876543210)';
         }
 
         if (!password) {
@@ -127,12 +127,7 @@ export default function SignupPage() {
             const user = await googleLogin(tokenResponse.access_token, role || undefined);
             if (user) {
                 showToast('success', 'Signup successful with Google!');
-                const finalRole = user.role || role;
-                if (finalRole) {
-                    router.push(`/${finalRole}/dashboard`);
-                } else {
-                    router.push('/select-role');
-                }
+                router.push('/complete-profile');
             } else {
                 showToast('error', 'Google signup failed. Please try again.');
             }

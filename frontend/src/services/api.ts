@@ -29,11 +29,16 @@ api.interceptors.response.use(
         const isNetworkError = !error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error');
 
         if (isNetworkError) {
-            console.warn('API network unavailable:', {
+            console.error('API Network Error detected!', {
+                config: error.config,
+                code: error.code,
                 message: error.message,
-                url: error.config?.url
+                baseURL: error.config?.baseURL,
+                url: error.config?.url,
+                method: error.config?.method
             });
-            return Promise.reject(error);
+            // Check if CORS is likely the issue (host mismatch or blocked)
+            return Promise.reject(new Error(`Network Error: Ensure backend is running at ${error.config?.baseURL || 'localhost:8000'} and CORS covers ${window.location.origin}`));
         }
 
         if (error.response?.status === 401) {

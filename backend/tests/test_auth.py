@@ -97,6 +97,54 @@ class TestAuth:
         assert response.status_code == 401
 
 
+    def test_profile_completeness_flow(self, client, auth_headers_passenger):
+        """Test complete profile flow: register -> profile_completed is False -> update -> profile_completed is True"""
+        # Initially False
+        response = client.get("/auth/me", headers=auth_headers_passenger)
+        assert response.status_code == 200
+        assert response.json()["profile_completed"] is False
+
+        # Update with partial fields (gender only)
+        response = client.patch("/auth/me", json={
+            "gender": "male"
+        }, headers=auth_headers_passenger)
+        assert response.status_code == 200
+        assert response.json()["profile_completed"] is False
+
+        # Update with required fields (gender, dob, emergency_contact)
+        response = client.patch("/auth/me", json={
+            "gender": "male",
+            "date_of_birth": "1990-01-01",
+            "emergency_contact": {
+                "name": "Jane Doe",
+                "phone": "+1987654321",
+                "relationship": "Sister"
+            }
+        }, headers=auth_headers_passenger)
+        assert response.status_code == 200
+        assert response.json()["profile_completed"] is True
+
+    def test_driver_profile_completeness_flow(self, client, auth_headers_driver):
+        """Test driver profile completeness: needs license + vehicle"""
+        # Initially False (test_driver doesn't have personal info yet)
+        response = client.get("/auth/me", headers=auth_headers_driver)
+        assert response.status_code == 200
+        assert response.json()["profile_completed"] is False
+
+        # Update with shared info. The test_driver fixture already has license + vehicle.
+        response = client.patch("/auth/me", json={
+            "gender": "male",
+            "date_of_birth": "1985-05-05",
+            "emergency_contact": {
+                "name": "Emergency Contact",
+                "phone": "+1234567891",
+                "relationship": "Family"
+            }
+        }, headers=auth_headers_driver)
+        assert response.status_code == 200
+        assert response.json()["profile_completed"] is True
+
+
 class TestAuthRateLimiting:
     """Test authentication rate limiting"""
     
