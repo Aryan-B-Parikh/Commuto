@@ -9,6 +9,7 @@ import {
     LayoutDashboard,
     Car,
     MapPin,
+    Search,
     Settings,
     Mail,
     Map,
@@ -77,9 +78,11 @@ export function Sidebar({
 
     const passengerLinks = [
         { label: 'Overview', href: '/passenger/dashboard', icon: <LayoutDashboard size={18} strokeWidth={2} /> },
+        { label: 'Search Rides', href: '/passenger/search', icon: <Search size={18} strokeWidth={2} /> },
         { label: 'Book a Ride', href: '/passenger/ride-sharing', icon: <Car size={18} strokeWidth={2} /> },
         { label: 'My Trips', href: '/passenger/history', icon: <Clock size={18} strokeWidth={2} /> },
         { label: 'Active Trips', href: '/passenger/live', icon: <MapPin size={18} strokeWidth={2} /> },
+        { label: 'Wallet', href: '/passenger/wallet', icon: <CircleDollarSign size={18} strokeWidth={2} /> },
         { label: 'Settings', href: '/profile', icon: <Settings size={18} strokeWidth={2} /> },
     ];
 
@@ -111,7 +114,7 @@ export function Sidebar({
                         <SidebarItem
                             key={link.href}
                             {...link}
-                            isActive={pathname === link.href}
+                            isActive={pathname === link.href || pathname.startsWith(link.href + '/')}
                             isMini={isMini}
                         />
                     ))}

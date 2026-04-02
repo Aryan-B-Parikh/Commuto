@@ -21,6 +21,7 @@ export function TopBar({
     const router = useRouter();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
@@ -38,6 +39,21 @@ export function TopBar({
     const handleLogout = () => {
         logout();
         router.push('/login');
+    };
+
+    const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const query = searchQuery.trim();
+
+        if (role === 'passenger') {
+            const target = query ? `/passenger/search?q=${encodeURIComponent(query)}` : '/passenger/search';
+            router.push(target);
+            return;
+        }
+
+        if (role === 'driver') {
+            router.push('/driver/requests');
+        }
     };
 
     return (
@@ -79,7 +95,7 @@ export function TopBar({
 
                 <div className="flex items-center gap-3">
                     {/* Search Bar */}
-                    <div className="relative group hidden xl:block">
+                    <form className="relative group hidden lg:block" onSubmit={handleSearch}>
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <svg className="h-4 w-4 text-muted-foreground group-focus-within:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -87,15 +103,17 @@ export function TopBar({
                         </div>
                         <input
                             type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="block w-72 pl-11 pr-12 py-2.5 border border-card-border rounded-xl leading-5 bg-muted/50 focus:bg-muted focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all duration-200 text-sm text-foreground placeholder:text-muted-foreground font-medium"
-                            placeholder="Search routes or drivers..."
+                            placeholder={role === 'passenger' ? 'Search locations...' : 'Search route requests...'}
                         />
                         <div className="absolute inset-y-0 right-3 flex items-center">
                             <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 border border-card-border/50 rounded-lg text-[10px] font-bold text-muted-foreground bg-muted">
-                                ⌘K
+                                Enter
                             </kbd>
                         </div>
-                    </div>
+                    </form>
 
                     {/* Notifications */}
                     <div className="relative">

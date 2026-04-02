@@ -1,10 +1,13 @@
 import argparse
 import asyncio
 import json
+import os
 import sys
 import threading
 import time
 import uuid
+import hmac
+import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -65,11 +68,12 @@ class Reporter:
 
 
 class MasterFlowVerifier:
-    def __init__(self, base_url: str, ws_url: str, timeout: float, auth_delay: float) -> None:
+    def __init__(self, base_url: str, ws_url: str, timeout: float, auth_delay: float, razorpay_secret: str) -> None:
         self.base_url = base_url.rstrip("/")
         self.ws_url = ws_url.rstrip("/")
         self.timeout = timeout
         self.auth_delay = auth_delay
+        self.razorpay_secret = razorpay_secret
         self.http = requests.Session()
         self.report = Reporter()
         self.phone_counter = 0
@@ -219,6 +223,41 @@ class MasterFlowVerifier:
         finally:
             db.close()
 
+    def fund_wallet_via_api(self, token: str, amount: float) -> bool:
+        if not self.razorpay_secret:
+            return False
+
+        add_resp = self.req("POST", "/wallet/add-money", token=token, json={"amount": amount})
+        if add_resp.status_code not in (200, 201):
+            return False
+
+        try:
+            order_id = add_resp.json().get("order_id")
+        except Exception:
+            return False
+
+        if not order_id:
+            return False
+
+        payment_id = f"pay_{uuid.uuid4().hex[:12]}"
+        signature = hmac.new(
+            self.razorpay_secret.encode(),
+            f"{order_id}|{payment_id}".encode(),
+            hashlib.sha256,
+        ).hexdigest()
+
+        verify_resp = self.req(
+            "POST",
+            "/wallet/verify-payment",
+            token=token,
+            json={
+                "razorpay_order_id": order_id,
+                "razorpay_payment_id": payment_id,
+                "razorpay_signature": signature,
+            },
+        )
+        return verify_resp.status_code == 200
+
     def trip_and_live_location_counts(self, trip_id: str) -> Dict[str, int]:
         if not self.db_available:
             raise RuntimeError("Direct DB access unavailable")
@@ -272,6 +311,30 @@ class MasterFlowVerifier:
         except Exception as exc:
             self.report.fail("Identity.Register", str(exc))
             return self.report.summarize()
+
+        seeded_creator_balance = None
+        seeded_joiner_balance = None
+        if self.db_available:
+            self.set_wallet_balance(passenger["id"], 1000.0)
+            self.set_wallet_balance(joiner["id"], 1000.0)
+            self.set_wallet_balance(driver["id"], 0.0)
+            seeded_creator_balance = 1000.0
+            seeded_joiner_balance = 1000.0
+            self.report.pass_("Finance.PrepayFunding", "Wallet balances seeded before create/join prepayment checks")
+        else:
+            creator_funded = self.fund_wallet_via_api(passenger["token"], 1000.0)
+            joiner_funded = self.fund_wallet_via_api(joiner["token"], 1000.0)
+            if creator_funded and joiner_funded:
+                p_wallet = self.req("GET", "/wallet", token=passenger["token"])
+                j_wallet = self.req("GET", "/wallet", token=joiner["token"])
+                seeded_creator_balance = float(p_wallet.json().get("balance", 0.0)) if p_wallet.status_code == 200 else None
+                seeded_joiner_balance = float(j_wallet.json().get("balance", 0.0)) if j_wallet.status_code == 200 else None
+                self.report.pass_("Finance.PrepayFunding", "Wallet top-up fallback succeeded via API")
+            else:
+                self.report.skip(
+                    "Finance.PrepayFunding",
+                    "Direct DB wallet seeding unavailable and API top-up fallback failed",
+                )
 
         # Schema provisioning + password hashing check
         if self.db_available:
@@ -430,6 +493,10 @@ class MasterFlowVerifier:
         # Self-bidding edge case
         try:
             self_bid_user = self.register("driver", "selfbid")
+            if self.db_available:
+                self.set_wallet_balance(self_bid_user["id"], 1000.0)
+            else:
+                self.fund_wallet_via_api(self_bid_user["token"], 1000.0)
             self_trip = self.create_shared(self_bid_user["token"], minutes_in_future=90, price=110.0)
             self_bid = self.req("POST", f"/bids/{self_trip}", token=self_bid_user["token"], json={"amount": 111, "message": "self"})
             if self_bid.status_code == 400 and "own trip" in self.json_or_text(self_bid).lower():
@@ -596,11 +663,6 @@ class MasterFlowVerifier:
             self.report.pass_("Execution.WebSocketReconnectBackoff", "Exponential/variable reconnect strategy detected")
 
         # ---- Financial settlement flow ----
-        # Prefer API-visible balances; seed directly only when DB is reachable.
-        if self.db_available:
-            self.set_wallet_balance(passenger["id"], 1000.0)
-            self.set_wallet_balance(joiner["id"], 1000.0)
-            self.set_wallet_balance(driver["id"], 0.0)
 
         p_wallet_before = self.req("GET", "/wallet", token=passenger["token"])
         j_wallet_before = self.req("GET", "/wallet", token=joiner["token"])
@@ -629,17 +691,35 @@ class MasterFlowVerifier:
         j_after = float(j_wallet_after.json().get("balance", 0.0)) if j_wallet_after.status_code == 200 else j_before
         d_after = float(d_wallet_after.json().get("balance", 0.0)) if d_wallet_after.status_code == 200 else d_before
 
-        # Expected fare per booking equals accepted bid amount (135 after counter) x seats_booked(1)
-        # Deduction from both passenger wallets should be visible after completion.
-        if p_after < p_before and j_after < j_before:
-            self.report.pass_("Finance.FareDeduction", f"Passenger wallets deducted: creator {p_before}->{p_after}, joiner {j_before}->{j_after}")
+        if seeded_creator_balance is not None and seeded_joiner_balance is not None:
+            if p_before < seeded_creator_balance and j_before < seeded_joiner_balance:
+                self.report.pass_(
+                    "Finance.PrepayDeduction",
+                    f"Passenger wallets were deducted before completion: creator {seeded_creator_balance}->{p_before}, joiner {seeded_joiner_balance}->{j_before}",
+                )
+            else:
+                self.report.fail(
+                    "Finance.PrepayDeduction",
+                    f"Missing prepay deduction before completion: creator {seeded_creator_balance}->{p_before}, joiner {seeded_joiner_balance}->{j_before}",
+                )
         elif not self.db_available and p_before == 0 and j_before == 0:
             self.report.skip(
-                "Finance.FareDeduction",
-                "Cannot deterministically assert wallet deductions without DB seeding or external top-up in this environment",
+                "Finance.PrepayDeduction",
+                "Cannot deterministically assert prepay deduction without DB seeding or external top-up in this environment",
             )
         else:
-            self.report.fail("Finance.FareDeduction", f"Wallet deduction missing: creator {p_before}->{p_after}, joiner {j_before}->{j_after}")
+            self.report.fail("Finance.PrepayDeduction", f"Unable to assert prepay deduction: creator={p_before}, joiner={j_before}")
+
+        if abs(p_after - p_before) < 0.01 and abs(j_after - j_before) < 0.01:
+            self.report.pass_(
+                "Finance.NoPostRidePassengerDebit",
+                f"No extra passenger debit on completion: creator {p_before}->{p_after}, joiner {j_before}->{j_after}",
+            )
+        else:
+            self.report.fail(
+                "Finance.NoPostRidePassengerDebit",
+                f"Passenger wallets changed unexpectedly at completion: creator {p_before}->{p_after}, joiner {j_before}->{j_after}",
+            )
 
         # Driver credit expectation from business requirement
         if d_after > d_before:
@@ -656,10 +736,10 @@ class MasterFlowVerifier:
         p_txs = self.req("GET", "/wallet/transactions", token=passenger["token"])
         j_txs = self.req("GET", "/wallet/transactions", token=joiner["token"])
         if p_txs.status_code == 200 and j_txs.status_code == 200:
-            def has_payment_or_debt(items: List[Dict[str, Any]]) -> bool:
-                return any(i.get("type") in ("payment", "debt") and i.get("status") in ("completed", "pending") for i in items)
+            def has_payment(items: List[Dict[str, Any]]) -> bool:
+                return any(i.get("type") == "payment" and i.get("status") == "completed" for i in items)
 
-            if has_payment_or_debt(p_txs.json()) and has_payment_or_debt(j_txs.json()):
+            if has_payment(p_txs.json()) and has_payment(j_txs.json()):
                 self.report.pass_("Finance.LedgerIntegrity", "Transaction ledger entries exist for passenger settlements")
             else:
                 self.report.fail("Finance.LedgerIntegrity", "Expected settlement transactions not found in wallet history")
@@ -743,10 +823,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ws-url", default="ws://127.0.0.1:8000", help="WebSocket base URL")
     parser.add_argument("--timeout", type=float, default=20.0, help="HTTP timeout seconds")
     parser.add_argument("--auth-delay", type=float, default=1.2, help="Delay between register/login")
+    parser.add_argument(
+        "--razorpay-secret",
+        default=os.getenv("RAZORPAY_KEY_SECRET", ""),
+        help="Razorpay secret for API wallet top-up fallback when DB access is unavailable",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    verifier = MasterFlowVerifier(args.base_url, args.ws_url, args.timeout, args.auth_delay)
+    verifier = MasterFlowVerifier(args.base_url, args.ws_url, args.timeout, args.auth_delay, args.razorpay_secret)
     raise SystemExit(verifier.run())

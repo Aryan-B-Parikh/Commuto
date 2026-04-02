@@ -13,6 +13,7 @@ import logging
 from typing import List
 from uuid import UUID
 from routers.websocket_router import notify_new_bid, notify_bid_status_update
+from services.wallet_service import reconcile_booking_hold
 
 router = APIRouter(prefix="/bids", tags=["Bidding"])
 logger = logging.getLogger(__name__)
@@ -343,8 +344,15 @@ def accept_bid(
             models.Booking.trip_id == trip.id
         ).with_for_update().all()
         
+        destination_hint = (trip.dest_address or "Trip").split(",")[0]
         for booking in all_bookings:
-            booking.total_price = bid.bid_amount * booking.seats_booked
+            updated_total = bid.bid_amount * booking.seats_booked
+            reconcile_booking_hold(
+                db,
+                booking,
+                updated_total,
+                f"Trip prepayment hold - {destination_hint}",
+            )
             booking.status = "confirmed"
         
         # Commit the transaction
@@ -358,6 +366,12 @@ def accept_bid(
             "otp": otp
         }
         
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{exc}. Ask passengers to add wallet money before accepting this bid.",
+        )
     except HTTPException:
         db.rollback()
         raise

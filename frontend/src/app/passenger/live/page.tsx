@@ -84,8 +84,6 @@ export default function PassengerLivePage() {
                 const active = trips.find(t => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
                 if (active) {
                     setTrip(active);
-                } else {
-                    router.push('/passenger/dashboard');
                 }
             } catch (error) {
                 console.error('Failed to fetch active trip:', error);
@@ -140,7 +138,30 @@ export default function PassengerLivePage() {
         );
     }
 
-    if (!trip) return null;
+    if (!trip) {
+        return (
+            <RoleGuard allowedRoles={['passenger']}>
+                <DashboardLayout userType="passenger" title="Active Trips">
+                    <div className="max-w-2xl mx-auto py-20 px-4">
+                        <Card className="p-8 text-center border border-card-border bg-card/70">
+                            <h2 className="text-2xl font-black text-foreground mb-3">No Active Trip Right Now</h2>
+                            <p className="text-sm text-muted-foreground mb-8">
+                                Active Trips only appears when your trip status is bid accepted, driver assigned, or active.
+                            </p>
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                <Button onClick={() => router.push('/passenger/ride-sharing')} className="w-full sm:w-auto">
+                                    Find a Ride
+                                </Button>
+                                <Button variant="outline" onClick={() => router.push('/passenger/history')} className="w-full sm:w-auto">
+                                    View Trip History
+                                </Button>
+                            </div>
+                        </Card>
+                    </div>
+                </DashboardLayout>
+            </RoleGuard>
+        );
+    }
 
     return (
         <RoleGuard allowedRoles={['passenger']}>
