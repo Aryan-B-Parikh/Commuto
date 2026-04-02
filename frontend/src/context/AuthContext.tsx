@@ -106,6 +106,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         loadUser();
     }, []);
 
+    // Route guard: redirect users with incomplete profiles to /complete-profile
+    useEffect(() => {
+        if (typeof window === 'undefined' || isLoading || !user) return;
+        const path = window.location.pathname;
+
+        // Pages that should NOT trigger the redirect (auth/onboarding pages)
+        const allowedPaths = [
+            '/complete-profile',
+            '/login',
+            '/signup',
+            '/select-role',
+            '/verify-email',
+            '/verify-phone',
+            '/verify-otp',
+            '/',
+        ];
+
+        const isAllowed = allowedPaths.some(
+            (p) => path === p || path.startsWith(p + '/')
+        );
+
+        if (!user.profileCompleted && !isAllowed) {
+            window.location.href = '/complete-profile';
+        }
+    }, [user, isLoading]);
+
     // Set role and persist to localStorage
     const setRole = useCallback((newRole: UserRole) => {
         setRoleState(newRole);

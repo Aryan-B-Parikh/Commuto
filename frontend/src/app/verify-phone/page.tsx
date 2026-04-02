@@ -63,10 +63,9 @@ export default function VerifyPhonePage() {
         try {
             await authAPI.verifyPhone(otp.trim());
             setStatus('success');
-            showToast('success', 'Phone verified! Taking you to your dashboard…');
+            showToast('success', 'Phone verified! Now complete your profile.');
             setTimeout(() => {
-                const role = user?.role ?? 'passenger';
-                router.push(`/${role}/dashboard`);
+                router.push('/complete-profile');
             }, 2000);
         } catch (err: any) {
             setStatus('error');
@@ -97,7 +96,7 @@ export default function VerifyPhonePage() {
                 {status === 'success' ? (
                     <>
                         <h1 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Phone Verified!</h1>
-                        <p className="text-[#9CA3AF] text-center">Your account is fully active. Taking you to your dashboard…</p>
+                        <p className="text-[#9CA3AF] text-center">Your phone is verified. Now complete your profile…</p>
                     </>
                 ) : (
                     <>
@@ -183,7 +182,7 @@ export default function VerifyPhonePage() {
 
                 <div className="mt-6 text-center">
                     <Link
-                        href="/passenger/dashboard"
+                        href="/complete-profile"
                         className="text-sm text-[#6B7280] hover:text-[#9CA3AF]"
                     >
                         Skip for now →

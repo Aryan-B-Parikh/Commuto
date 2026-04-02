@@ -7,26 +7,17 @@ export const Footer: React.FC = () => {
     const footerLinks = {
         company: [
             { label: 'About', href: '/about' },
+            { label: 'Safety', href: '/#safety' },
             { label: 'Careers', href: '/careers' },
-            { label: 'Press', href: '/press' },
-            { label: 'Blog', href: '/blog' },
         ],
         product: [
-            { label: 'How it Works', href: '/#how-it-works' },
-            { label: 'Safety', href: '/#safety' },
             { label: 'Features', href: '/#features' },
-            { label: 'Pricing', href: '/pricing' },
-        ],
-        support: [
-            { label: 'Help Center', href: '/help' },
+            { label: 'How it Works', href: '/#how-it-works' },
             { label: 'Contact', href: '/contact' },
-            { label: 'Community', href: '/community' },
-            { label: 'FAQ', href: '/faq' },
         ],
         legal: [
             { label: 'Privacy', href: '/privacy' },
             { label: 'Terms', href: '/terms' },
-            { label: 'Cookies', href: '/cookies' },
         ],
     };
 
@@ -106,19 +97,6 @@ export const Footer: React.FC = () => {
                         <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Product</h3>
                         <ul className="space-y-3">
                             {footerLinks.product.map((link) => (
-                                <li key={link.href}>
-                                    <Link href={link.href} className="text-sm hover:text-white transition-colors">
-                                        {link.label}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Support</h3>
-                        <ul className="space-y-3">
-                            {footerLinks.support.map((link) => (
                                 <li key={link.href}>
                                     <Link href={link.href} className="text-sm hover:text-white transition-colors">
                                         {link.label}

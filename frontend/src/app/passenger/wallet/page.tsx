@@ -56,17 +56,17 @@ export default function WalletPage() {
                     <div className="lg:col-span-2 space-y-8">
                         {/* Balance Card */}
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                            <Card className="bg-gradient-to-br from-indigo-600 to-purple-700 border-none p-1 shadow-2xl overflow-hidden relative group">
+                            <Card className="bg-gradient-to-br from-teal-600 to-emerald-700 border-none p-1 shadow-2xl overflow-hidden relative group rounded-sm">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 transition-transform group-hover:scale-110" />
-                                <div className="bg-transparent px-8 py-10 rounded-2xl relative z-10">
+                                <div className="bg-transparent px-8 py-10 rounded-sm relative z-10">
                                     <div className="flex justify-between items-start mb-8">
                                         <div>
-                                            <p className="text-indigo-100 text-xs font-black uppercase tracking-widest mb-2 opacity-80">Total Available Balance</p>
+                                            <p className="text-teal-100 text-xs font-black uppercase tracking-widest mb-2 opacity-80">Total Available Balance</p>
                                             <h2 className="text-6xl font-black text-white italic tracking-tighter leading-none">
                                                 {formatCurrency(balance.balance)}
                                             </h2>
                                         </div>
-                                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl border border-white/20">
+                                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-sm flex items-center justify-center text-3xl border border-white/20">
                                             💰
                                         </div>
                                     </div>
@@ -74,7 +74,7 @@ export default function WalletPage() {
                                     <div className="flex flex-wrap gap-4">
                                         <Button
                                             variant="primary"
-                                            className="bg-white text-indigo-600 hover:bg-indigo-50 font-black italic tracking-widest uppercase py-6 px-10 rounded-xl shadow-xl transition-all hover:-translate-y-1"
+                                            className="bg-white text-teal-600 hover:bg-teal-50 font-black italic tracking-widest uppercase py-6 px-10 rounded-sm shadow-xl transition-all hover:-translate-y-1"
                                             onClick={() => setIsAddMoneyOpen(true)}
                                         >
                                             + Add Cash
@@ -101,7 +101,7 @@ export default function WalletPage() {
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-xs font-bold text-indigo-400 uppercase tracking-widest"
+                                    className="text-xs font-bold text-teal-400 uppercase tracking-widest"
                                     onClick={() => setIsAddCardOpen(true)}
                                 >
                                     + Add New
@@ -116,7 +116,7 @@ export default function WalletPage() {
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: i * 0.1 }}
                                     >
-                                        <Card hoverable className="border-none shadow-sm px-6 py-5 relative group border-2 border-transparent hover:border-indigo-500/20">
+                                        <Card hoverable className="border-none shadow-sm px-6 py-5 relative group border-2 border-transparent hover:border-teal-500/20 rounded-sm">
                                             <div className="flex justify-between items-start">
                                                 <div className="flex gap-4">
                                                     <div className="w-12 h-8 bg-[#1E293B] rounded flex items-center justify-center font-bold text-xs uppercase text-[#9CA3AF]">

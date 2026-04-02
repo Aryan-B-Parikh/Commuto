@@ -8,18 +8,30 @@ import schemas_trips as trip_schemas
 import auth
 import uuid
 from uuid import UUID
+from decimal import Decimal, ROUND_DOWN, ROUND_UP
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
 import logging
+import os
 from websocket_manager import manager
 import schemas
 from services.rating_service import apply_driver_rating
 from services.billing_service import get_trip_receipt as _build_receipt
-from services.wallet_service import hold_wallet_funds_or_raise, release_wallet_funds
+from services.wallet_service import hold_wallet_funds_or_raise, release_wallet_funds, reconcile_booking_hold
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
+
+
+def _get_utcnow() -> datetime:
+    override = os.getenv("COMMUTO_TEST_NOW")
+    if override:
+        try:
+            return datetime.fromisoformat(override.replace("Z", "+00:00")).replace(tzinfo=None)
+        except ValueError:
+            pass
+    return datetime.utcnow()
 
 
 def populate_passenger_notes(trips, db):
@@ -132,7 +144,7 @@ async def create_shared_ride(
             detail="Invalid date/time format"
         )
     
-    if start_time < datetime.utcnow():
+    if start_time < _get_utcnow():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Trip start time must be in the future"
@@ -150,7 +162,8 @@ async def create_shared_ride(
         start_time=start_time,
         total_seats=trip_data.total_seats,
         available_seats=trip_data.total_seats - 1, # Creator occupies 1 seat
-        price_per_seat=trip_data.price_per_seat,
+        total_price=trip_data.total_price,
+        price_per_seat=trip_data.total_price, # Initial price is full total
         notes=trip_data.notes.strip()[:500] if trip_data.notes else None,
         status="pending",
         version=0
@@ -162,7 +175,7 @@ async def create_shared_ride(
         trip_id=new_trip.id,
         passenger_id=current_user.id,
         seats_booked=1,
-        total_price=trip_data.price_per_seat,
+        total_price=trip_data.total_price,
         status="confirmed",
         payment_status="completed",
         notes=trip_data.notes.strip()[:500] if trip_data.notes else None
@@ -183,12 +196,10 @@ async def create_shared_ride(
         db.add(booking)
         db.add(trip_passenger)
 
-        hold_wallet_funds_or_raise(
-            db,
-            current_user.id,
-            trip_data.price_per_seat,
-            f"Trip prepayment hold - {trip_data.to_location.address.split(',')[0]}",
-        )
+        # Check balance but don't deduct yet (post-ride charging model)
+        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
+        if not wallet or wallet.balance < Decimal(str(trip_data.total_price)):
+            raise ValueError("Insufficient wallet balance for this trip total")
 
         db.commit()
         db.refresh(new_trip)
@@ -220,6 +231,7 @@ async def create_shared_ride(
 
 
 @router.get("/available", response_model=List[trip_schemas.TripResponse])
+@rate_limit(max_requests=100 if os.getenv("APP_ENV") == "development" else 30, window_seconds=60, key_suffix="available_rides")
 def get_available_rides(
     request: Request,
     current_user: models.User = Depends(auth.get_current_user),
@@ -279,7 +291,7 @@ def get_trip_details(
 
 
 class JoinRideBody(BaseModel):
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=500)
 
 @router.post("/{trip_id}/join", status_code=status.HTTP_200_OK)
 async def join_ride(
@@ -316,32 +328,47 @@ async def join_ride(
             seats_booked=1
         )
         
-        # Create booking record
+        # Update trip seats temporarily to calculate NEW split
+        trip.available_seats -= 1
+        
+        # DYNAMIC PRICING: Calculate new price per seat
+        total_pax = trip.total_seats - trip.available_seats
+        new_fare = (Decimal(str(trip.total_price)) / Decimal(str(total_pax))).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+        trip.price_per_seat = new_fare
+        
+        # CHARGE the new passenger immediately
+        # Check balance but don't deduct yet (post-ride charging model)
+        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
+        if not wallet or wallet.balance < new_fare:
+            raise ValueError("Insufficient wallet balance to join this ride")
+
+        # Create booking record with NEW fare
         join_notes = body.notes.strip()[:500] if body and body.notes else None
         booking = models.Booking(
             id=uuid.uuid4(),
             trip_id=trip_id,
             passenger_id=current_user.id,
             seats_booked=1,
-            total_price=trip.price_per_seat,
+            total_price=new_fare,
             status="confirmed",
             payment_status="completed",
             notes=join_notes
         )
         
-        # Update trip
-        trip.available_seats -= 1
         trip.version += 1
 
-        hold_wallet_funds_or_raise(
-            db,
-            current_user.id,
-            trip.price_per_seat,
-            f"Trip prepayment hold - {trip.dest_address.split(',')[0]}",
-        )
+        # REFUND existing bookings difference
+        existing_bookings = db.query(models.Booking).filter(
+            models.Booking.trip_id == trip_id,
+            models.Booking.status == "confirmed"
+        ).all()
         
         db.add(tp)
         db.add(booking)
+        
+        for b in existing_bookings:
+            reconcile_booking_hold(db, b, new_fare, "Ride split update (new passenger joined)")
+
         db.commit()
         
         # Broadcast seat update to all in the trip
@@ -398,18 +425,11 @@ async def leave_ride(
         if not tp:
             raise HTTPException(status_code=400, detail="Not a passenger in this ride")
 
-        booking = db.query(models.Booking).filter(
-            models.Booking.trip_id == trip_id,
-            models.Booking.passenger_id == current_user.id
-        ).with_for_update().first()
-
-        if booking and booking.payment_status == "completed" and booking.total_price and booking.total_price > 0:
-            release_wallet_funds(
-                db,
-                current_user.id,
-                booking.total_price,
-                f"Trip refund - left ride to {trip.dest_address.split(',')[0]}",
-            )
+        # In post-ride model, we don't refund because we never deducted at start.
+        # We just remove the record.
+        if booking:
+            booking.status = "cancelled"
+            booking.payment_status = "cancelled"
         
         # Remove booking
         if booking:
@@ -421,6 +441,28 @@ async def leave_ride(
         # Update trip
         trip.available_seats += 1
         trip.version += 1
+
+        # DYNAMIC PRICING: Recalculate price for remaining passengers
+        total_passengers = trip.total_seats - trip.available_seats
+        if total_passengers > 0:
+            # Use ROUND_UP for remaining passengers if split isn't perfect, 
+            # to be fair to the driver. But passengers were rounded down on join.
+            new_price_per_seat = (Decimal(str(trip.total_price)) / Decimal(str(total_passengers))).quantize(Decimal("0.01"), rounding=ROUND_UP)
+            
+            # Cap the split to never exceed the original total price
+            if new_price_per_seat > Decimal(str(trip.total_price)):
+                new_price_per_seat = Decimal(str(trip.total_price))
+                
+            trip.price_per_seat = new_price_per_seat
+            
+            # Update remaining bookings
+            remaining_bookings = db.query(models.Booking).filter(
+                models.Booking.trip_id == trip_id,
+                models.Booking.status == "confirmed"
+            ).all()
+            
+            for b in remaining_bookings:
+                reconcile_booking_hold(db, b, new_price_per_seat, "Ride split update (passenger left)", blocking=False)
         
         db.commit()
         
@@ -442,7 +484,7 @@ async def leave_ride(
 
 
 @router.get("/my-trips", response_model=List[trip_schemas.TripResponse])
-@rate_limit(max_requests=30, window_seconds=60, key_suffix="my_trips")
+@rate_limit(max_requests=100 if os.getenv("APP_ENV") == "development" else 30, window_seconds=60, key_suffix="my_trips")
 def get_my_trips(
     request: Request,
     current_user: models.User = Depends(auth.get_current_user),
@@ -510,7 +552,7 @@ def get_driver_trips(
 
 
 @router.get("/open", response_model=List[trip_schemas.TripResponse])
-@rate_limit(max_requests=30, window_seconds=60, key_suffix="open_rides")
+@rate_limit(max_requests=100 if os.getenv("APP_ENV") == "development" else 30, window_seconds=60, key_suffix="open_rides")
 def get_open_rides(
     request: Request,
     current_user: models.User = Depends(auth.require_role(["driver"])),

@@ -174,10 +174,22 @@ export function MapWidget({
             // Fetch and patch the style to remove the broken 3D layer before initialization
             const styleUrl = `https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=${OLA_API_KEY}`;
             const response = await fetch(styleUrl);
-            const style = await response.json();
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('Invalid Ola Maps API key');
+                }
+                throw new Error(`Failed to load Ola Maps style: ${response.status} ${response.statusText}`);
+            }
 
-            if (!response.ok || !style.version) {
-                throw new Error('Invalid Ola Maps API Key or style response');
+            let style: any;
+            try {
+                style = await response.json();
+            } catch (error) {
+                throw new Error('Failed to parse Ola Maps style response');
+            }
+
+            if (!style || typeof style.version === 'undefined') {
+                throw new Error('Received malformed Ola Maps style JSON');
             }
 
             if (style.layers) {

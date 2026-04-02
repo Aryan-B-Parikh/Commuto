@@ -7,10 +7,11 @@ import models
 import schemas_trips as trip_schemas
 import auth
 import asyncio
+import concurrent.futures
 import uuid
 import random
 import logging
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from routers.websocket_router import notify_new_bid, notify_bid_status_update
 from services.wallet_service import reconcile_booking_hold
@@ -19,18 +20,25 @@ router = APIRouter(prefix="/bids", tags=["Bidding"])
 logger = logging.getLogger(__name__)
 
 
-def _dispatch_websocket_notification(coro) -> None:
+def _log_ws_future(future: concurrent.futures.Future) -> None:
+    try:
+        future.result()
+    except Exception as exc:
+        logger.warning(f"WebSocket notification failed: {exc}")
+
+
+def _dispatch_websocket_notification(coro, loop: Optional[asyncio.AbstractEventLoop]) -> None:
     """Safely send websocket notifications from sync endpoints."""
     try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    try:
         if loop and loop.is_running():
-            loop.create_task(coro)
-        else:
-            asyncio.run(coro)
+            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            future.add_done_callback(_log_ws_future)
+            return
+
+        running_loop = asyncio.get_running_loop()
+        running_loop.create_task(coro)
+    except RuntimeError:
+        logger.warning("No running event loop available for websocket notification")
     except Exception as exc:
         logger.warning(f"WebSocket notification failed: {exc}")
 
@@ -99,7 +107,7 @@ def get_my_bids(
 
 
 @router.post("/{ride_id}", response_model=trip_schemas.BidResponse, status_code=status.HTTP_201_CREATED)
-@rate_limit(max_requests=5, window_seconds=60, key_suffix="place_bid")
+@rate_limit(max_requests=6, window_seconds=60, key_suffix="place_bid")
 def place_bid(
     request: Request,
     ride_id: UUID,
@@ -171,6 +179,7 @@ def place_bid(
         db.refresh(new_bid)
 
         if trip.creator_passenger_id:
+            dispatch_loop = getattr(request.app.state, "notification_loop", None)
             _dispatch_websocket_notification(
                 notify_new_bid(
                     str(trip.creator_passenger_id),
@@ -183,7 +192,8 @@ def place_bid(
                         "message": new_bid.message,
                         "is_counter_bid": False,
                     },
-                )
+                ),
+                dispatch_loop,
             )
 
         logger.info(f"Bid created: {new_bid.id} by driver {current_user.id} for trip {ride_id}")
@@ -318,12 +328,12 @@ def accept_bid(
         
         # Update trip with driver and price
         trip.driver_id = bid.driver_id
-        trip.price_per_seat = bid.bid_amount
+        trip.total_price = bid.bid_amount # Target is now the bid amount
         trip.status = "bid_accepted"
         trip.version = current_version + 1  # Increment version for optimistic locking
         
-        # Generate OTP for ride start (4 digits for better UX)
-        otp = ''.join([str(random.randint(0, 9)) for _ in range(4)])
+        # Generate OTP for ride start (6 digits for better security)
+        otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
         trip.start_otp = otp
         trip.otp_verified = False
         trip.payment_status = "pending"
@@ -338,22 +348,27 @@ def accept_bid(
         for other_bid in other_bids:
             other_bid.status = "rejected"
             other_bid.version += 1
-        
-        # Update ALL bookings on this trip with price and confirmed status
+            
+        # Update ALL bookings on this trip with split price and confirmed status
         all_bookings = db.query(models.Booking).filter(
             models.Booking.trip_id == trip.id
         ).with_for_update().all()
         
-        destination_hint = (trip.dest_address or "Trip").split(",")[0]
-        for booking in all_bookings:
-            updated_total = bid.bid_amount * booking.seats_booked
-            reconcile_booking_hold(
-                db,
-                booking,
-                updated_total,
-                f"Trip prepayment hold - {destination_hint}",
-            )
-            booking.status = "confirmed"
+        from decimal import Decimal, ROUND_DOWN
+        passenger_count = Decimal(str(len(all_bookings)))
+        if passenger_count > 0:
+            new_split_fare = (Decimal(str(bid.bid_amount)) / passenger_count).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+            trip.price_per_seat = new_split_fare
+            
+            for booking in all_bookings:
+                # In post-ride model, reconcile_booking_hold only updates the DB value
+                reconcile_booking_hold(
+                    db,
+                    booking,
+                    new_split_fare * (booking.seats_booked or 1),
+                    "Trip bid accepted (split update)",
+                )
+                booking.status = "confirmed"
         
         # Commit the transaction
         db.commit()
@@ -458,6 +473,7 @@ def counter_bid(
         db.commit()
         db.refresh(counter_bid_obj)
 
+        dispatch_loop = getattr(request.app.state, "notification_loop", None)
         _dispatch_websocket_notification(
             notify_bid_status_update(
                 str(original_bid.driver_id),
@@ -470,7 +486,8 @@ def counter_bid(
                     "status": counter_bid_obj.status,
                     "is_counter_bid": True,
                 },
-            )
+            ),
+            dispatch_loop,
         )
         
         logger.info(f"Counter bid created: {counter_bid_obj.id} for trip {original_bid.trip_id}")

@@ -38,8 +38,8 @@ function VerifyEmailContent() {
         try {
             await authAPI.verifyEmail(tokenToUse.trim());
             setStatus('success');
-            showToast('success', 'Email verified! Now verify your phone number…');
-            setTimeout(() => router.push('/verify-phone'), 2000);
+            showToast('success', 'Email verified! Now let\'s complete your profile.');
+            setTimeout(() => router.push('/complete-profile'), 2000);
         } catch (err: any) {
             setStatus('error');
             setErrorMsg(err?.response?.data?.detail ?? 'Verification failed. The token may have expired.');
@@ -89,9 +89,9 @@ function VerifyEmailContent() {
                 {status === 'success' ? (
                     <>
                         <h1 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Email Verified!</h1>
-                        <p className="text-[#9CA3AF] text-center mb-6">Your email is confirmed. Next, verify your phone number.</p>
-                        <Button fullWidth size="lg" onClick={() => router.push('/verify-phone')}>
-                            Verify Phone Number →
+                        <p className="text-[#9CA3AF] text-center mb-6">Your email is confirmed. Next, complete your profile.</p>
+                        <Button fullWidth size="lg" onClick={() => router.push('/complete-profile')}>
+                            Complete Profile →
                         </Button>
                     </>
                 ) : (
@@ -153,7 +153,7 @@ function VerifyEmailContent() {
                 )}
 
                 <div className="mt-6 text-center">
-                    <Link href="/passenger/dashboard" className="text-sm text-[#6B7280] hover:text-[#9CA3AF]">
+                    <Link href="/complete-profile" className="text-sm text-[#6B7280] hover:text-[#9CA3AF]">
                         Skip for now →
                     </Link>
                 </div>

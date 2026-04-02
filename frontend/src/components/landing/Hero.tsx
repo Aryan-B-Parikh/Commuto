@@ -44,11 +44,11 @@ export const Hero: React.FC = () => {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-full mb-6 border border-blue-500/20"
                         >
                             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">10,000+ daily rides shared</span>
+                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">10,000+ daily rides shared</span>
                         </motion.div>
 
                         {/* Headline */}
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-6">
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-foreground leading-tight mb-6 italic tracking-tighter">
                             Share Your Ride,
                             <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-400">
@@ -80,16 +80,16 @@ export const Hero: React.FC = () => {
                         {/* Stats */}
                         <div className="flex gap-8 mt-12">
                             <div>
-                                <p className="text-3xl font-bold text-foreground">50K+</p>
-                                <p className="text-sm text-muted-foreground">Active Users</p>
+                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">50K+</p>
+                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">Active Users</p>
                             </div>
                             <div>
-                                <p className="text-3xl font-bold text-foreground">1M+</p>
-                                <p className="text-sm text-muted-foreground">Rides Shared</p>
+                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">1M+</p>
+                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">Rides Shared</p>
                             </div>
                             <div>
-                                <p className="text-3xl font-bold text-foreground">4.9</p>
-                                <p className="text-sm text-muted-foreground">App Rating</p>
+                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">4.9</p>
+                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">App Rating</p>
                             </div>
                         </div>
                     </motion.div>

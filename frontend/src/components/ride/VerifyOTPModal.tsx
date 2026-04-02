@@ -13,8 +13,10 @@ interface VerifyOTPModalProps {
 }
 
 export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: VerifyOTPModalProps) {
-    const [otp, setOtp] = useState(['', '', '', '']);
+    const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const inputRefs = [
+        useRef<HTMLInputElement>(null),
+        useRef<HTMLInputElement>(null),
         useRef<HTMLInputElement>(null),
         useRef<HTMLInputElement>(null),
         useRef<HTMLInputElement>(null),
@@ -23,7 +25,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
 
     useEffect(() => {
         if (isOpen) {
-            setOtp(['', '', '', '']);
+            setOtp(['', '', '', '', '', '']);
             setTimeout(() => inputRefs[0].current?.focus(), 100);
         }
     }, [isOpen]);
@@ -35,7 +37,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
         newOtp[index] = value.slice(-1);
         setOtp(newOtp);
 
-        if (value && index < 3) {
+        if (value && index < 5) {
             inputRefs[index + 1].current?.focus();
         }
     };
@@ -49,7 +51,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const fullOtp = otp.join('');
-        if (fullOtp.length === 4) {
+        if (fullOtp.length === 6) {
             try {
                 await onVerify(fullOtp);
             } catch (err: any) {
@@ -85,7 +87,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                                     </div>
                                     <div>
                                         <h3 className="text-xl font-bold text-[#F9FAFB]">Verify Start OTP</h3>
-                                        <p className="text-sm text-[#9CA3AF]">Ask passenger for the 4-digit code</p>
+                                        <p className="text-sm text-[#9CA3AF]">Ask passenger for the 6-digit code</p>
                                     </div>
                                 </div>
                                 <button
@@ -97,7 +99,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-8 text-center">
-                                <div className="flex justify-center gap-4">
+                                <div className="flex justify-center gap-2 sm:gap-4">
                                     {otp.map((digit, index) => (
                                         <input
                                             key={index}
@@ -108,7 +110,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                                             value={digit}
                                             onChange={(e) => handleChange(index, e.target.value)}
                                             onKeyDown={(e) => handleKeyDown(index, e)}
-                                            className="w-14 h-16 bg-[#1E293B] border border-[#374151] rounded-2xl text-2xl font-black text-white text-center focus:border-indigo-500 focus:outline-none transition-all shadow-lg focus:ring-4 focus:ring-indigo-500/20"
+                                            className="w-10 sm:w-14 h-14 sm:h-16 bg-[#1E293B] border border-[#374151] rounded-xl sm:rounded-2xl text-xl sm:text-2xl font-black text-white text-center focus:border-indigo-500 focus:outline-none transition-all shadow-lg focus:ring-4 focus:ring-indigo-500/20"
                                             disabled={isVerifying}
                                         />
                                     ))}
@@ -117,7 +119,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                                 <div className="flex flex-col gap-3 pt-4">
                                     <Button
                                         type="submit"
-                                        disabled={otp.join('').length !== 4 || isVerifying}
+                                        disabled={otp.join('').length !== 6 || isVerifying}
                                         className="h-14 bg-indigo-500 hover:bg-indigo-600 font-bold text-lg rounded-2xl w-full flex items-center justify-center gap-2 shadow-xl shadow-indigo-500/20"
                                     >
                                         {isVerifying ? (

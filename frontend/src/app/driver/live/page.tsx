@@ -122,15 +122,15 @@ export default function DriverLivePage() {
     const completeRideWithOtp = async () => {
         if (!trip) return;
 
-        const enteredOtp = window.prompt('Enter 4-digit drop OTP from passenger to end this trip:');
+        const enteredOtp = window.prompt('Enter 6-digit drop OTP from passenger to end this trip:');
         if (!enteredOtp) {
             showToast('error', 'Trip completion requires passenger drop OTP.');
             return;
         }
 
         const otp = enteredOtp.trim();
-        if (!/^\d{4}$/.test(otp)) {
-            showToast('error', 'Drop OTP must be a valid 4-digit number.');
+        if (!/^\d{6}$/.test(otp)) {
+            showToast('error', 'Drop OTP must be a valid 6-digit number.');
             return;
         }
 
@@ -204,7 +204,7 @@ export default function DriverLivePage() {
                         hasCompletedRef.current = true;
                         if (!hasShownDestinationPromptRef.current) {
                             hasShownDestinationPromptRef.current = true;
-                            showToast('success', "Destination reached! Ask passenger for drop OTP, then tap END TRIP.");
+                            showToast('success', "Destination reached! Ask passenger for 6-digit drop OTP, then tap END TRIP.");
                         }
                     }
                 }

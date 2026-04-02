@@ -9,11 +9,25 @@ export interface BackendUser {
     role: 'passenger' | 'driver';
     is_verified: boolean;
     is_phone_verified: boolean;
+    profile_completed: boolean;
     rating?: number;
     total_trips?: number;
     created_at: string;
     updated_at: string;
     license_photo_url?: string;
+    // Profile fields
+    gender?: string;
+    date_of_birth?: string;
+    bio?: string;
+    address?: string;
+    emergency_contact?: {
+        name: string;
+        relationship: string;
+        phone: string;
+    };
+    travel_preferences?: string[];
+    accessibility_needs?: boolean;
+    license_number?: string;
 }
 
 export interface RegisterRequest {
@@ -48,12 +62,26 @@ export interface UserResponse {
     avatar_url?: string;
     role: string;
     is_verified: boolean;
+    profile_completed: boolean;
     rating?: number;
     total_trips?: number;
     today_earnings?: number;
     online_hours?: number;
     created_at: string;
     license_photo_url?: string;
+    // Profile fields
+    gender?: string;
+    date_of_birth?: string;
+    bio?: string;
+    address?: string;
+    emergency_contact?: {
+        name: string;
+        relationship: string;
+        phone: string;
+    };
+    travel_preferences?: string[];
+    accessibility_needs?: boolean;
+    license_number?: string;
 }
 
 // Trip Types matching backend
@@ -70,6 +98,7 @@ export interface TripResponse {
     available_seats: number;
     creator_passenger_id?: string;
     shared_ride?: boolean;
+    total_price: number;
     price_per_seat?: number;
     status: string;
     created_at: string;
@@ -87,6 +116,7 @@ export interface TripResponse {
     booking_payment_status?: string;
     notes?: string;
     start_otp?: string;
+    completion_otp?: string;
     otp_verified?: boolean;
     passenger_notes?: { passenger_name: string; notes: string }[];
 }
@@ -121,6 +151,7 @@ export interface DriverBidWithTrip {
     trip_status: string;
     start_time: string;
     total_seats: number;
+    total_price: number;
     price_per_seat?: number;
     notes?: string;
     passenger_notes?: { passenger_name: string; notes: string }[];

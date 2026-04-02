@@ -53,6 +53,7 @@ class User(Base):
     role = Column(String(20), nullable=False)
     is_verified = Column(Boolean, default=False)
     is_phone_verified = Column(Boolean, default=False)
+    profile_completed = Column(Boolean, default=False)
     verification_token = Column(String(64), nullable=True, index=True)
     verification_token_expires = Column(DateTime, nullable=True)
     phone_otp = Column(String(6), nullable=True)
@@ -150,6 +151,7 @@ class Trip(Base):
     
     start_time = Column(DateTime, nullable=False)
     status = Column(String(20), default="pending")
+    total_price = Column(Numeric, nullable=False, default=0)
     price_per_seat = Column(Numeric, nullable=False)
     total_seats = Column(Integer, nullable=False)
     available_seats = Column(Integer, nullable=False)
@@ -158,6 +160,7 @@ class Trip(Base):
     notes = Column(Text, nullable=True)
     
     start_otp = Column(String(6), nullable=True)
+    completion_otp = Column(String(6), nullable=True)
     otp_verified = Column(Boolean, default=False)
     
     # Optimistic locking

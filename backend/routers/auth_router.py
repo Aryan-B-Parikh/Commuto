@@ -12,18 +12,36 @@ from datetime import datetime, timedelta
 import logging
 from services.email_service import smtp_is_configured, send_verification_email as _send_verification_email_bg
 from services.sms_service import twilio_is_configured, send_phone_otp as _send_phone_otp_bg
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-google_request_adapter = google_requests.Request()
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
 
 
+def _check_profile_complete(user: models.User, db: Session) -> bool:
+    """Return True if the user has filled all mandatory onboarding fields."""
+    # Shared mandatory fields
+    if not user.gender or not user.date_of_birth or not user.full_name or not user.phone_number:
+        return False
+    ec = user.emergency_contact
+    if not ec or not ec.get("name") or not ec.get("phone"):
+        return False
+
+    role = auth.get_user_role(user, db)
+    if role == "driver":
+        driver = db.query(models.Driver).filter(models.Driver.user_id == user.id).first()
+        if not driver or not driver.license_number:
+            return False
+        vehicle = db.query(models.Vehicle).filter(models.Vehicle.driver_id == user.id).first()
+        if not vehicle:
+            return False
+
+    return True
+
+
 @router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
-@rate_limit(max_requests=5, window_seconds=60, key_suffix="register")
+@rate_limit(max_requests=6, window_seconds=60, key_suffix="register")
 def register(
     request: Request,
     user_data: schemas.UserRegister,
@@ -103,6 +121,7 @@ def register(
             "role": user_data.role,
             "avatar_url": new_user.avatar_url,
             "is_verified": new_user.is_verified,
+            "profile_completed": new_user.profile_completed,
             "created_at": new_user.created_at,
             "gender": new_user.gender,
             "date_of_birth": new_user.date_of_birth,
@@ -142,7 +161,7 @@ def register(
 
 
 @router.post("/login", response_model=schemas.Token)
-@rate_limit(max_requests=10, window_seconds=60, key_suffix="login")
+@rate_limit(max_requests=11, window_seconds=60, key_suffix="login")
 def login(
     request: Request,
     user_credentials: schemas.UserLogin,
@@ -347,6 +366,16 @@ def google_auth(
     """Verify Google token and login/register user"""
     import time
     import requests as py_requests
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+    except ModuleNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google auth dependencies are not installed",
+        )
+
+    google_request_adapter = google_requests.Request()
     start_time = time.time()
     try:
         email = ""
@@ -454,7 +483,7 @@ def google_auth(
 
 
 @router.get("/me", response_model=schemas.UserResponse)
-@rate_limit(max_requests=30, window_seconds=60, key_suffix="me")
+@rate_limit(max_requests=100 if os.getenv("APP_ENV") == "development" else 30, window_seconds=60, key_suffix="me")
 def get_current_user_info(
     request: Request,
     current_user: models.User = Depends(auth.get_current_user),
@@ -475,6 +504,7 @@ def get_current_user_info(
         "role": role,
         "avatar_url": current_user.avatar_url,
         "is_verified": current_user.is_verified,
+        "profile_completed": current_user.profile_completed,
         "created_at": current_user.created_at,
         "gender": current_user.gender,
         "date_of_birth": current_user.date_of_birth,
@@ -535,7 +565,7 @@ def get_current_user_info(
 
 
 @router.patch("/me", response_model=schemas.UserResponse)
-@rate_limit(max_requests=10, window_seconds=60, key_suffix="update_me")
+@rate_limit(max_requests=50 if os.getenv("APP_ENV") == "development" else 10, window_seconds=60, key_suffix="update_me")
 def update_current_user(
     request: Request,
     update_data: schemas.ProfileUpdate,
@@ -554,12 +584,19 @@ def update_current_user(
             if key in data:
                 setattr(current_user, key, data[key])
         
-        # Date of birth (parse string to date)
+        # Date of birth (parse ISO format YYYY-MM-DD or datetime)
         if data.get("date_of_birth"):
+            dob_raw = data["date_of_birth"]
             try:
-                current_user.date_of_birth = date_type.fromisoformat(data["date_of_birth"])
-            except ValueError:
-                pass
+                if isinstance(dob_raw, str):
+                    if "T" in dob_raw:
+                        current_user.date_of_birth = datetime.fromisoformat(dob_raw.replace("Z", "+00:00")).date()
+                    else:
+                        current_user.date_of_birth = date_type.fromisoformat(dob_raw)
+                elif isinstance(dob_raw, (date_type, datetime)):
+                    current_user.date_of_birth = dob_raw
+            except (ValueError, TypeError):
+                logger.warning(f"Failed to parse date_of_birth: {dob_raw}")
         
         # Emergency contact (JSON)
         if data.get("emergency_contact"):
@@ -634,6 +671,9 @@ def update_current_user(
                 if data.get("accessibility_needs") is not None:
                     passenger.accessibility_needs = data["accessibility_needs"]
         
+        # Auto-detect profile completeness after updates
+        current_user.profile_completed = _check_profile_complete(current_user, db)
+
         db.commit()
         db.refresh(current_user)
         
@@ -646,6 +686,7 @@ def update_current_user(
             "role": role,
             "avatar_url": current_user.avatar_url,
             "is_verified": current_user.is_verified,
+            "profile_completed": current_user.profile_completed,
             "created_at": current_user.created_at,
             "gender": current_user.gender,
             "date_of_birth": current_user.date_of_birth,

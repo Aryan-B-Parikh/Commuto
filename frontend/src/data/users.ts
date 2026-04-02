@@ -11,5 +11,6 @@ export const currentUser: User = {
     rating: 0,
     totalTrips: 0,
     verified: false,
+    profileCompleted: false,
     joinedDate: '',
 };

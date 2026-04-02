@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
+import asyncio
 import os
 import logging
 
@@ -15,16 +16,64 @@ from rate_limiter import rate_limit
 
 from routers import auth_router, rides_router, bids_router, otp_router, websocket_router, payment_methods_router, wallet_router, websocket_trips
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging to console and file
+log_file = os.path.join(os.getcwd(), "commuto_backend.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
+logger.info(f"Logging initialized. Log file: {log_file}")
 
 # Create tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Commuto API", version="1.0.0")
 
-# CORS Configuration from environment
+
+@app.on_event("startup")
+async def capture_notification_loop() -> None:
+    app.state.notification_loop = asyncio.get_running_loop()
+
+# 1. Diagnostic Error & Header Logging Middleware
+@app.middleware("http")
+async def error_handling_middleware(request: Request, call_next):
+    method = request.method
+    url = str(request.url)
+    origin = request.headers.get("origin")
+    
+    # Preflight special log
+    if method == "OPTIONS":
+        logger.info(f"PREFLIGHT: OPTIONS {url} from origin {origin}")
+        
+    try:
+        response = await call_next(request)
+        
+        # Log outgoing CORS headers for debugging
+        if origin:
+            logger.info(f"RESPONSE: {method} {url} -> {response.status_code}")
+            logger.info(f"CORS Check: Origin={origin} Header={response.headers.get('access-control-allow-origin')}")
+            
+        return response
+    except HTTPException as http_exc:
+        logger.warning(f"HTTP Exception {http_exc.status_code}: {http_exc.detail}")
+        return JSONResponse(
+            status_code=http_exc.status_code,
+            content={"detail": http_exc.detail, "type": "http_error"}
+        )
+    except Exception as exc:
+        logger.error(f"CRITICAL: Unhandled exception during {method} {url}", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": str(exc), "type": "internal_error"}
+        )
+
+# 2. CORS Middleware (Outermost to wrap all responses including errors)
+# Specific origins and headers required when allow_credentials=True
 allow_origins = os.getenv(
     "CORS_ALLOW_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
@@ -35,28 +84,18 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
 
-# Centralized error handling middleware
-@app.middleware("http")
-async def error_handling_middleware(request: Request, call_next):
-    try:
-        response = await call_next(request)
-        return response
-    except HTTPException as http_exc:
-        logger.warning(f"HTTP Exception: {http_exc.detail}")
-        return JSONResponse(
-            status_code=http_exc.status_code,
-            content={"detail": http_exc.detail, "type": "http_error"}
-        )
-    except Exception as exc:
-        logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Internal server error", "type": "internal_error"}
-        )
+@app.get("/api/debug-cors")
+def debug_cors(request: Request):
+    return {
+        "origins": allow_origins,
+        "request_origin": request.headers.get("origin"),
+        "method": request.method,
+        "headers": dict(request.headers)
+    }
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):

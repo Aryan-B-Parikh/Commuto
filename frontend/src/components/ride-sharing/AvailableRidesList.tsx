@@ -80,7 +80,10 @@ export default function AvailableRidesList({ isMobile }: AvailableRidesListProps
                                     </div>
                                     <div className="flex-shrink-0 text-right">
                                         <p className="text-[#F9FAFB] text-[15px] font-black leading-none">
-                                            {formatCurrency(ride.price_per_seat || 0)}
+                                            {formatCurrency(ride.total_price || 0)}
+                                        </p>
+                                        <p className="text-[10px] text-[#9CA3AF] font-bold mt-1 uppercase">
+                                            {formatCurrency(ride.price_per_seat || 0)} each
                                         </p>
                                     </div>
                                 </div>
@@ -130,8 +133,10 @@ export default function AvailableRidesList({ isMobile }: AvailableRidesListProps
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-black text-indigo-400">{formatCurrency(ride.price_per_seat || 0)}</p>
-                                    <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider">Per Person</p>
+                                    <p className="text-2xl font-black text-indigo-400">{formatCurrency(ride.total_price || 0)}</p>
+                                    <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider">
+                                        {formatCurrency(ride.price_per_seat || 0)} Per Person
+                                    </p>
                                 </div>
                             </div>
 

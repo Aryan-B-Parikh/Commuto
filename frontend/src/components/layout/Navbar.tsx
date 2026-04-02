@@ -28,7 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                 <div className="flex items-center justify-between h-16 md:h-20">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <div className="w-10 h-10 rounded-sm bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
                             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                             </svg>
@@ -42,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                             <Link
                                 key={link.href}
                                 href={link.href}
-                                className="text-muted-foreground hover:text-foreground font-medium transition-colors"
+                                className="text-muted-foreground hover:text-foreground font-black uppercase tracking-widest text-xs transition-colors"
                             >
                                 {link.label}
                             </Link>

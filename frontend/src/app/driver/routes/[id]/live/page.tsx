@@ -230,15 +230,15 @@ export default function LiveRoutePage() {
             {/* OTP Modal */}
             <Modal isOpen={showOtpModal} onClose={() => setShowOtpModal(false)} title="Verify Passenger Boarding">
                 <div className="text-center p-2">
-                    <p className="text-[#9CA3AF] mb-6 text-sm">Enter the 4-digit code shown on {activeStop?.passengerName}&apos;s mobile app to confirm boarding.</p>
+                    <p className="text-[#9CA3AF] mb-6 text-sm">Enter the 6-digit code shown on {activeStop?.passengerName}&apos;s mobile app to confirm boarding.</p>
                     <div className="flex justify-center mb-8">
                         <input
                             type="text"
-                            maxLength={4}
+                            maxLength={6}
                             value={otpInput}
                             onChange={(e) => setOtpInput(e.target.value)}
-                            className="w-48 h-16 text-center text-4xl font-bold tracking-[1rem] border-b-4 border-indigo-500 focus:outline-none bg-indigo-500/10 rounded-t-xl text-[#F9FAFB]"
-                            placeholder="0000"
+                            className="w-64 h-16 text-center text-3xl font-bold tracking-[0.5rem] border-b-4 border-indigo-500 focus:outline-none bg-indigo-500/10 rounded-t-xl text-[#F9FAFB]"
+                            placeholder="000000"
                             autoFocus
                         />
                     </div>
@@ -246,7 +246,7 @@ export default function LiveRoutePage() {
                         <span className="text-xs font-bold text-indigo-400 uppercase">Demo Preview</span>
                         <span className="text-lg font-mono font-bold text-indigo-400">{activeStop?.otp}</span>
                     </div>
-                    <Button variant="primary" fullWidth size="lg" onClick={handleVerifyOtp} disabled={otpInput.length !== 4}>Confirm Boarding</Button>
+                    <Button variant="primary" fullWidth size="lg" onClick={handleVerifyOtp} disabled={otpInput.length !== 6}>Confirm Boarding</Button>
                 </div>
             </Modal>
 

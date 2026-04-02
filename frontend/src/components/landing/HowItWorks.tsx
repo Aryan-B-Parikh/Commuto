@@ -35,7 +35,7 @@ const steps = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         ),
-        color: 'purple',
+        color: 'teal',
     },
 ];
 
@@ -50,10 +50,10 @@ const colorClasses = {
         text: 'text-green-600',
         gradient: 'from-green-500 to-green-600',
     },
-    purple: {
-        bg: 'bg-purple-100',
-        text: 'text-purple-600',
-        gradient: 'from-purple-500 to-purple-600',
+    teal: {
+        bg: 'bg-teal-100',
+        text: 'text-teal-600',
+        gradient: 'from-teal-500 to-teal-600',
     },
 };
 
@@ -93,7 +93,7 @@ export const HowItWorks: React.FC = () => {
                                 <div className="hidden md:block absolute top-16 left-[60%] w-full h-0.5 bg-gradient-to-r from-gray-200 to-transparent" />
                             )}
 
-                            <div className="relative bg-card rounded-2xl p-8 border border-card-border hover:border-blue-500/30 hover:shadow-lg transition-all duration-300">
+                            <div className="relative bg-card rounded-sm p-8 border border-card-border hover:border-blue-500/30 hover:shadow-lg transition-all duration-300">
                                 {/* Step Number */}
                                 <div className={`absolute -top-4 right-8 px-3 py-1 bg-gradient-to-r ${colorClasses[step.color as keyof typeof colorClasses].gradient} text-white text-sm font-bold rounded-full`}>
                                     {step.number}
@@ -105,7 +105,7 @@ export const HowItWorks: React.FC = () => {
                                 </div>
 
                                 {/* Content */}
-                                <h3 className="text-xl font-bold text-foreground mb-3">{step.title}</h3>
+                                <h3 className="text-xl font-black text-foreground mb-3 italic tracking-tighter leading-none">{step.title}</h3>
                                 <p className="text-muted-foreground">{step.description}</p>
                             </div>
                         </motion.div>

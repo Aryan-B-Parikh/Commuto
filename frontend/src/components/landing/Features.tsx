@@ -33,7 +33,7 @@ const features = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
         ),
-        color: 'purple',
+        color: 'teal',
     },
     {
         title: 'Verified Profiles',
@@ -70,7 +70,6 @@ const features = [
 const colorClasses = {
     blue: 'bg-blue-100 text-blue-600',
     green: 'bg-green-100 text-green-600',
-    purple: 'bg-purple-100 text-purple-600',
     yellow: 'bg-yellow-100 text-yellow-600',
     red: 'bg-red-100 text-red-600',
     teal: 'bg-teal-100 text-teal-600',
@@ -106,12 +105,12 @@ export const Features: React.FC = () => {
                             viewport={{ once: true }}
                             transition={{ delay: index * 0.1 }}
                             whileHover={{ y: -5 }}
-                            className="bg-card rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-card-border"
+                            className="bg-card rounded-sm p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-card-border"
                         >
                             <div className={`w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4`}>
                                 {feature.icon}
                             </div>
-                            <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
+                            <h3 className="text-lg font-black text-foreground mb-2 italic tracking-tighter leading-none">{feature.title}</h3>
                             <p className="text-muted-foreground">{feature.description}</p>
                         </motion.div>
                     ))}

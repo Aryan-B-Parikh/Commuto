@@ -1,6 +1,7 @@
-﻿from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
 from typing import Optional, List
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from uuid import UUID
 
 class UserRegister(BaseModel):
@@ -9,13 +10,45 @@ class UserRegister(BaseModel):
     full_name: str
     phone: str
     role: str  # "passenger" or "driver"
+
+    @field_validator('email')
+    def validate_email(cls, v):
+        # Basic common-sense length & pattern checks
+        if len(v) < 5:
+            raise ValueError("Email is too short.")
+        
+        # Block common testing/fake emails
+        banned_patterns = ["test@test", "email@email", "a@a.com", "example@example", "123@123"]
+        if any(pattern in v.lower() for pattern in banned_patterns):
+            raise ValueError("Please provide a legitimate email address.")
+            
+        if " " in v:
+            raise ValueError("Email cannot contain spaces.")
+        return v.lower()
+
+    @field_validator('phone')
+    def validate_phone(cls, v):
+        # Remove common prefixes and non-digit characters
+        cleaned = re.sub(r'[\s\-\+\(\)]', '', v)
+        if cleaned.startswith('91') and len(cleaned) == 12:
+            cleaned = cleaned[2:]
+        
+        # Must be 10 digits starting with 6-9
+        if not re.match(r'^[6-9]\d{9}$', cleaned):
+            raise ValueError("Invalid Indian mobile number. Must be 10 digits starting with 6, 7, 8, or 9.")
+            
+        # Check for repetitive digits (e.g., 1111111111)
+        if len(set(cleaned)) == 1:
+            raise ValueError("Invalid phone number. Repetitive digits are not allowed.")
+            
+        return cleaned
     
     # Optional driver fields
     license_number: Optional[str] = None
     vehicle_make: Optional[str] = None
     vehicle_model: Optional[str] = None
     vehicle_plate: Optional[str] = None
-    vehicle_capacity: Optional[int] = None
+    vehicle_capacity: Optional[int] = Field(default=3, ge=1, le=4)
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -39,6 +72,20 @@ class EmergencyContactSchema(BaseModel):
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     phone_number: Optional[str] = None
+
+    @field_validator('phone_number')
+    def validate_phone_number(cls, v):
+        if v is None:
+            return v
+        # Reuse logic
+        cleaned = re.sub(r'[\s\-\+\(\)]', '', v)
+        if cleaned.startswith('91') and len(cleaned) == 12:
+            cleaned = cleaned[2:]
+        if not re.match(r'^[6-9]\d{9}$', cleaned):
+            raise ValueError("Invalid Indian mobile number. Must be 10 digits starting with 6, 7, 8, or 9.")
+        if len(set(cleaned)) == 1:
+            raise ValueError("Invalid phone number. Repetitive digits are not allowed.")
+        return cleaned
     avatar_url: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[str] = None  # ISO format string
@@ -49,7 +96,7 @@ class ProfileUpdate(BaseModel):
     # Driver fields
     license_number: Optional[str] = None
     insurance_status: Optional[str] = None
-    max_passengers: Optional[int] = None
+    max_passengers: Optional[int] = Field(default=None, ge=1, le=4)
     route_radius: Optional[int] = None
     is_available: Optional[bool] = None
     license_photo_url: Optional[str] = None
@@ -59,11 +106,39 @@ class ProfileUpdate(BaseModel):
     vehicle_model: Optional[str] = None
     vehicle_plate: Optional[str] = None
     vehicle_color: Optional[str] = None
-    vehicle_capacity: Optional[int] = None
+    vehicle_capacity: Optional[int] = Field(default=None, ge=1, le=4)
+
+    @field_validator('vehicle_type')
+    def validate_vehicle_type(cls, v):
+        if v and v.lower() not in ["auto-rickshaw", "rickshaw", "rikshaw"]:
+            raise ValueError("Commuto is currently only available for Auto-Rickshaws.")
+        return "Auto-Rickshaw"
     
     # Passenger fields
-    travel_preferences: Optional[List[str]] = None
     accessibility_needs: Optional[bool] = None
+
+    @field_validator('date_of_birth', mode='after')
+    @classmethod
+    def validate_age_threshold(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            try:
+                # Expecting ISO YYYY-MM-DD
+                dob = date.fromisoformat(v)
+                today = date.today()
+                
+                # Check for 15 year threshold
+                # Using 365.25 for average days in year including leap years
+                min_age_date = today - timedelta(days=15 * 365.25)
+                
+                if dob > min_age_date:
+                    raise ValueError("You must be at least 15 years old to join Commuto.")
+                    
+            except ValueError as e:
+                # Re-raise if it's our custom age error
+                if "15 years old" in str(e):
+                    raise e
+                raise ValueError(f"Invalid date format for birth date: {v}. Expected YYYY-MM-DD.")
+        return v
 
 class UserResponse(BaseModel):
     id: UUID
@@ -73,6 +148,7 @@ class UserResponse(BaseModel):
     role: str
     avatar_url: Optional[str] = None
     is_verified: bool = False
+    profile_completed: bool = False
     rating: Optional[float] = 0.0
     total_trips: Optional[int] = 0
     today_earnings: Optional[float] = 0
