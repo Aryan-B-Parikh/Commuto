@@ -26,42 +26,44 @@ export default function EditProfilePage() {
 
         const loadData = async () => {
             try {
+                // Fetch fresh user data from backend
+                const userData = await authAPI.getCurrentUser();
                 const methods = await paymentMethodsAPI.getMethods();
 
-                // Map User to UserProfile
+                // Map backend user data to UserProfile
                 const profileData = {
-                    id: user.id || '',
-                    fullName: user.name || '',
-                    email: user.email || '',
-                    phone: user.phone || '',
-                    avatar: user.avatar || '',
+                    id: userData.id || '',
+                    fullName: userData.full_name || '',
+                    email: userData.email || '',
+                    phone: userData.phone_number || '',
+                    avatar: userData.avatar_url || '',
                     role: role as 'passenger' | 'driver',
-                    gender: 'prefer-not-to-say' as Gender,
-                    dateOfBirth: '',
-                    bio: '',
-                    address: '',
-                    emergencyContact: {
-                        name: '',
-                        relationship: '',
-                        phone: ''
-                    },
+                    gender: userData.gender as Gender || 'prefer-not-to-say' as Gender,
+                    dateOfBirth: userData.date_of_birth || '',
+                    bio: userData.bio || '',
+                    address: userData.address || '',
+                    emergencyContact: userData.emergency_contact ? {
+                        name: userData.emergency_contact.name || '',
+                        relationship: userData.emergency_contact.relationship || '',
+                        phone: userData.emergency_contact.phone || ''
+                    } : { name: '', relationship: '', phone: '' },
                     preferences: {
-                        maxPassengers: 1,
-                        routeRadius: 10,
-                        isAvailable: true
+                        maxPassengers: userData.max_passengers || 3,
+                        routeRadius: userData.route_radius || 10,
+                        isAvailable: userData.is_online || false
                     },
                     vehicle: role === 'driver' ? {
-                        type: 'Sedan',
-                        model: '',
-                        plateNumber: '',
-                        color: '',
-                        seatCapacity: 4
+                        type: userData.vehicle_type || 'Auto-Rickshaw',
+                        model: userData.vehicle_model || '',
+                        plateNumber: userData.vehicle_plate || '',
+                        color: userData.vehicle_color || '',
+                        seatCapacity: userData.vehicle_capacity || 3
                     } : undefined,
                     documents: role === 'driver' ? {
-                        licenseNumber: (user as any).license_number || '',
-                        insuranceStatus: 'active',
+                        licenseNumber: userData.license_number || '',
+                        insuranceStatus: userData.insurance_status || 'active',
                         registrationUrl: '',
-                        licensePhotoUrl: user.licensePhotoUrl || ''
+                        licensePhotoUrl: userData.license_photo_url || ''
                     } : undefined,
                     // Passenger specific fields
                     savedPlaces: [],
@@ -72,9 +74,9 @@ export default function EditProfilePage() {
                         last4: m.last4,
                         isDefault: m.is_default
                     })),
-                    travelPreferences: [],
+                    travelPreferences: userData.travel_preferences || [],
                     preferredPickupLocations: [],
-                    accessibilityNeeds: false
+                    accessibilityNeeds: userData.accessibility_needs || false
                 };
 
                 setCurrentData(profileData as any);
@@ -90,13 +92,35 @@ export default function EditProfilePage() {
 
     const handleSave = async (newData: UserProfile) => {
         try {
-            await authAPI.updateProfile({
+            const payload: Record<string, any> = {
                 full_name: newData.fullName,
-                phone: newData.phone,
+                phone_number: newData.phone,
                 avatar_url: newData.avatar,
-                license_number: newData.role === 'driver' ? (newData as any).documents?.licenseNumber : undefined,
-                license_photo_url: newData.role === 'driver' ? (newData as any).documents?.licensePhotoUrl : undefined
-            });
+                gender: newData.gender,
+                date_of_birth: newData.dateOfBirth,
+                bio: newData.bio,
+                address: newData.address,
+                emergency_contact: {
+                    name: newData.emergencyContact.name,
+                    relationship: newData.emergencyContact.relationship,
+                    phone: newData.emergencyContact.phone,
+                },
+            };
+
+            if (newData.role === 'driver' && newData.vehicle) {
+                payload.vehicle_type = newData.vehicle.type;
+                payload.vehicle_model = newData.vehicle.model;
+                payload.vehicle_plate = newData.vehicle.plateNumber;
+                payload.vehicle_color = newData.vehicle.color;
+                payload.vehicle_capacity = newData.vehicle.seatCapacity;
+                payload.license_number = (newData as any).documents?.licenseNumber;
+                payload.license_photo_url = (newData as any).documents?.licensePhotoUrl;
+                payload.max_passengers = newData.preferences?.maxPassengers;
+                payload.route_radius = newData.preferences?.routeRadius;
+                payload.is_available = newData.preferences?.isAvailable;
+            }
+
+            await authAPI.updateProfile(payload);
             if (refreshUser) await refreshUser();
             setCurrentData(newData);
         } catch (error) {

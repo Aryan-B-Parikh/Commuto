@@ -106,13 +106,13 @@ class ProfileUpdate(BaseModel):
     vehicle_model: Optional[str] = None
     vehicle_plate: Optional[str] = None
     vehicle_color: Optional[str] = None
-    vehicle_capacity: Optional[int] = Field(default=None, ge=1, le=4)
+    vehicle_capacity: Optional[int] = Field(default=None, ge=1, le=3)
 
     @field_validator('vehicle_type')
     def validate_vehicle_type(cls, v):
-        if v and v.lower() not in ["auto-rickshaw", "rickshaw", "rikshaw"]:
-            raise ValueError("Commuto is currently only available for Auto-Rickshaws.")
-        return "Auto-Rickshaw"
+        if v and v.lower() in ["sedan", "suv", "bike", "car", "van", "truck", "bus"]:
+            raise ValueError("Only Auto-Rickshaws (3-wheelers) are allowed.")
+        return v
     
     # Passenger fields
     accessibility_needs: Optional[bool] = None
@@ -169,11 +169,18 @@ class UserResponse(BaseModel):
     max_passengers: Optional[int] = None
     route_radius: Optional[int] = None
     license_photo_url: Optional[str] = None
+    vehicle_type: Optional[str] = None
+    vehicle_model: Optional[str] = None
+    vehicle_plate: Optional[str] = None
+    vehicle_color: Optional[str] = None
+    vehicle_capacity: Optional[int] = None
     
     # Passenger-specific fields
     travel_preferences: Optional[list] = None
     accessibility_needs: Optional[bool] = None
     
+    profileCompleted: bool = False
+
     class Config:
         from_attributes = True
 

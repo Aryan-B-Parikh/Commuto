@@ -452,8 +452,8 @@ export default function CompleteProfilePage() {
                                             onChange={(e) => update('vehicle_capacity', parseInt(e.target.value))}
                                             className={inputClass()}
                                         >
-                                            {[1, 2, 3, 4].map((n) => (
-                                                <option key={n} value={n}>{n} seats</option>
+                                            {[1, 2, 3].map((n) => (
+                                                <option key={n} value={n}>{n} seat{n > 1 ? 's' : ''}</option>
                                             ))}
                                         </select>
                                     </div>

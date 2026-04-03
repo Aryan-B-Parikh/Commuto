@@ -269,10 +269,14 @@ def get_ride_bids(
 def accept_bid(
     request: Request,
     bid_id: UUID,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Accept a bid with database transaction and optimistic locking"""
+    """Accept a bid with database transaction and optimistic locking.
+    
+    - Passenger (trip creator) can accept any pending bid on their trip
+    - Driver can accept counter bids placed by them
+    """
     
     try:
         # Start transaction with serializable isolation for consistency
@@ -295,12 +299,20 @@ def accept_bid(
             models.Trip.id == bid.trip_id
         ).with_for_update().first()
         
-        # Check if user is the trip creator (only creator can accept bids)
-        if trip.creator_passenger_id != current_user.id:
+        # Check user role and permissions
+        user_role = auth.get_user_role(current_user, db)
+        
+        is_trip_creator = trip.creator_passenger_id == current_user.id
+        is_bid_driver = bid.driver_id == current_user.id
+        is_counter_bid = getattr(bid, 'is_counter_bid', False)
+        
+        # Passenger (trip creator) can accept any pending bid
+        # Driver can accept counter bids they placed
+        if not is_trip_creator and not (user_role == "driver" and is_bid_driver and is_counter_bid):
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the trip creator can accept bids"
+                detail="Only the trip creator or bid owner (for counter bids) can accept bids"
             )
         
         # Check if trip is still available

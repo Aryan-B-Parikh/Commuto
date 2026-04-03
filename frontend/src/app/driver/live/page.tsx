@@ -457,10 +457,12 @@ export default function DriverLivePage() {
                     onVerify={async (otp) => {
                         setIsVerifyingOTP(true);
                         try {
-                            await otpAPI.verifyOTP(trip.id, otp);
-                            setTrip(prev => (prev ? { ...prev, status: 'active', otp_verified: true } as TripResponse : prev));
+                            const result = await otpAPI.verifyOTP(trip.id, otp);
+                            setTrip(prev => (prev ? { ...prev, status: 'active', otp_verified: true, completion_otp: result.completion_otp } as TripResponse : prev));
                             showToast('success', "OTP Verified! Trip started. End trip will require drop OTP.");
                             setIsOTPModalOpen(false);
+                            // Force re-render after OTP verification
+                            setTimeout(() => window.location.reload(), 500);
                         } catch (err: any) {
                             if (err.response?.status === 401) {
                                 showToast('error', "Your session has expired. Please refresh the page or login again.");

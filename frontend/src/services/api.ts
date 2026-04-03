@@ -127,7 +127,7 @@ export const authAPI = {
 // Trips APIs
 export const tripsAPI = {
     getOpenRides: async (): Promise<TripResponse[]> => {
-        const response = await api.get<TripResponse[]>('/rides/open');
+        const response = await api.get<TripResponse[]>('/rides/available');
         return response.data;
     },
 

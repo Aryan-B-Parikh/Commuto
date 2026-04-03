@@ -108,10 +108,9 @@ export const DriverProfileFields: React.FC<DriverProfileFieldsProps> = ({
                     label="Vehicle Type"
                     value={data.vehicle.type}
                     options={[
-                        { value: 'Sedan', label: 'Sedan' },
-                        { value: 'SUV', label: 'SUV' },
-                        { value: 'Hatchback', label: 'Hatchback' },
-                        { value: 'Luxury', label: 'Luxury' },
+                        { value: 'Auto-Rickshaw', label: 'Auto-Rickshaw' },
+                        { value: 'E-Rickshaw', label: 'E-Rickshaw' },
+                        { value: 'Three-Wheeler', label: 'Three-Wheeler' },
                     ]}
                     onChange={(val) => onChange({ vehicle: { ...data.vehicle, type: val } })}
                 />
@@ -133,11 +132,15 @@ export const DriverProfileFields: React.FC<DriverProfileFieldsProps> = ({
                     onChange={(e) => onChange({ vehicle: { ...data.vehicle, color: e.target.value } })}
                     placeholder="e.g. Midnight Silver"
                 />
-                <Input
+                <Select
                     label="Seat Capacity"
-                    type="number"
-                    value={data.vehicle.seatCapacity}
-                    onChange={(e) => onChange({ vehicle: { ...data.vehicle, seatCapacity: parseInt(e.target.value) } })}
+                    value={String(data.vehicle.seatCapacity)}
+                    options={[
+                        { value: '1', label: '1 seat' },
+                        { value: '2', label: '2 seats' },
+                        { value: '3', label: '3 seats' },
+                    ]}
+                    onChange={(val) => onChange({ vehicle: { ...data.vehicle, seatCapacity: parseInt(val) } })}
                 />
             </CollapsibleSection>
 

@@ -155,6 +155,7 @@ export interface DriverBidWithTrip {
     price_per_seat?: number;
     notes?: string;
     passenger_notes?: { passenger_name: string; notes: string }[];
+    is_counter_bid?: boolean;
 }
 
 export interface ActionResponse {

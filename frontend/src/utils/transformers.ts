@@ -22,7 +22,7 @@ export function transformBackendUser(backendUser: BackendUser | UserResponse): U
         rating: userResp.rating || 0,
         totalTrips: userResp.total_trips || 0,
         verified: backendUser.is_verified,
-        profileCompleted: backendUser.profile_completed ?? false,
+        profileCompleted: (backendUser as any).profileCompleted ?? false,
         joinedDate: backendUser.created_at,
         todayEarnings: userResp.today_earnings || 0,
         onlineHours: userResp.online_hours || 0,

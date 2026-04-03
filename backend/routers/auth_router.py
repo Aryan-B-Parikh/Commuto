@@ -121,7 +121,7 @@ def register(
             "role": user_data.role,
             "avatar_url": new_user.avatar_url,
             "is_verified": new_user.is_verified,
-            "profile_completed": new_user.profile_completed,
+            "profileCompleted": new_user.profile_completed,
             "created_at": new_user.created_at,
             "gender": new_user.gender,
             "date_of_birth": new_user.date_of_birth,
@@ -504,7 +504,7 @@ def get_current_user_info(
         "role": role,
         "avatar_url": current_user.avatar_url,
         "is_verified": current_user.is_verified,
-        "profile_completed": current_user.profile_completed,
+        "profileCompleted": current_user.profile_completed,
         "created_at": current_user.created_at,
         "gender": current_user.gender,
         "date_of_birth": current_user.date_of_birth,
@@ -528,6 +528,15 @@ def get_current_user_info(
             resp["max_passengers"] = driver.max_passengers
             resp["route_radius"] = driver.route_radius
             resp["license_photo_url"] = driver.license_photo_url
+            
+            # Get vehicle data
+            vehicle = db.query(models.Vehicle).filter(models.Vehicle.driver_id == current_user.id).first()
+            if vehicle:
+                resp["vehicle_type"] = vehicle.make
+                resp["vehicle_model"] = vehicle.model
+                resp["vehicle_plate"] = vehicle.plate_number
+                resp["vehicle_color"] = vehicle.color
+                resp["vehicle_capacity"] = vehicle.capacity
             
             # Compute today's earnings
             today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -686,7 +695,7 @@ def update_current_user(
             "role": role,
             "avatar_url": current_user.avatar_url,
             "is_verified": current_user.is_verified,
-            "profile_completed": current_user.profile_completed,
+            "profileCompleted": current_user.profile_completed,
             "created_at": current_user.created_at,
             "gender": current_user.gender,
             "date_of_birth": current_user.date_of_birth,

@@ -27,16 +27,24 @@ import {
 } from 'lucide-react';
 import { useRouteInfo } from '@/hooks/useRouteInfo';
 
-function MobileBidCard({ bid, statusConfig, tripStatusConfig }: {
+function MobileBidCard({ bid, statusConfig, tripStatusConfig, onAccept, onCounter, acceptingId, counteringId, counterAmount, setCounterAmount }: {
     bid: DriverBidWithTrip,
     statusConfig: any,
-    tripStatusConfig: any
+    tripStatusConfig: any,
+    onAccept?: (bidId: string) => void,
+    onCounter?: (bidId: string) => void,
+    acceptingId?: string | null,
+    counteringId?: string | null,
+    counterAmount?: string,
+    setCounterAmount?: (v: string) => void
 }) {
     const origin = React.useMemo(() => [Number(bid.origin_lat), Number(bid.origin_lng)] as [number, number], [bid.origin_lat, bid.origin_lng]);
     const destination = React.useMemo(() => [Number(bid.dest_lat), Number(bid.dest_lng)] as [number, number], [bid.dest_lat, bid.dest_lng]);
     const { distanceKm } = useRouteInfo(origin, destination);
     const st = statusConfig[bid.status] || statusConfig.pending;
     const ts = tripStatusConfig[bid.trip_status] || tripStatusConfig.pending;
+    const isCounterBid = (bid as any).is_counter_bid;
+    const isPending = bid.status === 'pending';
 
     return (
         <motion.div variants={itemVariants} layout whileTap={{ scale: 0.98 }}>
@@ -49,6 +57,11 @@ function MobileBidCard({ bid, statusConfig, tripStatusConfig }: {
                                 {bid.status}
                             </span>
                         </div>
+                        {isCounterBid && (
+                            <div className="px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/30">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Counter</span>
+                            </div>
+                        )}
                         <div className={`px-2 py-1 rounded-full ${ts.bg}`}>
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${ts.text}`}>
                                 {bid.trip_status.replace('_', ' ')}
@@ -116,21 +129,76 @@ function MobileBidCard({ bid, statusConfig, tripStatusConfig }: {
                         ))}
                     </div>
                 )}
+
+                {/* Counter Bid Actions */}
+                {isCounterBid && isPending && (
+                    <div className="px-4 pb-4 flex gap-2">
+                        {counteringId !== bid.id ? (
+                            <>
+                                <button
+                                    onClick={() => onAccept?.(bid.id)}
+                                    disabled={acceptingId === bid.id}
+                                    className="flex-1 h-10 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 disabled:opacity-50"
+                                >
+                                    {acceptingId === bid.id ? 'Accepting...' : 'Accept'}
+                                </button>
+                                <button
+                                    onClick={() => setCounterAmount?.(String(bid.bid_amount))}
+                                    disabled={acceptingId === bid.id}
+                                    className="flex-1 h-10 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 disabled:opacity-50"
+                                >
+                                    Counter
+                                </button>
+                            </>
+                        ) : (
+                            <div className="flex-1 flex gap-2">
+                                <input
+                                    type="number"
+                                    value={counterAmount}
+                                    onChange={(e) => setCounterAmount?.(e.target.value)}
+                                    placeholder="Amount"
+                                    className="flex-1 h-10 px-3 bg-muted border border-border rounded-xl text-xs"
+                                />
+                                <button
+                                    onClick={() => onCounter?.(bid.id)}
+                                    disabled={!counterAmount}
+                                    className="h-10 px-4 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 disabled:opacity-50"
+                                >
+                                    Send
+                                </button>
+                                <button
+                                    onClick={() => setCounterAmount?.('')}
+                                    className="h-10 px-3 bg-muted text-muted-foreground rounded-xl text-xs font-bold"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </motion.div>
     );
 }
 
-function DesktopBidCard({ bid, statusConfig, tripStatusConfig }: {
+function DesktopBidCard({ bid, statusConfig, tripStatusConfig, onAccept, onCounter, acceptingId, counteringId, counterAmount, setCounterAmount }: {
     bid: DriverBidWithTrip,
     statusConfig: any,
-    tripStatusConfig: any
+    tripStatusConfig: any,
+    onAccept?: (bidId: string) => void,
+    onCounter?: (bidId: string) => void,
+    acceptingId?: string | null,
+    counteringId?: string | null,
+    counterAmount?: string,
+    setCounterAmount?: (v: string) => void
 }) {
     const origin = React.useMemo(() => [Number(bid.origin_lat), Number(bid.origin_lng)] as [number, number], [bid.origin_lat, bid.origin_lng]);
     const destination = React.useMemo(() => [Number(bid.dest_lat), Number(bid.dest_lng)] as [number, number], [bid.dest_lat, bid.dest_lng]);
     const { distanceKm } = useRouteInfo(origin, destination);
     const st = statusConfig[bid.status] || statusConfig.pending;
     const ts = tripStatusConfig[bid.trip_status] || tripStatusConfig.pending;
+    const isCounterBid = (bid as any).is_counter_bid;
+    const isPending = bid.status === 'pending';
 
     return (
         <motion.div variants={itemVariants} layout>
@@ -148,6 +216,11 @@ function DesktopBidCard({ bid, statusConfig, tripStatusConfig }: {
                                     {bid.status}
                                 </span>
                             </div>
+                            {isCounterBid && (
+                                <div className="px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/30">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400">Counter Bid</span>
+                                </div>
+                            )}
                             <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${ts.bg}`}>
                                 <span className={`text-[10px] font-bold uppercase tracking-widest ${ts.text}`}>
                                     Trip: {bid.trip_status.replace('_', ' ')}
@@ -196,16 +269,68 @@ function DesktopBidCard({ bid, statusConfig, tripStatusConfig }: {
                                 ))}
                             </div>
                         )}
+                        
+                        {/* Counter Input for Counter Bids */}
+                        {isCounterBid && isPending && counteringId === bid.id && (
+                            <div className="mt-4 flex items-center gap-3">
+                                <input
+                                    type="number"
+                                    value={counterAmount}
+                                    onChange={(e) => setCounterAmount?.(e.target.value)}
+                                    placeholder="Your counter amount"
+                                    className="flex-1 px-4 py-2 bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                />
+                                <button
+                                    onClick={() => onCounter?.(bid.id)}
+                                    disabled={!counterAmount || parseFloat(counterAmount) <= 0}
+                                    className="px-4 py-2 bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Send Counter
+                                </button>
+                                <button
+                                    onClick={() => setCounterAmount?.('')}
+                                    className="px-4 py-2 bg-muted text-muted-foreground rounded-xl text-sm font-bold hover:bg-muted/80"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="text-right shrink-0">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Your Bid</p>
-                        <p className={`text-3xl font-black tracking-tight ${bid.status === 'accepted' ? 'text-emerald-400' :
-                            bid.status === 'rejected' ? 'text-red-400 line-through' : 'text-indigo-400'
-                            }`}>
-                            {formatCurrency(bid.bid_amount)}
-                        </p>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Per Seat</p>
+                    <div className="text-right shrink-0 flex flex-col items-end gap-3">
+                        <div>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Your Bid</p>
+                            <p className={`text-3xl font-black tracking-tight ${bid.status === 'accepted' ? 'text-emerald-400' :
+                                bid.status === 'rejected' ? 'text-red-400 line-through' : 'text-indigo-400'
+                                }`}>
+                                {formatCurrency(bid.bid_amount)}
+                            </p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Per Seat</p>
+                        </div>
+                        
+                        {/* Action Buttons for Counter Bids */}
+                        {isCounterBid && isPending && (
+                            <div className="flex gap-2 mt-2">
+                                {counteringId !== bid.id && (
+                                    <>
+                                        <button
+                                            onClick={() => setCounterAmount?.(String(bid.bid_amount))}
+                                            disabled={acceptingId === bid.id}
+                                            className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 disabled:opacity-50"
+                                        >
+                                            {acceptingId === bid.id ? 'Accepting...' : 'Accept'}
+                                        </button>
+                                        <button
+                                            onClick={() => setCounterAmount?.('')}
+                                            disabled={acceptingId === bid.id}
+                                            className="px-4 py-2 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 disabled:opacity-50"
+                                        >
+                                            Counter
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </Card>
@@ -228,6 +353,9 @@ export default function MyBidsPage() {
     const [bids, setBids] = useState<DriverBidWithTrip[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
+    const [acceptingId, setAcceptingId] = useState<string | null>(null);
+    const [counteringId, setCounteringId] = useState<string | null>(null);
+    const [counterAmount, setCounterAmount] = useState<string>('');
 
     // === BUSINESS LOGIC (UNCHANGED) ===
     useEffect(() => {
@@ -246,6 +374,38 @@ export default function MyBidsPage() {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleAcceptBid = async (bidId: string) => {
+        try {
+            setAcceptingId(bidId);
+            await bidsAPI.acceptBid(bidId);
+            showToast('success', 'Bid accepted! Passenger will be notified.');
+            fetchBids();
+        } catch (error: any) {
+            showToast('error', error.response?.data?.detail || 'Failed to accept bid');
+        } finally {
+            setAcceptingId(null);
+        }
+    };
+
+    const handleCounterBid = async (bidId: string) => {
+        if (!counterAmount || isNaN(Number(counterAmount))) {
+            showToast('error', 'Please enter a valid counter amount');
+            return;
+        }
+        try {
+            setCounteringId(bidId);
+            await bidsAPI.counterBid(bidId, { amount: Number(counterAmount) });
+            showToast('success', 'Counter bid sent!');
+            setCounteringId(null);
+            setCounterAmount('');
+            fetchBids();
+        } catch (error: any) {
+            showToast('error', error.response?.data?.detail || 'Failed to counter bid');
+        } finally {
+            setCounteringId(null);
         }
     };
 
@@ -399,6 +559,12 @@ export default function MyBidsPage() {
                                             bid={bid}
                                             statusConfig={statusConfig}
                                             tripStatusConfig={tripStatusConfig}
+                                            onAccept={handleAcceptBid}
+                                            onCounter={handleCounterBid}
+                                            acceptingId={acceptingId}
+                                            counteringId={counteringId}
+                                            counterAmount={counterAmount}
+                                            setCounterAmount={setCounterAmount}
                                         />
                                     ))}
                                 </AnimatePresence>
@@ -497,6 +663,12 @@ export default function MyBidsPage() {
                                             bid={bid}
                                             statusConfig={statusConfig}
                                             tripStatusConfig={tripStatusConfig}
+                                            onAccept={handleAcceptBid}
+                                            onCounter={handleCounterBid}
+                                            acceptingId={acceptingId}
+                                            counteringId={counteringId}
+                                            counterAmount={counterAmount}
+                                            setCounterAmount={setCounterAmount}
                                         />
                                     ))}
                                 </AnimatePresence>
