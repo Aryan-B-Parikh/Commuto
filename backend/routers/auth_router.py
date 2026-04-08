@@ -11,12 +11,21 @@ import os
 from datetime import datetime, timedelta
 import logging
 from services.email_service import smtp_is_configured, send_verification_email as _send_verification_email_bg
+from services.emailjs_service import (
+    emailjs_is_configured,
+    send_verification_email_via_emailjs as _send_verification_email_emailjs_bg,
+)
 from services.sms_service import twilio_is_configured, send_phone_otp as _send_phone_otp_bg
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
+
+
+def _generate_email_verification_code() -> str:
+    """Generate a 6-digit numeric email verification code."""
+    return f"{secrets.randbelow(1_000_000):06d}"
 
 
 def _check_profile_complete(user: models.User, db: Session) -> bool:
@@ -44,6 +53,7 @@ def _check_profile_complete(user: models.User, db: Session) -> bool:
 @rate_limit(max_requests=6, window_seconds=60, key_suffix="register")
 def register(
     request: Request,
+    background_tasks: BackgroundTasks,
     user_data: schemas.UserRegister,
     db: Session = Depends(get_db)
 ):
@@ -54,8 +64,8 @@ def register(
         existing_user = db.query(models.User).filter(models.User.email == user_data.email).first()
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered. Please log in or use a different email."
             )
         
         # Validate role
@@ -67,13 +77,16 @@ def register(
         
         # Create new user with UUID
         hashed_pwd = auth.hash_password(user_data.password)
+        verification_token = _generate_email_verification_code()
         new_user = models.User(
             id=uuid.uuid4(),
             email=user_data.email,
             hashed_password=hashed_pwd,
             full_name=user_data.full_name,
             phone_number=user_data.phone,
-            role=user_data.role
+            role=user_data.role,
+            verification_token=verification_token,
+            verification_token_expires=datetime.utcnow() + timedelta(minutes=15),
         )
         
         db.add(new_user)
@@ -146,6 +159,17 @@ def register(
                 resp["route_radius"] = driver.route_radius
         
         logger.info(f"New user registered: {new_user.email} with role {user_data.role}")
+
+        # Automatically send verification email after signup.
+        if _smtp_is_configured():
+            background_tasks.add_task(_send_verification_email_bg, new_user.email, verification_token)
+        elif emailjs_is_configured():
+            background_tasks.add_task(_send_verification_email_emailjs_bg, new_user.email, verification_token)
+        else:
+            logger.warning(
+                "Verification email not sent for %s: SMTP/EmailJS not configured",
+                new_user.email,
+            )
         
         return resp
         
@@ -213,9 +237,9 @@ def send_verification(
     if current_user.is_verified:
         raise HTTPException(status_code=400, detail="Email is already verified")
 
-    token = secrets.token_urlsafe(32)
+    token = _generate_email_verification_code()
     current_user.verification_token = token
-    current_user.verification_token_expires = datetime.utcnow() + timedelta(hours=24)
+    current_user.verification_token_expires = datetime.utcnow() + timedelta(minutes=15)
     db.commit()
 
     if _smtp_is_configured():
@@ -225,6 +249,13 @@ def send_verification(
             message="Verification email queued. Check your inbox shortly."
         )
 
+    if emailjs_is_configured():
+        # Fallback provider: EmailJS template delivery.
+        background_tasks.add_task(_send_verification_email_emailjs_bg, current_user.email, token)
+        return schemas.SendVerificationResponse(
+            message="Verification email queued via EmailJS. Check your inbox shortly."
+        )
+
     # No SMTP – only acceptable in an explicitly declared development environment.
     is_dev = os.getenv("APP_ENV", "").lower() == "development"
     if not is_dev:
@@ -232,7 +263,7 @@ def send_verification(
             status_code=503,
             detail=(
                 "Email delivery is not configured. "
-                "Set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables."
+                "Set SMTP_HOST/SMTP_USER/SMTP_PASS or EMAILJS_SERVICE_ID/EMAILJS_TEMPLATE_ID/EMAILJS_PUBLIC_KEY."
             ),
         )
 
@@ -261,10 +292,10 @@ def verify_email(
     ).first()
 
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
 
     if user.verification_token_expires and user.verification_token_expires < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Verification token has expired. Request a new one.")
+        raise HTTPException(status_code=400, detail="Verification code has expired. Request a new one.")
 
     user.is_verified = True
     user.verification_token = None

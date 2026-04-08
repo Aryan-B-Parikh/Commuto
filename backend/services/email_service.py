@@ -56,19 +56,21 @@ def send_verification_email(to_email: str, token: str) -> None:
 
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Verify your Commuto account"
+        msg["Subject"] = "Your Commuto verification code"
         msg["From"] = smtp_user
         msg["To"] = to_email
         html = f"""
         <html><body>
           <h2>Welcome to Commuto!</h2>
-          <p>Click the link below to verify your email address:</p>
+          <p>Use this 6-digit verification code to verify your email address:</p>
+          <p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:16px 0;">{token}</p>
+          <p>You can also use the verification link below:</p>
           <a href="{verify_url}" style="background:#4F46E5;color:#fff;padding:12px 24px;
              border-radius:8px;text-decoration:none;display:inline-block;">
             Verify Email
           </a>
           <p>Or copy this link: {verify_url}</p>
-          <p>This link expires in 24 hours.</p>
+          <p>This code expires in 15 minutes.</p>
         </body></html>
         """
         msg.attach(MIMEText(html, "html"))
