@@ -181,7 +181,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsLoading(false);
             return loggedInUser;
         } catch (error) {
-            console.error('Registration failed:', error);
             setIsLoading(false);
             throw error;
         }

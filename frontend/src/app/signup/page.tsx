@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { isValidEmail, isValidName, getPasswordStrength, isValidPhone } from '@/utils/validators';
-import { authAPI } from '@/services/api';
 import { useGoogleLogin } from '@react-oauth/google';
 
 export default function SignupPage() {
@@ -75,7 +74,11 @@ export default function SignupPage() {
     };
 
     const getApiErrorMessage = (error: any): string => {
+        const status = error?.response?.status;
         const detail = error?.response?.data?.detail;
+        if (status === 409) {
+            return 'This email is already registered. Please log in or use a different email.';
+        }
         if (Array.isArray(detail)) {
             return detail.map((d: any) => d?.msg || String(d)).join(', ');
         }
@@ -110,12 +113,6 @@ export default function SignupPage() {
             });
 
             showToast('success', 'Account created! Please verify your email.');
-            // Trigger verification email (non-blocking)
-            try {
-                await authAPI.sendVerification();
-            } catch (_) {
-                // best-effort; user can resend on the verify page
-            }
             router.push('/verify-email');
         } catch (error: any) {
             showToast('error', getApiErrorMessage(error));
@@ -262,7 +259,7 @@ export default function SignupPage() {
                                 </div>
                                 <div className="space-y-1.5">
                                     <label htmlFor="phone" className="text-xs font-bold text-foreground/60 uppercase tracking-widest pl-1">Phone</label>
-                                    <input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass(errors.phone)} placeholder="+1 234..." />
+                                    <input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass(errors.phone)} placeholder="9876543210" />
                                     {errors.phone && <p className="text-[10px] font-bold text-red-500 pl-1">{errors.phone}</p>}
                                 </div>
                             </div>
