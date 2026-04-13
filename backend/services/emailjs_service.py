@@ -36,12 +36,9 @@ def send_verification_email_via_emailjs(to_email: str, token: str) -> None:
     template_id = os.getenv("EMAILJS_TEMPLATE_ID", "template_dfq9mib")
     public_key = os.getenv("EMAILJS_PUBLIC_KEY") or os.getenv("EMAILJS_USER_ID")
     private_key = os.getenv("EMAILJS_PRIVATE_KEY") or os.getenv("EMAILJS_ACCESS_TOKEN")
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
     verify_url = f"{frontend_url}/verify-email?token={token}"
 
-    # EmailJS rejects unknown top-level keys on the REST send endpoint.
-    # Keep the request body minimal and use the legacy-compatible field names
-    # that the API accepts consistently.
     payload = {
         "service_id": service_id,
         "template_id": template_id,
@@ -49,29 +46,21 @@ def send_verification_email_via_emailjs(to_email: str, token: str) -> None:
         "template_params": {
             "to_email": to_email,
             "email": to_email,
-            "to_name": to_email.split("@", 1)[0],
             "verify_url": verify_url,
             "verification_link": verify_url,
-            "verification_url": verify_url,
             "verification_token": token,
             "token": token,
             "otp": token,
             "code": token,
-            "passcode": token,
-            "one_time_password": token,
-            "time": "15 minutes",
-            "expiry": "15 minutes",
-            "expires_in": "15 minutes",
             "app_name": "Commuto",
-            "company_name": "Commuto",
-            "product_name": "Commuto",
-            "support_email": os.getenv("SMTP_USER", "support@commuto.local"),
-            "logo_url": os.getenv("EMAIL_LOGO_URL", ""),
         },
     }
 
     if private_key:
         payload["accessToken"] = private_key
+        payload["privateKey"] = private_key
+    if public_key:
+        payload["publicKey"] = public_key
 
     headers = {
         "Content-Type": "application/json",
@@ -79,12 +68,6 @@ def send_verification_email_via_emailjs(to_email: str, token: str) -> None:
     }
 
     try:
-        logger.info(
-            "Sending EmailJS verification email: service_id=%s template_id=%s to=%s",
-            service_id,
-            template_id,
-            to_email,
-        )
         response = requests.post(
             "https://api.emailjs.com/api/v1.0/email/send",
             json=payload,

@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -24,29 +23,27 @@ export const Button: React.FC<ButtonProps> = ({
     disabled,
     ...props
 }) => {
-    const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-[14px] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97]';
+    const baseStyles = 'inline-flex items-center justify-center whitespace-nowrap rounded-2xl font-semibold tracking-tight transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.985]';
 
     const variantStyles = {
-        primary: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-400 hover:to-indigo-500 focus:ring-indigo-500 shadow-lg shadow-indigo-500/25',
-        secondary: 'bg-[#1E293B] text-[#F9FAFB] hover:bg-[#374151] focus:ring-gray-500 border border-[#374151]',
-        outline: 'border-2 border-indigo-500 text-indigo-400 hover:bg-indigo-500/10 focus:ring-indigo-500',
-        ghost: 'text-[#9CA3AF] hover:bg-[#1E293B] hover:text-[#F9FAFB] focus:ring-gray-500',
-        danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500 focus:ring-red-500 shadow-lg shadow-red-500/25',
+        primary: 'bg-[linear-gradient(135deg,var(--primary),color-mix(in_srgb,var(--primary-hover)_72%,white_28%))] text-white shadow-[0_16px_30px_rgba(47,128,255,0.22)] hover:-translate-y-0.5 hover:shadow-[0_22px_38px_rgba(47,128,255,0.26)]',
+        secondary: 'border border-card-border bg-card text-foreground shadow-sm hover:bg-muted/70 hover:border-primary/20',
+        outline: 'border border-card-border bg-transparent text-foreground hover:bg-muted/60 hover:border-primary/25',
+        ghost: 'bg-transparent text-muted-foreground hover:bg-muted/65 hover:text-foreground',
+        danger: 'bg-[linear-gradient(135deg,#ef4444,#dc2626)] text-white shadow-[0_16px_30px_rgba(239,68,68,0.2)] hover:-translate-y-0.5 hover:shadow-[0_22px_38px_rgba(239,68,68,0.24)]',
     };
 
     const sizeStyles = {
-        sm: 'px-4 py-2.5 text-sm gap-2 min-h-[48px]',
-        md: 'px-6 py-3 text-base gap-2 min-h-[52px]',
-        lg: 'px-8 py-4 text-lg gap-2.5 min-h-[56px]',
+        sm: 'min-h-[44px] gap-2 px-4 text-sm',
+        md: 'min-h-[50px] gap-2.5 px-5 text-sm sm:text-base',
+        lg: 'min-h-[56px] gap-2.5 px-6 text-base',
     };
 
     return (
-        <motion.button
-            whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
-            whileTap={{ scale: disabled || isLoading ? 1 : 0.97 }}
+        <button
             className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
             disabled={disabled || isLoading}
-            {...(props as any)}
+            {...props}
         >
             {isLoading ? (
                 <>
@@ -75,6 +72,6 @@ export const Button: React.FC<ButtonProps> = ({
                     {rightIcon}
                 </>
             )}
-        </motion.button>
+        </button>
     );
 };

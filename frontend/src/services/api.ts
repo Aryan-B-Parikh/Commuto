@@ -6,6 +6,7 @@ import type {
     AuthResponse,
     UserResponse,
     TripResponse,
+    CreateSharedRideRequest,
     BidRequest,
     BidResponse,
     TripPaymentOrderResponse,
@@ -151,7 +152,7 @@ export const tripsAPI = {
         return response.data;
     },
 
-    createSharedRide: async (data: any): Promise<TripResponse> => {
+    createSharedRide: async (data: CreateSharedRideRequest): Promise<TripResponse> => {
         const response = await api.post<TripResponse>('/rides/create-shared', data);
         return response.data;
     },

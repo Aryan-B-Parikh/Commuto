@@ -16,6 +16,9 @@ router = APIRouter(prefix="/rides", tags=["OTP & Trip Completion"])
 logger = logging.getLogger(__name__)
 
 
+CASH_PAYMENT_STATUS = "cash"
+
+
 @router.post("/{trip_id}/verify-otp", response_model=trip_schemas.OTPVerifyResponse, status_code=status.HTTP_200_OK)
 @rate_limit(max_requests=5, window_seconds=60, key_suffix="verify_otp")
 def verify_otp_and_start_ride(
@@ -224,7 +227,7 @@ def complete_ride(
         
         # Post-ride payment collection
         collect_ride_payments(db, trip, bookings)
-        trip.payment_status = "completed"
+        trip.payment_status = CASH_PAYMENT_STATUS if (trip.payment_status or "").lower() == CASH_PAYMENT_STATUS else "completed"
 
         db.commit()
         

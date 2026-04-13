@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,12 +19,6 @@ export const Modal: React.FC<ModalProps> = ({
     children,
     size = 'md',
 }) => {
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
     // Close on escape key
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -42,7 +36,7 @@ export const Modal: React.FC<ModalProps> = ({
         };
     }, [isOpen, onClose]);
 
-    if (!mounted) return null;
+    if (typeof document === 'undefined') return null;
 
     const sizeStyles = {
         sm: 'max-w-sm',
@@ -61,7 +55,7 @@ export const Modal: React.FC<ModalProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                        className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
                     />
 
                     {/* Modal Content — bottom sheet on mobile, centered on desktop */}
@@ -70,7 +64,7 @@ export const Modal: React.FC<ModalProps> = ({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 100 }}
                         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                        className={`relative w-full ${sizeStyles[size]} bg-card rounded-t-3xl lg:rounded-3xl shadow-2xl shadow-black/40 overflow-hidden border border-card-border/50 max-h-[90vh] overflow-y-auto`}
+                        className={`relative w-full ${sizeStyles[size]} bg-card rounded-t-[28px] lg:rounded-[32px] shadow-[var(--shadow-soft)] overflow-hidden border border-card-border max-h-[90vh] overflow-y-auto`}
                     >
                         {/* Drag handle (mobile) */}
                         <div className="flex justify-center pt-3 pb-1 lg:hidden">
@@ -79,11 +73,11 @@ export const Modal: React.FC<ModalProps> = ({
 
                         {/* Header */}
                         {title && (
-                            <div className="flex items-center justify-between px-5 lg:px-8 py-4 lg:py-6 border-b border-card-border">
+                            <div className="flex items-center justify-between px-5 py-4 lg:px-8 lg:py-6 border-b border-card-border">
                                 <h2 className="text-lg lg:text-xl font-bold text-foreground">{title}</h2>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded-xl transition-all"
+                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-all"
                                 >
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />

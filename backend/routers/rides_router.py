@@ -24,6 +24,21 @@ router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
 
 
+ONLINE_PAYMENT_METHOD = "online"
+CASH_PAYMENT_METHOD = "cash"
+
+
+def _get_trip_payment_method(trip: models.Trip) -> str:
+    payment_status = (trip.payment_status or "").lower()
+    if payment_status == CASH_PAYMENT_METHOD:
+        return CASH_PAYMENT_METHOD
+    return ONLINE_PAYMENT_METHOD
+
+
+def _should_require_wallet_check(payment_method: str) -> bool:
+    return payment_method == ONLINE_PAYMENT_METHOD
+
+
 def _get_utcnow() -> datetime:
     override = os.getenv("COMMUTO_TEST_NOW")
     if override:
@@ -126,6 +141,12 @@ async def create_shared_ride(
     db: Session = Depends(get_db)
 ):
     """Create a public shared ride that others can join"""
+    payment_method = (trip_data.payment_method or ONLINE_PAYMENT_METHOD).lower()
+    if payment_method not in {ONLINE_PAYMENT_METHOD, CASH_PAYMENT_METHOD}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payment method must be either online or cash"
+        )
     
     # Parse date and time
     try:
@@ -166,6 +187,7 @@ async def create_shared_ride(
         price_per_seat=trip_data.total_price, # Initial price is full total
         notes=trip_data.notes.strip()[:500] if trip_data.notes else None,
         status="pending",
+        payment_status=CASH_PAYMENT_METHOD if payment_method == CASH_PAYMENT_METHOD else "pending",
         version=0
     )
     
@@ -177,7 +199,7 @@ async def create_shared_ride(
         seats_booked=1,
         total_price=trip_data.total_price,
         status="confirmed",
-        payment_status="completed",
+        payment_status=CASH_PAYMENT_METHOD if payment_method == CASH_PAYMENT_METHOD else "pending",
         notes=trip_data.notes.strip()[:500] if trip_data.notes else None
     )
     
@@ -196,13 +218,15 @@ async def create_shared_ride(
         db.add(booking)
         db.add(trip_passenger)
 
-        # Check balance but don't deduct yet (post-ride charging model)
-        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
-        if not wallet or wallet.balance < Decimal(str(trip_data.total_price)):
-            raise ValueError("Insufficient wallet balance for this trip total")
+        if _should_require_wallet_check(payment_method):
+            # Check balance but don't deduct yet (post-ride charging model)
+            wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
+            if not wallet or wallet.balance < Decimal(str(trip_data.total_price)):
+                raise ValueError("Insufficient wallet balance for this trip total")
 
         db.commit()
         db.refresh(new_trip)
+        new_trip.payment_method = payment_method
         
         # Broadcast to all drivers that a new ride is available
         await manager.send_to_drivers({
@@ -220,9 +244,10 @@ async def create_shared_ride(
         return new_trip
     except ValueError as exc:
         db.rollback()
+        guidance = "Add money to wallet before creating the ride." if payment_method == ONLINE_PAYMENT_METHOD else "Switch to online payment or try again."
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{exc}. Add money to wallet before creating the ride.",
+            detail=f"{exc}. {guidance}",
         )
     except Exception as e:
         db.rollback()
@@ -247,6 +272,7 @@ def get_available_rides(
     for ride in rides:
         ride.from_address = ride.origin_address
         ride.to_address = ride.dest_address
+        ride.payment_method = _get_trip_payment_method(ride)
     return rides
 
 
@@ -264,6 +290,7 @@ def get_trip_details(
     # Sort out backwards compat fields
     trip.from_address = trip.origin_address
     trip.to_address = trip.dest_address
+    trip.payment_method = _get_trip_payment_method(trip)
     
     # Populate creator manually if needed
     if trip.creator_passenger_id:
@@ -301,6 +328,7 @@ async def join_ride(
     db: Session = Depends(get_db)
 ):
     """Join a public shared ride"""
+    trip = None
     try:
         db.begin_nested()
         trip = db.query(models.Trip).filter(models.Trip.id == trip_id).with_for_update().first()
@@ -330,17 +358,18 @@ async def join_ride(
         
         # Update trip seats temporarily to calculate NEW split
         trip.available_seats -= 1
+        payment_method = _get_trip_payment_method(trip)
         
         # DYNAMIC PRICING: Calculate new price per seat
         total_pax = trip.total_seats - trip.available_seats
         new_fare = (Decimal(str(trip.total_price)) / Decimal(str(total_pax))).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
         trip.price_per_seat = new_fare
         
-        # CHARGE the new passenger immediately
-        # Check balance but don't deduct yet (post-ride charging model)
-        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
-        if not wallet or wallet.balance < new_fare:
-            raise ValueError("Insufficient wallet balance to join this ride")
+        if _should_require_wallet_check(payment_method):
+            # Check balance but don't deduct yet (post-ride charging model)
+            wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
+            if not wallet or wallet.balance < new_fare:
+                raise ValueError("Insufficient wallet balance to join this ride")
 
         # Create booking record with NEW fare
         join_notes = body.notes.strip()[:500] if body and body.notes else None
@@ -351,7 +380,7 @@ async def join_ride(
             seats_booked=1,
             total_price=new_fare,
             status="confirmed",
-            payment_status="completed",
+            payment_status=CASH_PAYMENT_METHOD if payment_method == CASH_PAYMENT_METHOD else "pending",
             notes=join_notes
         )
         
@@ -386,9 +415,11 @@ async def join_ride(
         return {"message": "Successfully joined ride", "available_seats": trip.available_seats}
     except ValueError as exc:
         db.rollback()
+        payment_method = _get_trip_payment_method(trip) if trip else ONLINE_PAYMENT_METHOD
+        guidance = "Add money to wallet before joining this ride." if payment_method == ONLINE_PAYMENT_METHOD else "Switch to online payment or try again."
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{exc}. Add money to wallet before joining this ride.",
+            detail=f"{exc}. {guidance}",
         )
     except HTTPException:
         raise

@@ -34,6 +34,7 @@ class SharedTripCreate(BaseModel):
     time: str
     total_seats: int = Field(ge=1, le=4)
     total_price: float = Field(gt=0)
+    payment_method: str = Field(default="online", pattern="^(online|cash)$")
     notes: Optional[str] = Field(default=None, max_length=500)
 
 
@@ -76,6 +77,7 @@ class TripResponse(BaseModel):
     booking_id: Optional[str] = None
     booking_total_price: Optional[float] = None
     booking_payment_status: Optional[str] = None
+    payment_method: Optional[str] = None
     
     # All passenger notes for this trip
     passenger_notes: List[PassengerNote] = []

@@ -706,66 +706,70 @@ export default function RideDetailsPage() {
                                         </div>
                                         <div className="space-y-3">
                                             {bids.map((bid: any) => (
-                                                <div key={bid.id} className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/5 ring-1 ring-emerald-500/10">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
-                                                            {bid.driver_name?.[0] || 'D'}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-[#F9FAFB]">{bid.driver_name || 'Driver'}</p>
-                                                            <div className="flex items-center gap-2">
-                                                                {bid.driver_rating && (
-                                                                    <span className="flex items-center gap-0.5 text-[10px] text-amber-400 font-bold">
-                                                                        <Star size={10} fill="currentColor" /> {Number(bid.driver_rating).toFixed(1)}
-                                                                    </span>
-                                                                )}
-                                                                <span className="text-xs text-[#9CA3AF]">
-                                                                    {new Date(bid.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        {bid.message && (
-                                                            <div className="mt-2 flex items-start gap-1.5 bg-emerald-500/5 rounded-xl px-2.5 py-1.5 ring-1 ring-emerald-500/10">
-                                                                <MessageSquare size={11} className="text-emerald-400 mt-0.5 shrink-0" />
-                                                                <p className="text-[10px] text-[#9CA3AF] leading-tight italic line-clamp-2">{bid.message}</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <p className="text-xl font-black text-emerald-400">{formatCurrency(bid.bid_amount)}</p>
-                                                        {trip.creator_passenger_id === user?.id && (
-                                                            <div className="flex items-center gap-2">
-                                                                {counterBidId === bid.id ? (
-                                                                    <CounterBidInput
-                                                                        bidId={bid.id}
-                                                                        isActive={counterBidId === bid.id}
-                                                                        counterAmount={counterAmount}
-                                                                        onAmountChange={setCounterAmount}
-                                                                        isSubmitting={isCountering}
-                                                                        onSubmit={handleCounterBid}
-                                                                        onCancel={() => { setCounterBidId(null); setCounterAmount(''); }}
-                                                                    />
-                                                                ) : (
-                                                                    <>
-                                                                        <Button
-                                                                            onClick={() => handleAcceptBid(bid.id)}
-                                                                            disabled={acceptingBidId === bid.id}
-                                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 h-9 rounded-xl"
-                                                                        >
-                                                                            {acceptingBidId === bid.id ? 'Accepting...' : 'Accept'}
-                                                                        </Button>
-                                                                        {!bid.is_counter_bid && (
-                                                                            <Button
-                                                                                onClick={() => { setCounterBidId(bid.id); setCounterAmount(String(bid.bid_amount)); }}
-                                                                                className="bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xs px-4 h-9 rounded-xl"
-                                                                            >
-                                                                                Counter
-                                                                            </Button>
+                                                <div key={bid.id} className="rounded-2xl bg-emerald-500/5 p-4 ring-1 ring-emerald-500/10">
+                                                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-start gap-3">
+                                                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                                                                    {bid.driver_name?.[0] || 'D'}
+                                                                </div>
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-sm font-bold text-[#F9FAFB]">{bid.driver_name || 'Driver'}</p>
+                                                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                                        {bid.driver_rating && (
+                                                                            <span className="flex items-center gap-0.5 text-[10px] text-amber-400 font-bold">
+                                                                                <Star size={10} fill="currentColor" /> {Number(bid.driver_rating).toFixed(1)}
+                                                                            </span>
                                                                         )}
-                                                                    </>
-                                                                )}
+                                                                        <span className="text-xs text-[#9CA3AF]">
+                                                                            {new Date(bid.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                        </span>
+                                                                    </div>
+                                                                    {bid.message && (
+                                                                        <div className="mt-3 flex items-start gap-1.5 rounded-xl bg-emerald-500/5 px-2.5 py-1.5 ring-1 ring-emerald-500/10">
+                                                                            <MessageSquare size={11} className="text-emerald-400 mt-0.5 shrink-0" />
+                                                                            <p className="text-[10px] text-[#9CA3AF] leading-tight italic line-clamp-2">{bid.message}</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        )}
+                                                        </div>
+                                                        <div className="flex w-full flex-col gap-3 xl:w-auto xl:min-w-[240px] xl:items-end">
+                                                            <p className="text-xl font-black text-emerald-400 xl:text-2xl">{formatCurrency(bid.bid_amount)}</p>
+                                                            {trip.creator_passenger_id === user?.id && (
+                                                                <div className="w-full xl:max-w-[280px]">
+                                                                    {counterBidId === bid.id ? (
+                                                                        <CounterBidInput
+                                                                            bidId={bid.id}
+                                                                            isActive={counterBidId === bid.id}
+                                                                            counterAmount={counterAmount}
+                                                                            onAmountChange={setCounterAmount}
+                                                                            isSubmitting={isCountering}
+                                                                            onSubmit={handleCounterBid}
+                                                                            onCancel={() => { setCounterBidId(null); setCounterAmount(''); }}
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="flex w-full flex-wrap gap-2 xl:justify-end">
+                                                                            <Button
+                                                                                onClick={() => handleAcceptBid(bid.id)}
+                                                                                disabled={acceptingBidId === bid.id}
+                                                                                className="min-w-[112px] flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 h-9 rounded-xl xl:flex-none"
+                                                                            >
+                                                                                {acceptingBidId === bid.id ? 'Accepting...' : 'Accept'}
+                                                                            </Button>
+                                                                            {!bid.is_counter_bid && (
+                                                                                <Button
+                                                                                    onClick={() => { setCounterBidId(bid.id); setCounterAmount(String(bid.bid_amount)); }}
+                                                                                    className="min-w-[112px] flex-1 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xs px-4 h-9 rounded-xl xl:flex-none"
+                                                                                >
+                                                                                    Counter
+                                                                                </Button>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}

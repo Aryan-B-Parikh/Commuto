@@ -1,132 +1,144 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, Search, Sparkles } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import CreateRideForm from '@/components/ride-sharing/CreateRideForm';
 import AvailableRidesList from '@/components/ride-sharing/AvailableRidesList';
 import { RoleGuard } from '@/components/auth/RoleGuard';
-import { ArrowLeft } from 'lucide-react';
 
 export default function RideSharingPage() {
     const [activeTab, setActiveTab] = useState<'create' | 'join'>('create');
 
-    const handleBack = () => {
-        window.history.back();
-    };
+    const tabClass = (isActive: boolean) =>
+        `flex-1 rounded-full px-4 py-3 text-sm font-semibold transition-all ${isActive
+            ? 'bg-[linear-gradient(135deg,var(--primary),#59b0ff)] text-white shadow-[0_16px_30px_rgba(47,128,255,0.22)]'
+            : 'text-muted-foreground hover:text-foreground'
+        }`;
 
     return (
         <RoleGuard allowedRoles={['passenger']}>
-            {/* ====================== MOBILE LAYOUT (UBER STYLE) ====================== */}
-            <div className="lg:hidden min-h-screen bg-[#0B1020] flex flex-col pb-24 font-sans">
-                {/* 1️⃣ Compact Header */}
-                <div className="sticky top-0 z-40 bg-[#0B1020] px-4 h-[56px] flex items-center justify-between border-b border-[#1E293B]">
-                    <button onClick={handleBack} className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-[#F9FAFB] active:bg-[#1E293B] transition-colors">
-                        <ArrowLeft size={24} />
-                    </button>
-                    <h2 className="text-lg font-bold text-[#F9FAFB] absolute left-1/2 -translate-x-1/2">Book Ride</h2>
-                    <div className="w-10"></div> {/* Spacer for centering */}
+            <div className="lg:hidden min-h-screen bg-background pb-24">
+                <div className="sticky top-0 z-40 border-b border-card-border bg-background/85 px-4 py-4 backdrop-blur-xl">
+                    <div className="flex items-center justify-between">
+                        <button onClick={() => window.history.back()} className="flex h-11 w-11 items-center justify-center rounded-2xl border border-card-border bg-card text-foreground">
+                            <ArrowLeft className="h-5 w-5" />
+                        </button>
+                        <div className="text-center">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Ride booking</p>
+                            <h1 className="font-display text-xl font-bold text-foreground">Plan your next trip</h1>
+                        </div>
+                        <div className="w-11" />
+                    </div>
                 </div>
 
-                <div className="px-4 mt-6">
-                    {/* 2️⃣ Segmented Control */}
-                    <div className="bg-[#111827] rounded-full p-1 flex items-center h-[44px] mb-6 border border-[#1E293B]">
-                        <button
-                            onClick={() => setActiveTab('create')}
-                            className={`flex-1 h-full rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'create'
-                                ? 'bg-indigo-500 text-white shadow-md'
-                                : 'text-[#9CA3AF]'
-                                }`}
-                        >
-                            Create Ride
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('join')}
-                            className={`flex-1 h-full rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'join'
-                                ? 'bg-[#1E293B] text-white shadow-md'
-                                : 'text-[#9CA3AF]'
-                                }`}
-                        >
-                            Join Ride
-                        </button>
+                <div className="space-y-5 px-4 pt-5">
+                    <div className="rounded-[28px] border border-card-border bg-card p-2 shadow-[var(--shadow-card)]">
+                        <div className="flex rounded-full bg-muted/60 p-1">
+                            <button onClick={() => setActiveTab('create')} className={tabClass(activeTab === 'create')}>Create ride</button>
+                            <button onClick={() => setActiveTab('join')} className={tabClass(activeTab === 'join')}>Join ride</button>
+                        </div>
                     </div>
 
-                    {/* Content Area */}
+                    <CardHero activeTab={activeTab} />
+
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={activeTab}
-                            initial={{ opacity: 0, x: activeTab === 'create' ? -20 : 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: activeTab === 'create' ? 20 : -20 }}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -16 }}
                             transition={{ duration: 0.2 }}
-                            className="space-y-6"
                         >
-                            {activeTab === 'create' ? <CreateRideForm isMobile={true} /> : <AvailableRidesList isMobile={true} />}
+                            {activeTab === 'create' ? <CreateRideForm isMobile /> : <AvailableRidesList isMobile />}
                         </motion.div>
                     </AnimatePresence>
                 </div>
             </div>
 
-            {/* ====================== DESKTOP LAYOUT (UNCHANGED) ====================== */}
             <div className="hidden lg:block">
-                <DashboardLayout userType="passenger" title="Shared Commute Dashboard">
-                    <div className="max-w-5xl mx-auto px-4">
+                <DashboardLayout userType="passenger" title="Ride Booking">
+                    <div className="mx-auto max-w-6xl space-y-8">
+                        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                            <div className="rounded-[32px] border border-card-border bg-[linear-gradient(135deg,var(--primary),#59b0ff)] p-8 text-white shadow-[var(--shadow-soft)]">
+                                <span className="inline-flex rounded-full border border-white/16 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
+                                    Booking flow refresh
+                                </span>
+                                <h1 className="mt-5 font-display text-4xl font-bold leading-tight">
+                                    Book or join a ride with cleaner steps and clearer decisions.
+                                </h1>
+                                <p className="mt-4 max-w-2xl text-base leading-7 text-white/80">
+                                    Pickup, destination, seats, pricing, and available rides now sit inside a simpler split view that works across mobile and desktop.
+                                </p>
+                            </div>
 
-                        {/* Marketplace Header */}
-                        <div className="text-center mb-8 lg:mb-12">
-                            <h1 className="text-2xl lg:text-3xl font-extrabold text-[#F9FAFB] mb-4">
-                                Collaborative Travel Marketplace
-                            </h1>
-                            <p className="text-[#9CA3AF] max-w-2xl mx-auto">
-                                Join existing rides to save costs or create your own shared commute
-                                and find fellow travelers going your way.
-                            </p>
-                        </div>
-
-                        {/* Modern SaaS Tabs */}
-                        <div className="flex justify-center mb-8 lg:mb-10">
-                            <div className="bg-[#1E293B]/50 p-1.5 rounded-2xl flex gap-2 backdrop-blur-sm border border-[#1E293B] shadow-sm">
-                                <button
-                                    onClick={() => setActiveTab('create')}
-                                    className={`px-6 lg:px-8 py-3 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 ${activeTab === 'create'
-                                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                                        : 'text-[#9CA3AF] hover:bg-[#1E293B]'
-                                        }`}
-                                >
-                                    <span className="text-xl">✍️</span>
-                                    Create Ride
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('join')}
-                                    className={`px-6 lg:px-8 py-3 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 ${activeTab === 'join'
-                                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                                        : 'text-[#9CA3AF] hover:bg-[#1E293B]'
-                                        }`}
-                                >
-                                    <span className="text-xl">🤝</span>
-                                    Join Ride
-                                </button>
+                            <div className="rounded-[32px] border border-card-border bg-card p-6 shadow-[var(--shadow-card)]">
+                                <div className="flex rounded-full bg-muted/60 p-1">
+                                    <button onClick={() => setActiveTab('create')} className={tabClass(activeTab === 'create')}>Create ride</button>
+                                    <button onClick={() => setActiveTab('join')} className={tabClass(activeTab === 'join')}>Join ride</button>
+                                </div>
+                                <div className="mt-5 grid gap-3">
+                                    <div className="rounded-[24px] border border-card-border bg-background/55 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                                <Sparkles className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-foreground">Fewer booking steps</p>
+                                                <p className="mt-1 text-sm text-muted-foreground">Key decisions are grouped together to reduce back-and-forth.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-[24px] border border-card-border bg-background/55 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+                                                <Search className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-foreground">Clear availability</p>
+                                                <p className="mt-1 text-sm text-muted-foreground">Browse open rides with seats, timing, and pricing upfront.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Content Area */}
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={`desktop-${activeTab}`}
-                                initial={{ opacity: 0, y: 20 }}
+                                initial={{ opacity: 0, y: 16 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ duration: 0.3 }}
+                                exit={{ opacity: 0, y: -16 }}
+                                transition={{ duration: 0.25 }}
                             >
                                 {activeTab === 'create' ? <CreateRideForm /> : <AvailableRidesList />}
                             </motion.div>
                         </AnimatePresence>
-
                     </div>
                 </DashboardLayout>
             </div>
         </RoleGuard>
+    );
+}
+
+function CardHero({ activeTab }: { activeTab: 'create' | 'join' }) {
+    return (
+        <div className="rounded-[28px] border border-card-border bg-card p-5 shadow-[var(--shadow-card)]">
+            <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    {activeTab === 'create' ? <Sparkles className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-foreground">{activeTab === 'create' ? 'Create a ride request' : 'Browse open rides'}</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                        {activeTab === 'create'
+                            ? 'Set pickup, drop, seats, timing, and total budget in one compact booking flow.'
+                            : 'Compare available rides with timing, seats, and price before you commit.'}
+                    </p>
+                </div>
+            </div>
+        </div>
     );
 }
