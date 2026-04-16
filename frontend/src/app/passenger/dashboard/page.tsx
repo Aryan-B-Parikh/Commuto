@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSocketEvent } from '@/hooks/useWebSocket';
 import { formatCurrency } from '@/utils/formatters';
 import { useTheme } from '@/context/ThemeContext';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 export default function PassengerDashboard() {
     const router = useRouter();
@@ -32,8 +33,8 @@ export default function PassengerDashboard() {
             try {
                 const tripsData = await tripsAPI.getMyTrips();
                 setTrips(tripsData);
-                const activeTrip = tripsData.find((t) => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
-                if (activeTrip) {
+                const startedTrip = tripsData.find((t) => normalizeRideStatus(t.status) === 'started');
+                if (startedTrip) {
                     router.push('/passenger/live');
                 }
             } catch (error) {
@@ -84,7 +85,7 @@ export default function PassengerDashboard() {
         ];
     }, [trips]);
 
-    const upcomingCount = trips.filter((t) => ['pending', 'upcoming', 'bid_accepted'].includes(t.status)).length;
+    const upcomingCount = trips.filter((t) => ['requested', 'accepted'].includes(normalizeRideStatus(t.status))).length;
     const recentTrips = trips.slice(0, 4);
 
     const mobileStats = stats.map((stat) => ({ ...stat, value: stat.value.length > 9 ? stat.value.replace('.00', '') : stat.value }));
@@ -331,7 +332,7 @@ export default function PassengerDashboard() {
                                                             <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                                                 <span>{trip.start_time ? new Date(trip.start_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Today'}</span>
                                                                 <span className="rounded-full bg-muted px-2.5 py-1 capitalize text-foreground">{trip.status.replace('_', ' ')}</span>
-                                                                {trip.bid_count && trip.bid_count > 0 && trip.status === 'pending' && (
+                                                                {trip.bid_count && trip.bid_count > 0 && normalizeRideStatus(trip.status) === 'requested' && (
                                                                     <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-400">{trip.bid_count} bids</span>
                                                                 )}
                                                             </div>

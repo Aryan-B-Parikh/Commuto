@@ -23,6 +23,19 @@ export default function SignupPage() {
     const { register, googleLogin, isLoading, role } = useAuth();
     const { showToast } = useToast();
 
+    const getSelectedRole = (): 'driver' | 'passenger' | null => {
+        if (role === 'driver' || role === 'passenger') {
+            return role;
+        }
+        if (typeof window !== 'undefined') {
+            const persistedRole = localStorage.getItem('commuto_role');
+            if (persistedRole === 'driver' || persistedRole === 'passenger') {
+                return persistedRole;
+            }
+        }
+        return null;
+    };
+
     useEffect(() => {
         if (!role && !isLoading) {
             showToast('info', 'Please select a role first');
@@ -37,6 +50,17 @@ export default function SignupPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; phone?: string; terms?: string }>({});
+
+    const resolvePostAuthRoute = (signedInUser: any) => {
+        const normalizedRole = signedInUser?.role === 'driver' ? 'driver' : 'passenger';
+        if (signedInUser?.phone_number && signedInUser?.isPhoneVerified === false) {
+            return '/verify-phone';
+        }
+        if (normalizedRole === 'driver' && !signedInUser?.profileCompleted) {
+            return '/complete-profile';
+        }
+        return `/${normalizedRole}/dashboard`;
+    };
 
     const passwordStrength = getPasswordStrength(password);
     const strengthStyles = {
@@ -128,10 +152,17 @@ export default function SignupPage() {
 
     const googleLoginAction = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
-            const user = await googleLogin(tokenResponse.access_token, role || undefined);
+            const selectedRole = getSelectedRole();
+            if (!selectedRole) {
+                showToast('error', 'Please select a role first');
+                router.push('/select-role');
+                return;
+            }
+
+            const user = await googleLogin(tokenResponse.access_token, selectedRole);
             if (user) {
                 showToast('success', 'Signup successful with Google!');
-                router.push('/complete-profile');
+                router.push('/verify-email');
             } else {
                 showToast('error', 'Google signup failed. Please try again.');
             }

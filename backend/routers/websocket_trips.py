@@ -8,6 +8,7 @@ from database import get_db
 from sqlalchemy.orm import Session
 import models
 import json
+from ride_states import normalize_ride_status
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key")
@@ -104,7 +105,7 @@ async def trip_websocket(
             elif message.get("type") == "trip_status_update":
                 # Handle status updates (Arrived, Started, Completed)
                 # This could also be done via REST API, but WebSocket is faster for UI sync
-                new_status = message.get("status")
+                new_status = normalize_ride_status(message.get("status"))
                 if is_driver:
                     trip.status = new_status
                     db.commit()

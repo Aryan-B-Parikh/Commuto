@@ -15,6 +15,7 @@ import { MapPin, Users, Clock, Shield, ShieldCheck, ArrowLeft, MessageCircle, Me
 import { formatCurrency } from '@/utils/formatters';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import dynamic from 'next/dynamic';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 const MapWidget = dynamic(() => import('@/components/map/MapWidget').then(mod => mod.MapWidget), { ssr: false });
 import { TripPaymentModal } from '@/components/ride/TripPaymentModal';
@@ -50,7 +51,7 @@ export default function RideDetailsPage() {
         handleCounterBid,
     } = useCounterBid({ onSuccess: refreshBids });
 
-    const { isConnected, availableSeats, newPassenger } = useTripWebSocket(tripId);
+    const { isConnected, availableSeats, seatUpdateVersion, newPassenger } = useTripWebSocket(tripId);
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -76,6 +77,21 @@ export default function RideDetailsPage() {
     }, [availableSeats]);
 
     useEffect(() => {
+        if (!tripId || !trip || seatUpdateVersion === 0) return;
+
+        const refreshTripAfterSeatUpdate = async () => {
+            try {
+                const updatedData = await tripsAPI.getTripDetails(tripId);
+                setTrip(updatedData);
+            } catch (error) {
+                console.error('Failed to refresh trip after seat update:', error);
+            }
+        };
+
+        void refreshTripAfterSeatUpdate();
+    }, [seatUpdateVersion, tripId]);
+
+    useEffect(() => {
         if (newPassenger && trip) {
             const exists = trip.passengers.some((p: any) => p.id === newPassenger.id);
             if (!exists) {
@@ -92,16 +108,16 @@ export default function RideDetailsPage() {
     useEffect(() => {
         if (!tripId || !trip) return;
         // Only poll if trip is active/confirmed (not yet completed/cancelled)
-        if (['completed', 'cancelled'].includes(trip.status)) return;
+        if (['completed', 'cancelled'].includes(normalizeRideStatus(trip.status))) return;
 
         const interval = setInterval(async () => {
             try {
                 const updatedData = await tripsAPI.getTripDetails(tripId);
-                if (updatedData.status !== trip.status) {
+                if (normalizeRideStatus(updatedData.status) !== normalizeRideStatus(trip.status)) {
                     setTrip(updatedData);
                     // Auto-open payment if trip just became completed and payment is pending
                     if (
-                        updatedData.status === 'completed' &&
+                            normalizeRideStatus(updatedData.status) === 'completed' &&
                         updatedData.user_booking?.payment_status === 'pending'
                     ) {
                         setIsPaymentModalOpen(true);
@@ -129,8 +145,9 @@ export default function RideDetailsPage() {
 
     const isMember = trip?.passengers?.some((p: any) => p.id === user?.id) || trip?.creator_passenger_id === user?.id || false;
     const isCreator = trip?.creator_passenger_id === user?.id || false;
-    const showPickupOtp = Boolean(isMember && trip?.start_otp && !trip?.otp_verified);
-    const showCompletionOtp = Boolean(isMember && trip?.completion_otp && trip?.otp_verified && trip?.status === 'active');
+    const currentStatus = normalizeRideStatus(trip?.status);
+    const showPickupOtp = Boolean(isMember && trip?.start_otp && currentStatus === 'accepted' && !trip?.otp_verified);
+    const showCompletionOtp = Boolean(isMember && trip?.completion_otp && trip?.otp_verified && currentStatus === 'started');
     const otpValue = showCompletionOtp ? trip?.completion_otp : trip?.start_otp;
     const otpLabel = showCompletionOtp
         ? 'Share this Drop OTP with your Driver'
@@ -138,12 +155,12 @@ export default function RideDetailsPage() {
 
     // Fetch bids when user is a member
     useEffect(() => {
-        if (isMember && trip?.status === 'pending') {
+        if (isMember && currentStatus === 'requested') {
             bidsAPI.getRideBids(tripId)
                 .then(data => setBids(data))
                 .catch(() => setBids([]));
         }
-    }, [isMember, tripId, trip?.status]);
+    }, [isMember, tripId, currentStatus]);
 
     if (isLoading) return <div className="p-20 text-center animate-pulse text-[#9CA3AF]">Loading adventure details...</div>;
     if (!trip) return null;
@@ -694,7 +711,7 @@ export default function RideDetailsPage() {
                                 </Card>
 
                                 {/* Driver Bids (Desktop) */}
-                                {isMember && bids.length > 0 && trip.status === 'pending' && (
+                                {isMember && bids.length > 0 && normalizeRideStatus(trip.status) === 'requested' && (
                                     <Card className="p-5 lg:p-6">
                                         <div className="flex items-center justify-between mb-6">
                                             <h3 className="font-bold text-[#F9FAFB] flex items-center gap-2">

@@ -62,6 +62,7 @@ export interface UserResponse {
     avatar_url?: string;
     role: string;
     is_verified: boolean;
+    is_phone_verified: boolean;
     profile_completed: boolean;
     rating?: number;
     total_trips?: number;

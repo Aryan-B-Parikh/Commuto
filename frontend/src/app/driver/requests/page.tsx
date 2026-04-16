@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useRouter } from 'next/navigation';
-import { tripsAPI } from '@/services/api';
+import { tripsAPI, otpAPI } from '@/services/api';
 import { TripResponse } from '@/types/api';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { BidModal } from '@/components/ride/BidModal';
@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { useRouteInfo } from '@/hooks/useRouteInfo';
 import { useAuth } from '@/hooks/useAuth';
+import { VerifyOTPModal } from '@/components/ride/VerifyOTPModal';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
     request: TripResponse,
@@ -142,7 +144,9 @@ export default function DriverRequestsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedTrip, setSelectedTrip] = useState<TripResponse | null>(null);
     const [isBidModalOpen, setIsBidModalOpen] = useState(false);
-    const [watchAcceptedTrip, setWatchAcceptedTrip] = useState(false);
+    const [acceptedTrip, setAcceptedTrip] = useState<TripResponse | null>(null);
+    const [isStartRideModalOpen, setIsStartRideModalOpen] = useState(false);
+    const [isStartingRide, setIsStartingRide] = useState(false);
 
     // === BUSINESS LOGIC (UNCHANGED) ===
     const getIgnoredIds = (): string[] => {
@@ -216,19 +220,24 @@ export default function DriverRequestsPage() {
         if (selectedTrip) {
             setRequests(prev => prev.filter(r => r.id !== selectedTrip.id));
         }
-        setWatchAcceptedTrip(true);
         showToast('info', 'Bid placed. Waiting for passenger acceptance...');
     };
 
     useEffect(() => {
-        if (!watchAcceptedTrip) return;
-
         const checkAcceptedTrip = async () => {
             try {
                 const trips = await tripsAPI.getDriverTrips();
-                const liveTrip = trips.find((t: TripResponse) => ['bid_accepted', 'driver_assigned', 'active'].includes(t.status));
-                if (liveTrip) {
+                const startedTrip = trips.find((t: TripResponse) => normalizeRideStatus(t.status) === 'started');
+                const pendingStartTrip = trips.find((t: TripResponse) => normalizeRideStatus(t.status) === 'accepted');
+
+                if (startedTrip) {
                     router.push('/driver/live');
+                    return;
+                }
+
+                setAcceptedTrip(pendingStartTrip || null);
+                if (pendingStartTrip) {
+                    setIsStartRideModalOpen(false);
                 }
             } catch (error: any) {
                 // Ignore expected rate limits during background polling.
@@ -242,7 +251,24 @@ export default function DriverRequestsPage() {
         const interval = setInterval(checkAcceptedTrip, 8000);
 
         return () => clearInterval(interval);
-    }, [watchAcceptedTrip, router]);
+    }, [router]);
+
+    const handleStartRide = async (otp: string) => {
+        if (!acceptedTrip) return;
+
+        setIsStartingRide(true);
+        try {
+            await otpAPI.verifyOTP(acceptedTrip.id, otp);
+            setAcceptedTrip(prev => (prev ? { ...prev, status: 'started', otp_verified: true } as TripResponse : prev));
+            setIsStartRideModalOpen(false);
+            showToast('success', 'Ride started successfully. Opening live trip...');
+            router.push('/driver/live');
+        } catch (error: any) {
+            showToast('error', error?.response?.data?.detail || 'Failed to start ride. Please try again.');
+        } finally {
+            setIsStartingRide(false);
+        }
+    };
 
     // Calculate time-ago for display
     const getTimeAgo = (dateStr: string) => {
@@ -297,6 +323,39 @@ export default function DriverRequestsPage() {
                             </motion.div>
                         )}
                     </div>
+
+                    {/* Active ride card */}
+                    {acceptedTrip && normalizeRideStatus(acceptedTrip.status) === 'accepted' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mb-5 rounded-3xl border border-indigo-500/20 bg-indigo-500/5 p-5"
+                        >
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Ride accepted</p>
+                                    <h2 className="mt-1 text-lg font-black text-[#F9FAFB]">Driver is on the way to pickup</h2>
+                                    <p className="mt-2 text-sm text-[#9CA3AF]">
+                                        Pickup: {acceptedTrip.origin_address}
+                                    </p>
+                                    <p className="text-sm text-[#9CA3AF]">
+                                        Customer: {acceptedTrip.passenger_notes?.[0]?.passenger_name || 'Rider'}
+                                    </p>
+                                </div>
+                                <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                                    Accepted
+                                </span>
+                            </div>
+                            <div className="mt-4 flex gap-3">
+                                <button
+                                    onClick={() => setIsStartRideModalOpen(true)}
+                                    className="flex-1 h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                                >
+                                    Start Ride
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
 
                     {/* ─── Content ─── */}
                     <AnimatePresence mode="popLayout">
@@ -426,6 +485,13 @@ export default function DriverRequestsPage() {
                         onClose={() => setIsBidModalOpen(false)}
                         trip={selectedTrip}
                         onBidPlaced={handleBidPlaced}
+                    />
+
+                    <VerifyOTPModal
+                        isOpen={isStartRideModalOpen}
+                        onClose={() => setIsStartRideModalOpen(false)}
+                        isVerifying={isStartingRide}
+                        onVerify={handleStartRide}
                     />
                 </motion.div>
             </DashboardLayout>

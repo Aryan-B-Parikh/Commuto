@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useCallback, ReactNode, useRef } from 'react';
 import { Toast } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -17,9 +17,11 @@ interface ToastProviderProps {
 
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     const [toasts, setToasts] = useState<Toast[]>([]);
+    const toastCounterRef = useRef(0);
 
     const showToast = useCallback((type: Toast['type'], message: string) => {
-        const id = `toast-${Date.now()}`;
+        toastCounterRef.current += 1;
+        const id = `toast-${Date.now()}-${toastCounterRef.current}`;
         const newToast: Toast = { id, type, message };
 
         setToasts(prev => [...prev, newToast]);

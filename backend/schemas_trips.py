@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
+from ride_states import normalize_ride_status
 
 # Location Schemas
 class LocationCreate(BaseModel):
@@ -81,6 +82,10 @@ class TripResponse(BaseModel):
     
     # All passenger notes for this trip
     passenger_notes: List[PassengerNote] = []
+
+    @validator("status", pre=True)
+    def normalize_status(cls, value):
+        return normalize_ride_status(value)
     
     class Config:
         from_attributes = True
@@ -139,6 +144,10 @@ class DriverBidWithTrip(BaseModel):
     price_per_seat: Optional[float] = None
     notes: Optional[str] = None
     passenger_notes: List[PassengerNote] = []
+
+    @validator("trip_status", pre=True)
+    def normalize_trip_status(cls, value):
+        return normalize_ride_status(value)
 
 
 class BidWithDriver(BaseModel):

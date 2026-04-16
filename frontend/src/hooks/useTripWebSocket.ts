@@ -5,6 +5,7 @@ export function useTripWebSocket(tripId: string | null) {
     const [lastLocation, setLastLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [tripStatus, setTripStatus] = useState<string | null>(null);
     const [availableSeats, setAvailableSeats] = useState<number | null>(null);
+    const [seatUpdateVersion, setSeatUpdateVersion] = useState(0);
     const [newPassenger, setNewPassenger] = useState<any | null>(null);
     const socketRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,6 +59,7 @@ export function useTripWebSocket(tripId: string | null) {
                     setTripStatus(message.status);
                 } else if (message.type === 'seat_update') {
                     setAvailableSeats(message.available_seats);
+                    setSeatUpdateVersion((prev) => prev + 1);
                     if (message.passenger) {
                         setNewPassenger(message.passenger);
                     }
@@ -133,6 +135,7 @@ export function useTripWebSocket(tripId: string | null) {
         lastLocation,
         tripStatus,
         availableSeats,
+        seatUpdateVersion,
         newPassenger,
         sendLocation,
         updateStatus

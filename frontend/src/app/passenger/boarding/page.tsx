@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import { tripsAPI, otpAPI } from '@/services/api';
 import { TripResponse } from '@/types/api';
 import { Loader2 } from 'lucide-react';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 export default function BoardingPage() {
     const router = useRouter();
@@ -29,11 +30,15 @@ export default function BoardingPage() {
         const fetchActiveTrip = async () => {
             try {
                 const myTrips = await tripsAPI.getMyTrips();
-                const activeTrip = myTrips.find((t: TripResponse) =>
-                    ['active', 'bid_accepted', 'driver_assigned'].includes(t.status)
-                );
-                if (activeTrip) {
-                    setTrip(activeTrip);
+                const startedTrip = myTrips.find((t: TripResponse) => normalizeRideStatus(t.status) === 'started');
+                if (startedTrip) {
+                    router.replace('/passenger/live');
+                    return;
+                }
+
+                const acceptedTrip = myTrips.find((t: TripResponse) => normalizeRideStatus(t.status) === 'accepted');
+                if (acceptedTrip) {
+                    setTrip(acceptedTrip);
                 }
             } catch (error) {
                 console.error('Failed to fetch active trip:', error);
@@ -65,7 +70,7 @@ export default function BoardingPage() {
         try {
             await otpAPI.verifyOTP(trip.id, otp);
             setIsVerified(true);
-            showToast('success', 'Boarding verified! Have a safe trip.');
+            showToast('success', 'Boarding verified! Your ride is starting.');
             setTimeout(() => {
                 router.push('/passenger/live');
             }, 2500);

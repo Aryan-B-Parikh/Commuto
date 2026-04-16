@@ -28,6 +28,17 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
+    const resolvePostAuthRoute = (loggedInUser: any) => {
+        const normalizedRole = loggedInUser?.role === 'driver' ? 'driver' : 'passenger';
+        if (loggedInUser?.phone_number && loggedInUser?.isPhoneVerified === false) {
+            return '/verify-phone';
+        }
+        if (normalizedRole === 'driver' && !loggedInUser?.profileCompleted) {
+            return '/complete-profile';
+        }
+        return `/${normalizedRole}/dashboard`;
+    };
+
     const validate = () => {
         const newErrors: typeof errors = {};
 
@@ -55,7 +66,7 @@ export default function LoginPage() {
 
         if (loggedInUser) {
             showToast('success', 'Login successful!');
-            router.push('/select-role');
+            router.push(resolvePostAuthRoute(loggedInUser));
         } else {
             showToast('error', 'Invalid email or password. Please try again.');
         }
@@ -63,14 +74,10 @@ export default function LoginPage() {
 
     const googleLoginAction = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
-            const user = await googleLogin(tokenResponse.access_token, role || undefined);
+            const user = await googleLogin(tokenResponse.access_token);
             if (user) {
                 showToast('success', 'Login successful with Google!');
-                if (user.role) {
-                    router.push(`/${user.role}/dashboard`);
-                } else {
-                    router.push('/select-role');
-                }
+                router.push(resolvePostAuthRoute(user));
             } else {
                 showToast('error', 'Google login failed. Please try again.');
             }

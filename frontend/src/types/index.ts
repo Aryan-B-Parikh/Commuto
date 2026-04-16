@@ -21,6 +21,7 @@ export interface User {
     onlineHours?: number;
     totalTrips?: number;
     verified: boolean;
+    isPhoneVerified?: boolean;
     profileCompleted: boolean;
     joinedDate: string;
     licensePhotoUrl?: string;
@@ -39,6 +40,9 @@ export interface User {
 }
 
 // Trip type
+export type RideStatus = 'requested' | 'accepted' | 'started' | 'completed' | 'cancelled';
+export type LegacyRideStatus = 'pending' | 'upcoming' | 'active' | 'bid_accepted' | 'driver_assigned';
+
 export interface Trip {
     id: string;
     from: Location;
@@ -50,7 +54,7 @@ export interface Trip {
     pricePerSeat: number;
     driver: User;
     passengers: User[];
-    status: 'pending' | 'upcoming' | 'active' | 'completed' | 'cancelled';
+    status: RideStatus | LegacyRideStatus;
     distance: string;
     duration: string;
     vehicleType: string;

@@ -19,6 +19,7 @@ import schemas
 from services.rating_service import apply_driver_rating
 from services.billing_service import get_trip_receipt as _build_receipt
 from services.wallet_service import hold_wallet_funds_or_raise, release_wallet_funds, reconcile_booking_hold
+from ride_states import RIDE_STATUS_STARTED, normalize_ride_status
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
@@ -304,6 +305,13 @@ def get_trip_details(
     ).first()
     
     trip.user_booking = user_booking
+    if user_booking:
+        trip.booking_id = str(user_booking.id)
+        trip.booking_total_price = float(user_booking.total_price) if user_booking.total_price is not None else None
+        trip.booking_payment_status = user_booking.payment_status
+        trip.seats_requested = user_booking.seats_booked
+    else:
+        trip.seats_requested = trip.total_seats
 
     # Populate per-passenger notes from bookings
     if hasattr(trip, 'passengers') and trip.passengers:
@@ -405,6 +413,8 @@ async def join_ride(
             "type": "seat_update",
             "trip_id": str(trip_id),
             "available_seats": trip.available_seats,
+            "price_per_seat": float(trip.price_per_seat) if trip.price_per_seat is not None else None,
+            "filled_seats": trip.total_seats - trip.available_seats,
             "passenger": {
                 "id": str(current_user.id),
                 "full_name": current_user.full_name,
@@ -502,6 +512,8 @@ async def leave_ride(
             "type": "seat_update",
             "trip_id": str(trip_id),
             "available_seats": trip.available_seats,
+            "price_per_seat": float(trip.price_per_seat) if trip.price_per_seat is not None else None,
+            "filled_seats": trip.total_seats - trip.available_seats,
             "left_user_id": str(current_user.id)
         })
         
@@ -778,7 +790,7 @@ def update_location(
         )
     
     # Can only update location for active trips
-    if trip.status not in ["active"]:
+    if normalize_ride_status(trip.status) != RIDE_STATUS_STARTED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Can only update location for active trips"
