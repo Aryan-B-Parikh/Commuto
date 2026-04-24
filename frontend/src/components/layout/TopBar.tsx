@@ -58,10 +58,11 @@ export function TopBar({
 
     return (
         <header className="sticky top-0 z-40 h-20 px-6">
-            <div className="absolute inset-x-4 top-3 bottom-3 rounded-[28px] border border-card-border bg-card/85 shadow-[var(--shadow-card)] backdrop-blur-xl" />
+            <div className="relative h-full w-full">
+                <div className="absolute inset-x-0 top-3 bottom-3 rounded-[28px] border border-card-border bg-card/85 shadow-[var(--shadow-card)] backdrop-blur-xl" />
 
-            <div className="relative z-10 flex w-full items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
+                <div className="relative z-10 flex h-full w-full items-center justify-between gap-6 px-4">
+                    <div className="flex min-w-0 items-center gap-4">
                     <div className="flex items-center rounded-2xl border border-card-border bg-muted/60 p-1">
                         <button
                             onClick={onToggleSidebar}
@@ -79,11 +80,11 @@ export function TopBar({
                         )}
                     </div>
 
-                    <div className="flex flex-col">
-                        <h1 className="font-display text-lg font-bold leading-none tracking-tight text-foreground">{title}</h1>
+                    <div className="flex min-w-0 flex-col">
+                        <h1 className="truncate font-display text-lg font-bold leading-none tracking-tight text-foreground">{title}</h1>
                         <div className="mt-1 flex items-center gap-2">
                             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{role} workspace active</p>
+                            <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{role} workspace active</p>
                         </div>
                     </div>
                 </div>
@@ -213,6 +214,7 @@ export function TopBar({
                         </AnimatePresence>
                     </div>
                 </div>
+            </div>
             </div>
         </header>
     );

@@ -159,7 +159,7 @@ export default function PassengerTripDetailsPage() {
         requested: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Awaiting Bids', dot: 'bg-amber-500' },
         accepted: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Driver Arriving', dot: 'bg-blue-500' },
         started: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'In Progress', dot: 'bg-emerald-500' },
-        completed: { bg: 'bg-[#1E293B]', text: 'text-[#6B7280]', label: 'Completed', dot: 'bg-[#6B7280]' },
+        completed: { bg: 'bg-muted', text: 'text-muted-foreground', label: 'Completed', dot: 'bg-muted-foreground' },
         cancelled: { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Cancelled', dot: 'bg-red-500' },
     };
 
@@ -179,7 +179,7 @@ export default function PassengerTripDetailsPage() {
                 <DashboardLayout userType="passenger" title="Trip Details">
                     <div className="flex flex-col items-center justify-center py-32">
                         <Loader2 size={32} className="animate-spin text-indigo-400 mb-4" />
-                        <p className="text-sm font-bold text-[#9CA3AF] uppercase tracking-widest">Loading trip details...</p>
+                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Loading trip details...</p>
                     </div>
                 </DashboardLayout>
             </RoleGuard>
@@ -212,13 +212,13 @@ export default function PassengerTripDetailsPage() {
                         <div className="flex items-center gap-3 lg:gap-4">
                             <button
                                 onClick={() => router.back()}
-                                className="p-2.5 rounded-xl border border-[#1E293B] hover:bg-[#1E293B] transition-colors text-[#F9FAFB]"
+                                className="p-2.5 rounded-xl border border-card-border hover:bg-muted transition-colors text-foreground"
                             >
                                 <ArrowLeft size={18} />
                             </button>
                             <div>
-                                <h2 className="text-xl lg:text-2xl font-extrabold text-[#F9FAFB] tracking-tight">Trip Details</h2>
-                                <p className="text-sm text-[#9CA3AF] font-medium">
+                                <h2 className="text-xl lg:text-2xl font-extrabold text-foreground tracking-tight">Trip Details</h2>
+                                <p className="text-sm text-muted-foreground font-medium">
                                     ID: {tripId.substring(0, 8).toUpperCase()}
                                 </p>
                             </div>
@@ -256,38 +256,38 @@ export default function PassengerTripDetailsPage() {
 
                                     <div className="flex-1 space-y-6">
                                         <div>
-                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Pickup</p>
-                                            <p className="font-bold text-[#F9FAFB] text-sm leading-snug">{trip.from.name}</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Pickup</p>
+                                            <p className="font-bold text-foreground text-sm leading-snug">{trip.from.name}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Destination</p>
-                                            <p className="font-bold text-[#F9FAFB] text-sm leading-snug">{trip.to.name}</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Destination</p>
+                                            <p className="font-bold text-foreground text-sm leading-snug">{trip.to.name}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Stats Strip */}
-                                <div className="mt-6 pt-5 border-t border-[#1E293B] grid grid-cols-3 gap-4">
+                                <div className="mt-6 pt-5 border-t border-card-border grid grid-cols-3 gap-4">
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
                                             <Navigation size={14} className="text-indigo-400" />
-                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Distance</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Distance</p>
                                         </div>
-                                        <p className="text-lg font-black text-[#F9FAFB]">{distanceKm} km</p>
+                                        <p className="text-lg font-black text-foreground">{distanceKm} km</p>
                                     </div>
-                                    <div className="text-center border-x border-[#1E293B]">
+                                    <div className="text-center border-x border-card-border">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
                                             <Clock size={14} className="text-indigo-400" />
-                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Schedule</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Schedule</p>
                                         </div>
-                                        <p className="text-lg font-black text-[#F9FAFB]">{dt.time}</p>
+                                        <p className="text-lg font-black text-foreground">{dt.time}</p>
                                     </div>
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
                                             <Users size={14} className="text-indigo-400" />
-                                            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Seats</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Seats</p>
                                         </div>
-                                        <p className="text-lg font-black text-[#F9FAFB]">{trip.totalSeats}</p>
+                                        <p className="text-lg font-black text-foreground">{trip.totalSeats}</p>
                                     </div>
                                 </div>
                             </Card>
@@ -299,8 +299,8 @@ export default function PassengerTripDetailsPage() {
                                         <Clock size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Scheduled For</p>
-                                        <p className="font-bold text-[#F9FAFB] text-sm">{dt.date} at {dt.time}</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Scheduled For</p>
+                                        <p className="font-bold text-foreground text-sm">{dt.date} at {dt.time}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full font-bold">
@@ -322,7 +322,7 @@ export default function PassengerTripDetailsPage() {
                                             </span>
                                         ))}
                                     </div>
-                                    <p className="text-[10px] text-[#6B7280] text-center mt-3">
+                                    <p className="text-[10px] text-muted-foreground text-center mt-3">
                                         {otpHint}
                                     </p>
                                 </Card>

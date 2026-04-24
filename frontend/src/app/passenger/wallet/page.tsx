@@ -69,13 +69,17 @@ export default function WalletPage() {
             <DashboardLayout userType="passenger" title="Wallet & Payments">
                 <div className="mx-auto max-w-7xl space-y-8">
                     <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-                        <Card className="overflow-hidden bg-[linear-gradient(135deg,#0f172a,#12356f_65%,#1a6bff)] text-white" padding="lg">
+                        <Card
+                            variant="outline"
+                            className="overflow-hidden border-transparent !bg-[linear-gradient(135deg,#0f172a,#12356f_65%,#1a6bff)] text-white shadow-[var(--shadow-soft)]"
+                            padding="lg"
+                        >
                             <div className="space-y-8">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
-                                        <p className="text-sm text-white/75">Available balance</p>
+                                        <p className="text-sm text-white/90">Available balance</p>
                                         <h1 className="mt-3 font-display text-5xl font-bold tracking-tight">{formatCurrency(balance.balance)}</h1>
-                                        <p className="mt-3 text-sm text-white/75">Use wallet balance for faster checkout on upcoming rides.</p>
+                                        <p className="mt-3 text-sm text-white/90">Use wallet balance for faster checkout on upcoming rides.</p>
                                     </div>
                                     <div className="rounded-[24px] bg-white/10 p-4 backdrop-blur-sm">
                                         <Wallet2 className="h-7 w-7" />
@@ -86,10 +90,10 @@ export default function WalletPage() {
                                     <Button className="bg-white text-primary hover:bg-white/92" onClick={() => setIsAddMoneyOpen(true)}>
                                         <Plus className="h-4 w-4" /> Add money
                                     </Button>
-                                    <Button variant="outline" className="border-white/25 text-white hover:bg-white/10" onClick={() => setIsSendMoneyOpen(true)}>
+                                    <Button variant="outline" className="border-white/35 text-white hover:bg-white/15" onClick={() => setIsSendMoneyOpen(true)}>
                                         <Send className="h-4 w-4" /> Send money
                                     </Button>
-                                    <Button variant="outline" className="border-white/25 text-white hover:bg-white/10" onClick={() => setIsAddCardOpen(true)}>
+                                    <Button variant="outline" className="border-white/35 text-white hover:bg-white/15" onClick={() => setIsAddCardOpen(true)}>
                                         <CreditCard className="h-4 w-4" /> Add card
                                     </Button>
                                 </div>

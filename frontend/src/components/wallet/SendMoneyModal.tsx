@@ -71,9 +71,9 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Send Money" size="sm">
             <div className="space-y-6">
-                <div className="bg-indigo-50 p-4 rounded-xl">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Available Balance</p>
-                    <p className="text-2xl font-black text-indigo-600">₹{balance.toLocaleString('en-IN')}</p>
+                <div className="rounded-xl border border-primary/20 bg-primary/10 p-4">
+                    <p className="mb-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Available Balance</p>
+                    <p className="text-2xl font-black text-primary">₹{balance.toLocaleString('en-IN')}</p>
                 </div>
 
                 <Input
@@ -85,7 +85,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                 />
 
                 <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold z-10 pt-6">₹</span>
+                    <span className="absolute left-4 top-1/2 z-10 -translate-y-1/2 pt-6 font-bold text-muted-foreground">₹</span>
                     <Input
                         label="Amount"
                         value={amount}
@@ -115,3 +115,4 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
         </Modal>
     );
 };
+

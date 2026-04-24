@@ -20,7 +20,7 @@ const featureHighlights = [
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, googleLogin, isLoading, role } = useAuth();
+    const { login, googleLogin, isLoading } = useAuth();
     const { showToast } = useToast();
 
     const [email, setEmail] = useState('');
@@ -30,9 +30,6 @@ export default function LoginPage() {
 
     const resolvePostAuthRoute = (loggedInUser: any) => {
         const normalizedRole = loggedInUser?.role === 'driver' ? 'driver' : 'passenger';
-        if (loggedInUser?.phone_number && loggedInUser?.isPhoneVerified === false) {
-            return '/verify-phone';
-        }
         if (normalizedRole === 'driver' && !loggedInUser?.profileCompleted) {
             return '/complete-profile';
         }

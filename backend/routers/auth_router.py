@@ -463,8 +463,6 @@ def google_auth(
         email = ""
         full_name = ""
         is_new_user = False
-        google_email_token = ""
-        
         # Determine if token is a JWT (ID Token) or an Access Token
         if auth_data.token.startswith("eyJ"):
             # Verify the ID token
@@ -571,30 +569,32 @@ def google_auth(
         # Determine role
         role = auth.get_user_role(user, db)
 
-        # The current EmailJS template is OTP-based, so provide a fresh code for
-        # Google auth emails as well.
-        google_email_token = _generate_email_verification_code()
-        user.verification_token = google_email_token
-        user.verification_token_expires = datetime.utcnow() + timedelta(minutes=15)
-        db.commit()
-        db.refresh(user)
-        logger.info(
-            "Generated Google auth email token for %s: token_present=%s expires_in=%s",
-            user.email,
-            bool(google_email_token),
-            "15 minutes",
-        )
+        # Only new Google signups get a verification/welcome OTP email.
+        # Existing Google logins should not receive OTP.
+        if is_new_user:
+            google_email_token = _generate_email_verification_code()
+            user.verification_token = google_email_token
+            user.verification_token_expires = datetime.utcnow() + timedelta(minutes=15)
+            db.commit()
+            db.refresh(user)
+            logger.info(
+                "Generated Google signup email token for %s: token_present=%s expires_in=%s",
+                user.email,
+                bool(google_email_token),
+                "15 minutes",
+            )
 
-        email_type = "google_welcome" if is_new_user else "google_login"
-        _queue_post_auth_email(
-            background_tasks,
-            user_email=user.email,
-            user_name=user.full_name or full_name,
-            auth_provider="google",
-            email_type=email_type,
-            is_new_user=is_new_user,
-            token=google_email_token,
-        )
+            _queue_post_auth_email(
+                background_tasks,
+                user_email=user.email,
+                user_name=user.full_name or full_name,
+                auth_provider="google",
+                email_type="google_welcome",
+                is_new_user=True,
+                token=google_email_token,
+            )
+        else:
+            logger.info("Skipping OTP email for existing Google login: %s", user.email)
         
         # Create access token
         access_token = auth.create_access_token(data={"sub": str(user.id), "role": role})
