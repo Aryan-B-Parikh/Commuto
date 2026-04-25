@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
@@ -23,8 +23,7 @@ class LocationResponse(BaseModel):
     longitude: float
     timestamp: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Trip Schemas
@@ -83,12 +82,12 @@ class TripResponse(BaseModel):
     # All passenger notes for this trip
     passenger_notes: List[PassengerNote] = []
 
-    @validator("status", pre=True)
+    @field_validator("status", mode="before")
+    @classmethod
     def normalize_status(cls, value):
         return normalize_ride_status(value)
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TripCancellationRequest(BaseModel):
@@ -119,8 +118,7 @@ class BidResponse(BaseModel):
     is_counter_bid: Optional[bool] = False
     parent_bid_id: Optional[UUID] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DriverBidWithTrip(BaseModel):
@@ -145,7 +143,8 @@ class DriverBidWithTrip(BaseModel):
     notes: Optional[str] = None
     passenger_notes: List[PassengerNote] = []
 
-    @validator("trip_status", pre=True)
+    @field_validator("trip_status", mode="before")
+    @classmethod
     def normalize_trip_status(cls, value):
         return normalize_ride_status(value)
 
@@ -194,15 +193,13 @@ class PassengerShortInfo(BaseModel):
     avatar_url: Optional[str] = None
     notes: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class BookingShortInfo(BaseModel):
     id: UUID
     payment_status: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TripWithPassengers(TripResponse):
     passengers: List[PassengerShortInfo] = []

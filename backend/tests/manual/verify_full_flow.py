@@ -1,13 +1,15 @@
 import sys
-import os
+from pathlib import Path
 import uuid
 import json
 import requests
 from decimal import Decimal
 from datetime import datetime, timedelta
 
-# Add parent dir to path if needed
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add backend root to path if needed
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 BASE_URL = "http://localhost:8000"
 

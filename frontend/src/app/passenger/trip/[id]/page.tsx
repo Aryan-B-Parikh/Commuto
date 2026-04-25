@@ -346,7 +346,7 @@ export default function PassengerTripDetailsPage() {
                                 />
                             )}
                             {/* Post-ride Receipt (completed trips) */}
-                            {normalizeRideStatus(rawTrip?.status) === 'completed' && (
+                            {rawTrip && normalizeRideStatus(rawTrip.status) === 'completed' && (
                                 <TripReceiptCard
                                     rawTrip={rawTrip}
                                     trip={trip}

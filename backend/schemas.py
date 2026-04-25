@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 import re
 from typing import Optional, List
 from datetime import datetime, date, timedelta
@@ -175,8 +175,7 @@ class UserResponse(BaseModel):
     travel_preferences: Optional[list] = None
     accessibility_needs: Optional[bool] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DriverResponse(BaseModel):
     user_id: UUID
@@ -185,8 +184,7 @@ class DriverResponse(BaseModel):
     total_trips: Optional[int]
     is_online: bool
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleResponse(BaseModel):
     id: UUID
@@ -196,8 +194,7 @@ class VehicleResponse(BaseModel):
     capacity: int
     color: Optional[str]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Payment Method Schemas
 class PaymentMethodCreate(BaseModel):
@@ -214,8 +211,7 @@ class PaymentMethodResponse(BaseModel):
     is_default: bool
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Wallet Schemas
 class WalletResponse(BaseModel):
@@ -224,8 +220,7 @@ class WalletResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AddMoneyRequest(BaseModel):
     amount: float = Field(gt=0, le=50000)
@@ -249,8 +244,7 @@ class TransactionResponse(BaseModel):
     status: str
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TransferRequest(BaseModel):
     recipient_email: EmailStr

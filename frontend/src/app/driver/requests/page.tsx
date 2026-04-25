@@ -421,7 +421,7 @@ export default function DriverRequestsPage() {
                                     </div>
 
                                     <div className="px-6 pb-8 text-center -mt-2">
-                                        <h3 className="text-xl font-black text-[#F9FAFB] mb-2">You're all caught up!</h3>
+                                        <h3 className="text-xl font-black text-[#F9FAFB] mb-2">You&apos;re all caught up!</h3>
                                         <p className="text-sm text-[#6B7280] mb-6 max-w-xs mx-auto">
                                             No pending ride requests right now. New requests will appear here automatically.
                                         </p>

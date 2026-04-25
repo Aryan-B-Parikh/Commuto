@@ -500,7 +500,7 @@ function _createDriverMarkerEl(heading?: number): HTMLDivElement {
 // Polyline decoder helper
 function decodePolyline(encoded: string) {
     if (!encoded) return [];
-    let index = 0, len = encoded.length;
+    let index = 0; const len = encoded.length;
     let lat = 0, lng = 0;
     const coordinates = [];
 

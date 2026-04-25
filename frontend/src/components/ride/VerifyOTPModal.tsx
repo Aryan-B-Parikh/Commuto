@@ -43,6 +43,7 @@ export function VerifyOTPModal({
             setOtp(['', '', '', '', '', '']);
             setTimeout(() => inputRefs[0].current?.focus(), 100);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     const handleChange = (index: number, value: string) => {

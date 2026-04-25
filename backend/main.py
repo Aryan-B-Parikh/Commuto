@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import asyncio
 import os
@@ -32,12 +33,15 @@ logger.info(f"Logging initialized. Log file: {log_file}")
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Commuto API", version="1.0.0")
 
-
-@app.on_event("startup")
-async def capture_notification_loop() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Modern lifespan handler replacing deprecated on_event('startup')."""
     app.state.notification_loop = asyncio.get_running_loop()
+    yield
+
+
+app = FastAPI(title="Commuto API", version="1.0.0", lifespan=lifespan)
 
 # 1. Diagnostic Error & Header Logging Middleware
 @app.middleware("http")

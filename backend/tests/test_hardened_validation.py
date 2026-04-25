@@ -1,7 +1,15 @@
+import os
+
+import pytest
 import requests
 import uuid
 
 BASE_URL = "http://localhost:8000"
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_LIVE_API_TESTS") != "1",
+    reason="Requires a running backend at http://localhost:8000; set RUN_LIVE_API_TESTS=1 to enable.",
+)
 
 def test_hardened_validation():
     print("--- Starting Hardened Validation Verification (Rikshaw & Email) ---")

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarDays, Search, SlidersHorizontal } from 'lucide-react';
@@ -15,7 +15,7 @@ import { tripsAPI } from '@/services/api';
 import type { TripResponse } from '@/types/api';
 import { transformTripResponses } from '@/utils/tripTransformers';
 
-export default function PassengerSearchPage() {
+function PassengerSearchContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { showToast } = useToast();
@@ -138,5 +138,13 @@ export default function PassengerSearchPage() {
 
             <PassengerBottomNav />
         </div>
+    );
+}
+
+export default function PassengerSearchPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background" />}>
+            <PassengerSearchContent />
+        </Suspense>
     );
 }

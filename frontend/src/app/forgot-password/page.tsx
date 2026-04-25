@@ -2,13 +2,10 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { authAPI } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/Button';
 
 export default function ForgotPasswordPage() {
-    const router = useRouter();
     const { showToast } = useToast() as any;
 
     const [email, setEmail] = useState('');
@@ -34,12 +31,8 @@ export default function ForgotPasswordPage() {
 
         setIsResetting(true);
         try {
-            const res = await authAPI.resetPasswordDirect({
-                email: email.trim(),
-                new_password: newPassword,
-            });
-            showToast('success', res.message || 'Password updated successfully');
-            router.push('/login');
+            // Intentionally disabled until secure reset token flow is implemented server-side.
+            showToast('error', 'Password reset is temporarily unavailable. Please contact support.');
         } catch (error: any) {
             const detail = error?.response?.data?.detail;
             showToast('error', typeof detail === 'string' ? detail : 'Failed to reset password.');

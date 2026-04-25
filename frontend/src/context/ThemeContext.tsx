@@ -12,19 +12,13 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setTheme] = useState<Theme>('dark');
-
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light' || savedTheme === 'dark') {
-            setTheme(savedTheme);
-            return;
-        }
-
-        if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-            setTheme('light');
-        }
-    }, []);
+    const [theme, setTheme] = useState<Theme>(() => {
+        // SSR-safe: default to 'dark', hydration effect will correct if needed
+        if (typeof window === 'undefined') return 'dark';
+        const saved = localStorage.getItem('theme');
+        if (saved === 'light' || saved === 'dark') return saved;
+        return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    });
 
     useEffect(() => {
         const root = window.document.documentElement;
