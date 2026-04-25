@@ -33,7 +33,7 @@ function PassengerSearchContent() {
         const fetchTrips = async () => {
             try {
                 setIsLoading(true);
-                const data = await tripsAPI.getOpenRides();
+                const data = await tripsAPI.getAvailableRides();
                 setTrips(data);
             } catch (error) {
                 console.error('Failed to fetch trips:', error);
