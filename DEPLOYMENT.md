@@ -80,7 +80,11 @@ Vercel is the creator of Next.js and provides the absolute best hosting experien
 3. Configure the project:
    - **Framework Preset:** Next.js
    - **Root Directory:** `frontend` (Click Edit and select the `frontend` folder)
-4. Open the **Environment Variables** section and add:
+4. Open the **Environment Variables** section. 
+   
+   **Pro Tip:** You can open the `vercel.env` file in the root of this project, copy all the text, and paste it directly into the first "Key" input box on Vercel. Vercel will automatically split it into all the separate key-value pairs!
+   
+   Just remember to update the `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`, and `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` before you deploy.
 
 | Key | Value |
 |---|---|
