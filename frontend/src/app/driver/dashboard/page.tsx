@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { DriverBottomNav } from '@/components/layout/DriverBottomNav';
 import { ChevronUp, Navigation, DollarSign, Car, Star, Bell, MapPin } from 'lucide-react';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 export default function DriverDashboard() {
     const router = useRouter();
@@ -31,8 +32,8 @@ export default function DriverDashboard() {
         const fetchRequests = async () => {
             try {
                 const driverTrips = await tripsAPI.getDriverTrips();
-                const activeTrip = driverTrips.find((t: TripResponse) => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
-                if (activeTrip) {
+                const startedTrip = driverTrips.find((t: TripResponse) => normalizeRideStatus(t.status) === 'started');
+                if (startedTrip) {
                     router.push('/driver/live');
                     return;
                 }

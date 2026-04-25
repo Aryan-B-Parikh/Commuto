@@ -17,6 +17,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PassengerBottomNav } from '@/components/layout/PassengerBottomNav';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { ArrowLeft, MapPin, Navigation, History, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 export default function PassengerHistoryPage() {
     const [trips, setTrips] = useState<Trip[]>([]);
@@ -61,7 +62,7 @@ export default function PassengerHistoryPage() {
         if (activeFilter === 'all') return true;
         if (activeFilter === 'completed') return trip.status === 'completed';
         if (activeFilter === 'cancelled') return trip.status === 'cancelled';
-        if (activeFilter === 'upcoming') return ['pending', 'active'].includes(trip.status);
+        if (activeFilter === 'upcoming') return ['requested', 'accepted', 'started'].includes(normalizeRideStatus(trip.status));
         return true;
     });
 
@@ -69,8 +70,9 @@ export default function PassengerHistoryPage() {
         switch (status) {
             case 'completed': return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', icon: <CheckCircle2 size={12} /> };
             case 'cancelled': return { bg: 'bg-red-500/20', text: 'text-red-400', icon: <XCircle size={12} /> };
-            case 'active':
-            case 'pending': return { bg: 'bg-teal-500/20', text: 'text-teal-400', icon: <Clock size={12} /> };
+            case 'accepted':
+            case 'started':
+            case 'requested': return { bg: 'bg-teal-500/20', text: 'text-teal-400', icon: <Clock size={12} /> };
             default: return { bg: 'bg-[#1E293B]', text: 'text-[#9CA3AF]', icon: null };
         }
     };
@@ -218,10 +220,10 @@ export default function PassengerHistoryPage() {
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center justify-between mb-2">
                                                                     <h3 className="font-bold text-[#F9FAFB] truncate">
-                                                                        {trip.status === 'pending' ? `Request to ${trip.to.name}` : trip.driver.name}
+                                                                        {normalizeRideStatus(trip.status) === 'requested' ? `Request to ${trip.to.name}` : trip.driver.name}
                                                                     </h3>
                                                                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 ml-2 ${trip.status === 'completed' ? 'bg-teal-500/15 text-teal-400' :
-                                                                        trip.status === 'active' ? 'bg-blue-500/15 text-blue-400' :
+                                                                        normalizeRideStatus(trip.status) === 'started' ? 'bg-blue-500/15 text-blue-400' :
                                                                             'bg-[#1E293B] text-[#6B7280]'
                                                                         }`}>
                                                                         {trip.status}

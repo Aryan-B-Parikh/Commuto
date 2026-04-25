@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CalendarDays, Search, SlidersHorizontal } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { MapContainer } from '@/components/trip/MapContainer';
 import { TripCard } from '@/components/trip/TripCard';
 import { PassengerBottomNav } from '@/components/layout/PassengerBottomNav';
@@ -25,9 +26,7 @@ export default function PassengerSearchPage() {
 
     useEffect(() => {
         const initialQuery = searchParams.get('q');
-        if (initialQuery) {
-            setSearchQuery(initialQuery);
-        }
+        if (initialQuery) setSearchQuery(initialQuery);
     }, [searchParams]);
 
     useEffect(() => {
@@ -47,7 +46,7 @@ export default function PassengerSearchPage() {
         fetchTrips();
     }, [showToast]);
 
-    const filteredTrips = trips.filter(trip => {
+    const filteredTrips = trips.filter((trip) => {
         const matchesSearch = !searchQuery ||
             trip.from_address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             trip.to_address?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -56,80 +55,85 @@ export default function PassengerSearchPage() {
 
     const transformedTrips = transformTripResponses(filteredTrips);
 
-    const handleJoinTrip = (tripId: string) => {
-        showToast('success', 'Join request sent!');
-        router.push('/passenger/live');
-    };
-
     return (
-        <div className="min-h-screen bg-[#0B1020] pb-20">
-            {/* Map */}
-            <div className="relative h-[30vh]">
+        <div className="min-h-screen bg-background pb-24 lg:pb-10">
+            <div className="relative h-[32vh] overflow-hidden border-b border-card-border">
                 <MapContainer className="h-full" showRoute />
-                <Link href="/passenger/dashboard" className="absolute top-4 left-4 p-3 bg-[#111827]/90 backdrop-blur-sm rounded-full shadow-md hover:bg-[#1E293B] transition-colors">
-                    <svg className="w-5 h-5 text-[#F9FAFB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                </Link>
-            </div>
-
-            {/* Search */}
-            <div className="sticky top-0 z-10 bg-[#111827] border-b border-[#1E293B] px-4 py-4 -mt-6 rounded-t-3xl shadow-lg">
-                <div className="relative mb-3">
-                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search by location..."
-                        className="w-full pl-12 pr-4 py-3 min-h-[48px] rounded-xl border border-[#1E293B] bg-[#0B1020] text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                </div>
-                <div className="flex gap-3">
-                    <input
-                        type="date"
-                        value={filterDate}
-                        onChange={(e) => setFilterDate(e.target.value)}
-                        className="flex-1 px-4 py-2 min-h-[44px] rounded-lg border border-[#1E293B] bg-[#0B1020] text-[#F9FAFB] text-sm"
-                    />
-                    <button className="px-4 py-2 bg-indigo-500/15 text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-500/25 transition-colors">Filter</button>
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,17,31,0.1),rgba(8,17,31,0.72))]" />
+                <button onClick={() => router.push('/passenger/dashboard')} className="absolute left-4 top-4 rounded-2xl border border-white/20 bg-black/25 px-4 py-3 text-sm font-semibold text-white backdrop-blur-md">
+                    Back to dashboard
+                </button>
+                <div className="absolute bottom-5 left-4 right-4">
+                    <div className="max-w-3xl rounded-[28px] border border-white/12 bg-black/28 p-5 text-white backdrop-blur-md">
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">Search rides</p>
+                        <h1 className="mt-2 font-display text-2xl font-bold">Find an available shared trip</h1>
+                        <p className="mt-2 text-sm text-white/75">Search by pickup or destination, then compare routes without leaving the page.</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Results */}
-            <div className="px-4 py-6">
-                <h2 className="text-lg font-semibold text-[#F9FAFB] mb-4">
-                    Available Trips {!isLoading && `(${transformedTrips.length})`}
-                </h2>
+            <div className="mx-auto max-w-6xl px-4 py-5 lg:px-6">
+                <div className="sticky top-4 z-20 rounded-[28px] border border-card-border bg-card p-4 shadow-[var(--shadow-card)] backdrop-blur-xl">
+                    <div className="grid gap-3 lg:grid-cols-[1fr_220px_140px]">
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search by location"
+                                className="min-h-[52px] w-full rounded-2xl border border-card-border bg-background/55 pl-11 pr-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-[var(--ring)]"
+                            />
+                        </div>
+                        <div className="relative">
+                            <CalendarDays className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="date"
+                                value={filterDate}
+                                onChange={(e) => setFilterDate(e.target.value)}
+                                className="min-h-[52px] w-full rounded-2xl border border-card-border bg-background/55 pl-11 pr-4 text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-[var(--ring)]"
+                            />
+                        </div>
+                        <button className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-card-border bg-background/55 text-sm font-semibold text-foreground transition-all hover:border-primary/20 hover:bg-muted/50">
+                            <SlidersHorizontal className="h-4 w-4 text-primary" />
+                            Filter
+                        </button>
+                    </div>
+                </div>
 
-                <AnimatePresence mode="wait">
-                    {isLoading ? (
-                        <motion.div key="loading" className="space-y-4">
-                            {[1, 2, 3].map((i) => <SkeletonTripCard key={i} />)}
-                        </motion.div>
-                    ) : transformedTrips.length > 0 ? (
-                        <motion.div key="trips" className="space-y-4">
-                            {transformedTrips.map((trip, index) => (
-                                <motion.div
-                                    key={trip.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                >
-                                    <TripCard trip={trip} onJoin={handleJoinTrip} />
-                                </motion.div>
-                            ))}
-                        </motion.div>
-                    ) : (
-                        <EmptyState
-                            title="No trips found"
-                            description="Try adjusting your search criteria"
-                            action={{ label: 'Clear Filters', onClick: () => { setSearchQuery(''); setFilterDate(''); } }}
-                        />
-                    )}
-                </AnimatePresence>
+                <div className="mt-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Results</p>
+                        <h2 className="mt-2 font-display text-2xl font-bold text-foreground">
+                            Available rides {!isLoading && `(${transformedTrips.length})`}
+                        </h2>
+                    </div>
+                    <Link href="/passenger/ride-sharing" className="text-sm font-semibold text-primary">Create a ride instead</Link>
+                </div>
+
+                <div className="mt-5">
+                    <AnimatePresence mode="wait">
+                        {isLoading ? (
+                            <motion.div key="loading" className="space-y-4">
+                                {[1, 2, 3].map((i) => <SkeletonTripCard key={i} />)}
+                            </motion.div>
+                        ) : transformedTrips.length > 0 ? (
+                            <motion.div key="trips" className="space-y-4">
+                                {transformedTrips.map((trip, index) => (
+                                    <motion.div key={trip.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                                        <TripCard trip={trip} onJoin={() => router.push('/passenger/live')} />
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                        ) : (
+                            <EmptyState
+                                title="No trips found"
+                                description="Try adjusting your location or clearing filters."
+                                action={{ label: 'Clear Filters', onClick: () => { setSearchQuery(''); setFilterDate(''); } }}
+                            />
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             <PassengerBottomNav />

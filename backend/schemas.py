@@ -148,6 +148,7 @@ class UserResponse(BaseModel):
     role: str
     avatar_url: Optional[str] = None
     is_verified: bool = False
+    is_phone_verified: bool = False
     profile_completed: bool = False
     rating: Optional[float] = 0.0
     total_trips: Optional[int] = 0

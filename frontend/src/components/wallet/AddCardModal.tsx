@@ -82,7 +82,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                 <div className="p-4 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl text-white shadow-lg mb-6">
                     <div className="flex justify-between items-start mb-8">
                         <div className="w-12 h-8 bg-yellow-500/80 rounded-md" />
-                        <span className="font-bold tracking-widest uppercase text-white/50">
+                        <span className="font-bold tracking-widest uppercase text-white/75">
                             {cardNumber[0] === '4' ? 'VISA' : cardNumber[0] === '5' ? 'MASTERCARD' : 'CARD'}
                         </span>
                     </div>
@@ -91,11 +91,11 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                     </div>
                     <div className="flex justify-between items-end">
                         <div>
-                            <div className="text-[10px] font-bold text-white/50 uppercase">Card Holder</div>
+                            <div className="text-[10px] font-bold text-white/75 uppercase">Card Holder</div>
                             <div className="text-sm font-bold tracking-wider uppercase">{name || 'YOUR NAME'}</div>
                         </div>
                         <div>
-                            <div className="text-[10px] font-bold text-white/50 uppercase">Expires</div>
+                            <div className="text-[10px] font-bold text-white/75 uppercase">Expires</div>
                             <div className="text-sm font-bold tracking-wider">{expiry || 'MM/YY'}</div>
                         </div>
                     </div>

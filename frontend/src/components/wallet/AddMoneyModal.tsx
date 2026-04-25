@@ -6,11 +6,28 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { walletAPI } from '@/services/api';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AddMoneyModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+}
+
+interface RazorpayResponse {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+}
+
+interface RazorpayInstance {
+    open: () => void;
+}
+
+declare global {
+    interface Window {
+        Razorpay?: new (options: Record<string, unknown>) => RazorpayInstance;
+    }
 }
 
 export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
@@ -21,6 +38,7 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
     const [amount, setAmount] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
     const { showToast } = useToast();
+    const { user } = useAuth();
 
     // Predefined amounts for quick selection
     const QUICK_AMOUNTS = [100, 500, 1000, 2000];
@@ -38,6 +56,11 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
             // 1. Create Order on Backend
             const order = await walletAPI.addMoney(value);
 
+            if (typeof window === 'undefined' || !window.Razorpay) {
+                showToast('error', 'Razorpay checkout is not available right now. Please refresh and try again.');
+                return;
+            }
+
             // 2. Open Razorpay Checkout
             const options = {
                 key: order.key,
@@ -46,7 +69,7 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
                 name: "Commuto Wallet",
                 description: "Add Money to Wallet",
                 order_id: order.order_id,
-                handler: async function (response: any) {
+                handler: async function (response: RazorpayResponse) {
                     try {
                         // 3. Verify Payment on Backend
                         const result = await walletAPI.verifyPayment({
@@ -69,21 +92,24 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
                     }
                 },
                 prefill: {
-                    name: "User Name", // Ideally get from auth context
-                    email: "user@example.com",
-                    contact: "9999999999"
+                    name: user?.name || '',
+                    email: user?.email || '',
+                    contact: user?.phone || ''
                 },
                 theme: {
                     color: "#4F46E5"
                 }
             };
 
-            const rzp = new (window as any).Razorpay(options);
+            const rzp = new window.Razorpay(options);
             rzp.open();
 
         } catch (error) {
             console.error('Payment Error:', error);
-            showToast('error', 'Failed to initiate payment');
+            const message = typeof error === 'object' && error !== null && 'response' in error
+                ? ((error as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to initiate payment')
+                : 'Failed to initiate payment';
+            showToast('error', message);
         } finally {
             setIsLoading(false);
         }
