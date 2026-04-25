@@ -17,18 +17,16 @@ from rate_limiter import rate_limit
 
 from routers import auth_router, rides_router, bids_router, otp_router, websocket_router, payment_methods_router, wallet_router, websocket_trips
 
-# Configure logging to console and file
-log_file = os.path.join(os.getcwd(), "commuto_backend.log")
+# Configure logging to console (Render handles log capture)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(log_file),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
-logger.info(f"Logging initialized. Log file: {log_file}")
+logger.info("Logging initialized to stdout.")
 
 # Create tables
 Base.metadata.create_all(bind=engine)
