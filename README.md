@@ -257,14 +257,16 @@ pytest tests/ -v
 For a direct terminal end-to-end validation of critical user flows (identity, marketplace, OTP/tracking, wallet checks), run:
 
 ```bash
-python verify_master_flow.py
+python scripts/verification/verify_master_flow.py
 ```
 
 Optional flags:
 
 ```bash
-python verify_master_flow.py --base-url http://127.0.0.1:8000 --ws-url ws://127.0.0.1:8000 --timeout 20 --auth-delay 1.2
+python scripts/verification/verify_master_flow.py --base-url http://127.0.0.1:8000 --ws-url ws://127.0.0.1:8000 --timeout 20 --auth-delay 1.2
 ```
+
+Other manual checks live in [scripts/verification](scripts/verification) and [backend/tests/manual](backend/tests/manual).
 
 Test coverage includes:
 - Authentication (registration, login, rate limiting)

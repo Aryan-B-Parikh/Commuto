@@ -58,7 +58,8 @@ export default function CompleteProfilePage() {
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
     const [submitting, setSubmitting] = useState(false);
 
-    const isDriver = role === 'driver';
+    const effectiveRole = user?.role || role;
+    const isDriver = effectiveRole === 'driver';
     const steps: Step[] = isDriver ? ['personal', 'safety', 'vehicle'] : ['personal', 'safety'];
     const stepIndex = steps.indexOf(currentStep);
     const isLast = stepIndex === steps.length - 1;
@@ -68,6 +69,11 @@ export default function CompleteProfilePage() {
         if (authLoading) return;
         if (!user) {
             router.push('/login');
+            return;
+        }
+
+        if (effectiveRole === 'passenger') {
+            router.push('/passenger/dashboard');
             return;
         }
         
@@ -88,10 +94,10 @@ export default function CompleteProfilePage() {
         }));
 
         if (user.profileCompleted) {
-            const dest = role === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
+            const dest = effectiveRole === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
             router.push(dest);
         }
-    }, [user, role, authLoading, router]);
+    }, [user, effectiveRole, authLoading, router]);
 
     const update = (key: keyof FormData, value: string | number) => {
         setForm((prev) => ({ ...prev, [key]: value }));
@@ -182,7 +188,7 @@ export default function CompleteProfilePage() {
             if (refreshUser) await refreshUser();
 
             showToast('success', 'Profile completed! Welcome to Commuto.');
-            const dest = role === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
+            const dest = effectiveRole === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
             router.push(dest);
         } catch (err: any) {
             const detail = err?.response?.data?.detail;

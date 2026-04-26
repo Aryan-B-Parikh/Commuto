@@ -11,12 +11,23 @@ import os
 from datetime import datetime, timedelta
 import logging
 from services.email_service import smtp_is_configured, send_verification_email as _send_verification_email_bg
+from services.emailjs_service import (
+    emailjs_is_configured,
+    get_emailjs_config_status,
+    send_auth_email_via_emailjs as _send_auth_email_emailjs_bg,
+    send_verification_email_via_emailjs as _send_verification_email_emailjs_bg,
+)
 from services.sms_service import twilio_is_configured, send_phone_otp as _send_phone_otp_bg
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
+
+
+def _generate_email_verification_code() -> str:
+    """Generate a 6-digit numeric email verification code."""
+    return f"{secrets.randbelow(1_000_000):06d}"
 
 
 def _check_profile_complete(user: models.User, db: Session) -> bool:
@@ -40,10 +51,60 @@ def _check_profile_complete(user: models.User, db: Session) -> bool:
     return True
 
 
+def _queue_post_auth_email(
+    background_tasks: BackgroundTasks,
+    *,
+    user_email: str,
+    user_name: str,
+    auth_provider: str,
+    email_type: str,
+    is_new_user: bool,
+    token: str = "",
+) -> None:
+    """Queue the most appropriate auth email delivery path and log the decision."""
+    emailjs_ready = emailjs_is_configured()
+    smtp_ready = _smtp_is_configured()
+
+    logger.info(
+        "Post-auth email decision: email=%s provider=%s type=%s new_user=%s emailjs_ready=%s smtp_ready=%s emailjs_config=%s",
+        user_email,
+        auth_provider,
+        email_type,
+        is_new_user,
+        emailjs_ready,
+        smtp_ready,
+        get_emailjs_config_status(),
+    )
+
+    if emailjs_ready:
+        background_tasks.add_task(
+            _send_auth_email_emailjs_bg,
+            user_email,
+            user_name,
+            token=token,
+            auth_provider=auth_provider,
+            email_type=email_type,
+            is_new_user=is_new_user,
+        )
+        return
+
+    if token and smtp_ready:
+        background_tasks.add_task(_send_verification_email_bg, user_email, token)
+        return
+
+    logger.warning(
+        "Auth email not queued for %s: no compatible provider configured for provider=%s type=%s",
+        user_email,
+        auth_provider,
+        email_type,
+    )
+
+
 @router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 @rate_limit(max_requests=6, window_seconds=60, key_suffix="register")
 def register(
     request: Request,
+    background_tasks: BackgroundTasks,
     user_data: schemas.UserRegister,
     db: Session = Depends(get_db)
 ):
@@ -54,8 +115,8 @@ def register(
         existing_user = db.query(models.User).filter(models.User.email == user_data.email).first()
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered. Please log in or use a different email."
             )
         
         # Validate role
@@ -67,13 +128,16 @@ def register(
         
         # Create new user with UUID
         hashed_pwd = auth.hash_password(user_data.password)
+        verification_token = _generate_email_verification_code()
         new_user = models.User(
             id=uuid.uuid4(),
             email=user_data.email,
             hashed_password=hashed_pwd,
             full_name=user_data.full_name,
             phone_number=user_data.phone,
-            role=user_data.role
+            role=user_data.role,
+            verification_token=verification_token,
+            verification_token_expires=datetime.utcnow() + timedelta(minutes=15),
         )
         
         db.add(new_user)
@@ -144,9 +208,19 @@ def register(
                 resp["insurance_status"] = driver.insurance_status
                 resp["max_passengers"] = driver.max_passengers
                 resp["route_radius"] = driver.route_radius
-        
+
         logger.info(f"New user registered: {new_user.email} with role {user_data.role}")
-        
+
+        _queue_post_auth_email(
+            background_tasks,
+            user_email=new_user.email,
+            user_name=new_user.full_name,
+            auth_provider="password",
+            email_type="verification",
+            is_new_user=True,
+            token=verification_token,
+        )
+
         return resp
         
     except HTTPException:
@@ -213,9 +287,9 @@ def send_verification(
     if current_user.is_verified:
         raise HTTPException(status_code=400, detail="Email is already verified")
 
-    token = secrets.token_urlsafe(32)
+    token = _generate_email_verification_code()
     current_user.verification_token = token
-    current_user.verification_token_expires = datetime.utcnow() + timedelta(hours=24)
+    current_user.verification_token_expires = datetime.utcnow() + timedelta(minutes=15)
     db.commit()
 
     if _smtp_is_configured():
@@ -225,14 +299,21 @@ def send_verification(
             message="Verification email queued. Check your inbox shortly."
         )
 
+    if emailjs_is_configured():
+        # Fallback provider: EmailJS template delivery.
+        background_tasks.add_task(_send_verification_email_emailjs_bg, current_user.email, token)
+        return schemas.SendVerificationResponse(
+            message="Verification email queued via EmailJS. Check your inbox shortly."
+        )
+
     # No SMTP – only acceptable in an explicitly declared development environment.
-    is_dev = os.getenv("APP_ENV", "").lower() == "development"
+    is_dev = os.getenv("APP_ENV", "development").lower() == "development"
     if not is_dev:
         raise HTTPException(
             status_code=503,
             detail=(
                 "Email delivery is not configured. "
-                "Set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables."
+                "Set SMTP_HOST/SMTP_USER/SMTP_PASS or EMAILJS_SERVICE_ID/EMAILJS_TEMPLATE_ID/EMAILJS_PUBLIC_KEY."
             ),
         )
 
@@ -261,10 +342,10 @@ def verify_email(
     ).first()
 
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
 
     if user.verification_token_expires and user.verification_token_expires < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Verification token has expired. Request a new one.")
+        raise HTTPException(status_code=400, detail="Verification code has expired. Request a new one.")
 
     user.is_verified = True
     user.verification_token = None
@@ -308,7 +389,7 @@ def send_phone_verification(
             message="OTP sent to your phone number. Check your SMS."
         )
 
-    is_dev = os.getenv("APP_ENV", "").lower() == "development"
+    is_dev = os.getenv("APP_ENV", "development").lower() == "development"
     if not is_dev:
         raise HTTPException(
             status_code=503,
@@ -360,6 +441,7 @@ def verify_phone(
 @rate_limit(max_requests=10, window_seconds=60, key_suffix="google_login")
 def google_auth(
     request: Request,
+    background_tasks: BackgroundTasks,
     auth_data: schemas.GoogleAuthRequest,
     db: Session = Depends(get_db)
 ):
@@ -380,7 +462,7 @@ def google_auth(
     try:
         email = ""
         full_name = ""
-        
+        is_new_user = False
         # Determine if token is a JWT (ID Token) or an Access Token
         if auth_data.token.startswith("eyJ"):
             # Verify the ID token
@@ -423,6 +505,20 @@ def google_auth(
             verify_time = time.time() - start_time
             logger.info(f"Google Access token verified in {verify_time:.4f}s")
 
+        if not email:
+            raise ValueError("Google authentication did not return an email address")
+
+        if not full_name:
+            full_name = email.split("@", 1)[0]
+
+        logger.info(
+            "Google auth identity captured: email=%s full_name=%s role_in_request=%s token_type=%s",
+            email,
+            full_name,
+            auth_data.role,
+            "id_token" if auth_data.token.startswith("eyJ") else "access_token",
+        )
+
         # Check if user exists
         user = db.query(models.User).filter(models.User.email == email).first()
         
@@ -445,6 +541,7 @@ def google_auth(
             )
             db.add(user)
             db.flush()
+            is_new_user = True
             
             # Create appropriate profile
             if requested_role == "driver":
@@ -457,9 +554,47 @@ def google_auth(
             db.commit()
             db.refresh(user)
             logger.info(f"New user created via Google with role {requested_role}: {email}")
+        else:
+            if full_name and user.full_name != full_name:
+                logger.info(
+                    "Refreshing stored Google profile name for %s from %s to %s",
+                    email,
+                    user.full_name,
+                    full_name,
+                )
+                user.full_name = full_name
+                db.commit()
+                db.refresh(user)
         
         # Determine role
         role = auth.get_user_role(user, db)
+
+        # Only new Google signups get a verification/welcome OTP email.
+        # Existing Google logins should not receive OTP.
+        if is_new_user:
+            google_email_token = _generate_email_verification_code()
+            user.verification_token = google_email_token
+            user.verification_token_expires = datetime.utcnow() + timedelta(minutes=15)
+            db.commit()
+            db.refresh(user)
+            logger.info(
+                "Generated Google signup email token for %s: token_present=%s expires_in=%s",
+                user.email,
+                bool(google_email_token),
+                "15 minutes",
+            )
+
+            _queue_post_auth_email(
+                background_tasks,
+                user_email=user.email,
+                user_name=user.full_name or full_name,
+                auth_provider="google",
+                email_type="google_welcome",
+                is_new_user=True,
+                token=google_email_token,
+            )
+        else:
+            logger.info("Skipping OTP email for existing Google login: %s", user.email)
         
         # Create access token
         access_token = auth.create_access_token(data={"sub": str(user.id), "role": role})
@@ -467,6 +602,8 @@ def google_auth(
         logger.info(f"User logged in via Google: {email}")
         return {"access_token": access_token, "token_type": "bearer"}
 
+    except HTTPException:
+        raise
     except ValueError as e:
         # Invalid token
         logger.error(f"Invalid Google token: {str(e)}")
@@ -504,6 +641,7 @@ def get_current_user_info(
         "role": role,
         "avatar_url": current_user.avatar_url,
         "is_verified": current_user.is_verified,
+        "is_phone_verified": current_user.is_phone_verified,
         "profile_completed": current_user.profile_completed,
         "created_at": current_user.created_at,
         "gender": current_user.gender,

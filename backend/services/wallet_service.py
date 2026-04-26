@@ -13,6 +13,9 @@ import models
 logger = logging.getLogger(__name__)
 
 
+CASH_PAYMENT_STATUS = "cash"
+
+
 def _to_decimal(value: object) -> Decimal:
     if value is None:
         return Decimal("0")
@@ -135,6 +138,8 @@ def collect_ride_payments(
     
     for booking in bookings:
         if booking.status == "cancelled":
+            continue
+        if (booking.payment_status or "").lower() == CASH_PAYMENT_STATUS:
             continue
             
         fare = _to_decimal(booking.total_price)

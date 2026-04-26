@@ -19,24 +19,24 @@ export const Input: React.FC<InputProps> = ({
     ...props
 }) => {
     return (
-        <div className={`flex flex-col gap-1.5 w-full ${className}`}>
-            <label className="text-sm font-medium text-muted-foreground ml-1">
+        <div className={`flex w-full flex-col gap-2 ${className}`}>
+            <label className="ml-1 text-sm font-semibold text-foreground/78">
                 {label}
             </label>
             <div className="relative group">
                 {icon && (
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 group-focus-within:text-indigo-400 transition-colors">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
                         {icon}
                     </div>
                 )}
                 <input
                     className={`
-                        w-full bg-card border rounded-xl py-3 px-4 min-h-[48px] transition-all duration-200 outline-none
-                        ${icon ? 'pl-11' : 'pl-4'}
+                        min-h-[52px] w-full rounded-2xl border bg-card px-4 py-3.5 text-foreground outline-none transition-all duration-200
+                        ${icon ? 'pl-12' : 'pl-4'}
                         ${error
-                            ? 'border-red-500/50 ring-2 ring-red-500/10 focus:border-red-500'
-                            : 'border-card-border hover:border-card-border/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'}
-                        text-foreground placeholder:text-muted-foreground/60
+                            ? 'border-danger/50 bg-danger/5 focus:border-danger focus:ring-4 focus:ring-danger/10'
+                            : 'border-card-border hover:border-primary/20 focus:border-primary focus:ring-4 focus:ring-[var(--ring)]'}
+                        placeholder:text-muted-foreground/80
                     `}
                     {...props}
                 />
@@ -45,7 +45,7 @@ export const Input: React.FC<InputProps> = ({
                 <motion.p
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`text-xs ml-1 ${error ? 'text-red-400' : 'text-muted-foreground/60'}`}
+                    className={`ml-1 text-xs ${error ? 'text-danger' : 'text-muted-foreground'}`}
                 >
                     {error || helperText}
                 </motion.p>

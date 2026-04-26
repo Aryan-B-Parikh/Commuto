@@ -3,6 +3,7 @@
 
 import type { TripResponse } from '@/types/api';
 import type { Trip } from '@/types';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 /**
  * Transform backend TripResponse to frontend Trip type
@@ -33,7 +34,7 @@ export function transformTripResponse(trip: TripResponse): Trip {
         pricePerSeat: trip.price_per_seat || 0,
         seatsAvailable: trip.available_seats,
         totalSeats: trip.total_seats,
-        status: trip.status as 'upcoming' | 'active' | 'completed' | 'cancelled',
+        status: normalizeRideStatus(trip.status),
         driver: {
             id: trip.driver_id || 'unknown',
             name: trip.driver_name || 'Finding Driver...',

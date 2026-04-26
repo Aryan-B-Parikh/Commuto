@@ -19,8 +19,24 @@ function VerifyEmailContent() {
     const [resending, setResending] = useState(false);
     const [devToken, setDevToken] = useState<string | null>(null);
     const [devUrl, setDevUrl] = useState<string | null>(null);
+    const [autoSent, setAutoSent] = useState(false);
 
-    // If token is in the URL query param, auto-fill and verify
+    const resolvePostVerifyRoute = async () => {
+        const currentUser = await authAPI.getCurrentUser();
+        const normalizedRole = currentUser?.role === 'driver' ? 'driver' : 'passenger';
+
+        if (currentUser?.phone_number && currentUser?.is_phone_verified === false) {
+            return '/verify-phone';
+        }
+
+        if (normalizedRole === 'driver' && !currentUser?.profile_completed) {
+            return '/complete-profile';
+        }
+
+        return `/${normalizedRole}/dashboard`;
+    };
+
+    // If the code is in the URL query param, auto-fill and verify
     useEffect(() => {
         const urlToken = searchParams.get('token');
         if (urlToken) {
@@ -30,6 +46,37 @@ function VerifyEmailContent() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // When user lands here right after signup, dispatch verification immediately.
+    useEffect(() => {
+        const urlToken = searchParams.get('token');
+        if (urlToken || autoSent) {
+            return;
+        }
+
+        const autoSend = async () => {
+            setResending(true);
+            setDevToken(null);
+            setDevUrl(null);
+            try {
+                const res = await authAPI.sendVerification();
+                if (res.dev_token) {
+                    setDevToken(res.dev_token);
+                    setDevUrl(res.dev_verify_url ?? null);
+                    showToast('info', 'Dev mode: verification code shown below (no SMTP configured)');
+                } else {
+                    showToast('success', 'Verification code sent to your email.');
+                }
+            } catch (err: any) {
+                showToast('error', err?.response?.data?.detail ?? 'Could not send verification code.');
+            } finally {
+                setResending(false);
+                setAutoSent(true);
+            }
+        };
+
+        void autoSend();
+    }, [searchParams, autoSent, showToast]);
+
     const handleVerify = async (t?: string) => {
         const tokenToUse = t ?? token;
         if (!tokenToUse.trim()) return;
@@ -38,11 +85,12 @@ function VerifyEmailContent() {
         try {
             await authAPI.verifyEmail(tokenToUse.trim());
             setStatus('success');
-            showToast('success', 'Email verified! Now let\'s complete your profile.');
-            setTimeout(() => router.push('/complete-profile'), 2000);
+            const nextRoute = await resolvePostVerifyRoute();
+            showToast('success', 'Email verified successfully.');
+            setTimeout(() => router.push(nextRoute), 2000);
         } catch (err: any) {
             setStatus('error');
-            setErrorMsg(err?.response?.data?.detail ?? 'Verification failed. The token may have expired.');
+            setErrorMsg(err?.response?.data?.detail ?? 'Verification failed. The code may have expired.');
         }
     };
 
@@ -55,7 +103,7 @@ function VerifyEmailContent() {
             if (res.dev_token) {
                 setDevToken(res.dev_token);
                 setDevUrl(res.dev_verify_url ?? null);
-                showToast('info', 'Dev mode: token shown below (no SMTP configured)');
+                showToast('info', 'Dev mode: verification code shown below (no SMTP configured)');
             } else {
                 showToast('success', 'Verification email resent — check your inbox!');
             }
@@ -89,8 +137,8 @@ function VerifyEmailContent() {
                 {status === 'success' ? (
                     <>
                         <h1 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Email Verified!</h1>
-                        <p className="text-[#9CA3AF] text-center mb-6">Your email is confirmed. Next, complete your profile.</p>
-                        <Button fullWidth size="lg" onClick={() => router.push('/complete-profile')}>
+                        <p className="text-[#9CA3AF] text-center mb-6">Your email is confirmed. Redirecting you now.</p>
+                        <Button fullWidth size="lg" onClick={() => router.push('/dashboard')}>
                             Complete Profile →
                         </Button>
                     </>
@@ -98,14 +146,14 @@ function VerifyEmailContent() {
                     <>
                         <h2 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Verify your email</h2>
                         <p className="text-[#9CA3AF] text-center mb-6">
-                            We sent a verification link to your email. Click it or paste the token below.
+                            We sent a 6-digit verification code to your email. Enter it below or use the link from the email.
                         </p>
 
                         {/* Dev mode: show token + link */}
                         {devToken && (
                             <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm">
                                 <p className="text-amber-400 font-semibold mb-1">Dev mode — no SMTP configured</p>
-                                <p className="text-[#9CA3AF] mb-1 break-all">Token: <span className="text-[#F9FAFB] font-mono">{devToken}</span></p>
+                                <p className="text-[#9CA3AF] mb-1 break-all">Verification code: <span className="text-[#F9FAFB] font-mono">{devToken}</span></p>
                                 {devUrl && (
                                     <a href={devUrl} className="text-indigo-400 underline text-xs break-all">{devUrl}</a>
                                 )}
@@ -114,12 +162,14 @@ function VerifyEmailContent() {
 
                         {/* Token input */}
                         <div className="mb-4">
-                            <label className="block text-sm font-medium text-[#9CA3AF] mb-1.5">Verification token</label>
+                            <label className="block text-sm font-medium text-[#9CA3AF] mb-1.5">Verification code</label>
                             <input
                                 type="text"
                                 value={token}
                                 onChange={(e) => { setToken(e.target.value); setErrorMsg(''); setStatus('idle'); }}
-                                placeholder="Paste your verification token here"
+                                inputMode="numeric"
+                                maxLength={6}
+                                placeholder="Enter 6-digit code"
                                 className="w-full px-4 py-3 rounded-xl border border-[#1E293B] bg-[#0B1020] text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none font-mono text-sm"
                             />
                             {errorMsg && (
@@ -153,7 +203,7 @@ function VerifyEmailContent() {
                 )}
 
                 <div className="mt-6 text-center">
-                    <Link href="/complete-profile" className="text-sm text-[#6B7280] hover:text-[#9CA3AF]">
+                    <Link href="/dashboard" className="text-sm text-[#6B7280] hover:text-[#9CA3AF]">
                         Skip for now →
                     </Link>
                 </div>

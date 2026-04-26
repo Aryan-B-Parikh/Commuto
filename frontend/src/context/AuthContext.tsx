@@ -13,9 +13,11 @@ interface AuthContextType {
     role: UserRole;
     isAuthenticated: boolean;
     isLoading: boolean;
+    pendingEmail: string | null;
     login: (email: string, password: string) => Promise<User | null>;
     register: (data: RegisterRequest) => Promise<User>;
     googleLogin: (credential: string, role?: string) => Promise<User | null>;
+    verifyOTP: (otp: string) => Promise<boolean>;
     logout: () => void;
     setRole: (role: UserRole) => void;
     refreshUser: () => Promise<void>;
@@ -31,6 +33,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [role, setRoleState] = useState<UserRole>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
     const getPersistedRole = (): UserRole => {
         if (typeof window === 'undefined') {
@@ -68,36 +71,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 const savedRole = getPersistedRole();
                 const routeRole = getRoleFromPathname();
 
-                if (routeRole || savedRole) setRoleState(routeRole ?? savedRole);
+                if (!token) {
+                    if (routeRole || savedRole) setRoleState(routeRole ?? savedRole);
+                    setIsLoading(false);
+                    return;
+                }
 
-                if (token) {
-                    try {
-                        const userData = await authAPI.getCurrentUser();
-                        const frontendUser = transformBackendUser(userData);
-                        setUser(frontendUser);
-                        // Use backend role as source of truth; saved role is only a fallback.
-                        const backendRole = userData.role as UserRole;
-                        const effectiveRole = routeRole ?? backendRole ?? savedRole;
-                        setRoleState(effectiveRole);
-                        if (effectiveRole) {
-                            localStorage.setItem('commuto_role', effectiveRole);
-                        }
-                    } catch (error: any) {
-                        const status = error?.response?.status;
-                        const isNetworkError = !error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error');
+                try {
+                    const userData = await authAPI.getCurrentUser();
+                    const frontendUser = transformBackendUser(userData);
+                    setUser(frontendUser);
+                    // Backend role is authoritative after authentication.
+                    const backendRole = userData.role as UserRole;
+                    const effectiveRole = backendRole ?? routeRole ?? savedRole;
+                    setRoleState(effectiveRole);
+                    if (effectiveRole) {
+                        localStorage.setItem('commuto_role', effectiveRole);
+                    }
+                } catch (error: any) {
+                    const status = error?.response?.status;
+                    const isNetworkError = !error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error');
 
-                        if (isNetworkError) {
-                            console.warn('Auth check skipped: backend unreachable.');
-                            setUser(null);
-                        } else if (status !== 401) {
-                            console.error('Failed to load user:', error);
-                        }
+                    if (isNetworkError) {
+                        console.warn('Auth check skipped: backend unreachable.');
+                        setUser(null);
+                    } else if (status !== 401) {
+                        console.error('Failed to load user:', error);
+                    }
 
-                        // Clear persisted auth only on actual unauthorized response.
-                        if (status === 401) {
-                            localStorage.removeItem('auth_token');
-                            localStorage.removeItem('commuto_role');
-                        }
+                    // Clear persisted auth only on actual unauthorized response.
+                    if (status === 401) {
+                        localStorage.removeItem('auth_token');
+                        localStorage.removeItem('commuto_role');
                     }
                 }
                 setIsLoading(false);
@@ -127,7 +132,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             (p) => path === p || path.startsWith(p + '/')
         );
 
-        if (!user.profileCompleted && !isAllowed) {
+        if (user.role === 'driver' && !user.profileCompleted && !isAllowed) {
             window.location.href = '/complete-profile';
         }
     }, [user, isLoading]);
@@ -150,12 +155,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             const authResponse = await authAPI.login({ email, password });
             localStorage.setItem('auth_token', authResponse.access_token);
+            setPendingEmail(email);
 
             // Fetch user data
             const userData = await authAPI.getCurrentUser();
             const frontendUser = transformBackendUser(userData);
 
             setUser(frontendUser);
+            setPendingEmail(frontendUser.email);
             setRole(userData.role as UserRole);
             setIsLoading(false);
             return frontendUser;
@@ -170,6 +177,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const register = useCallback(async (data: RegisterRequest): Promise<User> => {
         setIsLoading(true);
         try {
+            setPendingEmail(data.email);
             await authAPI.register(data);
 
             // Auto-login after registration
@@ -181,7 +189,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsLoading(false);
             return loggedInUser;
         } catch (error) {
-            console.error('Registration failed:', error);
             setIsLoading(false);
             throw error;
         }
@@ -191,7 +198,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const googleLogin = useCallback(async (credential: string, role?: string): Promise<User | null> => {
         setIsLoading(true);
         try {
-            const authResponse = await authAPI.googleLogin(credential, role);
+            const requestedRole = role === 'driver' || role === 'passenger' ? role : undefined;
+            const authResponse = await authAPI.googleLogin(credential, requestedRole);
             localStorage.setItem('auth_token', authResponse.access_token);
 
             // Fetch user data
@@ -199,6 +207,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const frontendUser = transformBackendUser(userData);
 
             setUser(frontendUser);
+            setPendingEmail(frontendUser.email);
             setRole(userData.role as UserRole);
             setIsLoading(false);
             return frontendUser;
@@ -209,6 +218,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }, [setRole]);
 
+    // Legacy OTP page support. Use the real backend email verification endpoint.
+    const verifyOTP = useCallback(async (otp: string): Promise<boolean> => {
+        setIsLoading(true);
+        try {
+            await authAPI.verifyEmail(otp.trim());
+            setPendingEmail(null);
+            return true;
+        } catch (error) {
+            console.error('OTP verification failed:', error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     // Refresh user data
     const refreshUser = useCallback(async () => {
         try {
@@ -218,7 +242,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const savedRole = getPersistedRole();
             const routeRole = getRoleFromPathname();
             const backendRole = userData.role as UserRole;
-            setRole(routeRole ?? backendRole ?? savedRole);
+            setRole(backendRole ?? routeRole ?? savedRole);
         } catch (error) {
             console.error('Failed to refresh user:', error);
         }
@@ -240,9 +264,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 role,
                 isAuthenticated: !!user,
                 isLoading,
+                pendingEmail,
                 login,
                 register,
                 googleLogin,
+                verifyOTP,
                 logout,
                 setRole,
                 refreshUser,

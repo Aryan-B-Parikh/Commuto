@@ -30,6 +30,7 @@ import { transformTripResponse } from '@/utils/tripTransformers';
 import { calculateDistance } from '@/utils/geoUtils';
 import { useRouteInfo } from '@/hooks/useRouteInfo';
 import dynamic from 'next/dynamic';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 const TripMap = dynamic(() => import('@/components/map/TripMap'), {
     ssr: false,
@@ -68,7 +69,7 @@ export default function PassengerLivePage() {
 
     const targetCoords = useMemo((): [number, number] | undefined => {
         if (!trip) return undefined;
-        const isStarted = trip.status === 'active';
+        const isStarted = normalizeRideStatus(trip.status) === 'started';
         return isStarted ? destinationPos : passengerPos;
     }, [trip, destinationPos, passengerPos]);
 
@@ -81,9 +82,12 @@ export default function PassengerLivePage() {
         const fetchActiveTrip = async () => {
             try {
                 const trips = await tripsAPI.getMyTrips();
-                const active = trips.find(t => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
-                if (active) {
-                    setTrip(active);
+                const startedTrip = trips.find(t => normalizeRideStatus(t.status) === 'started');
+                const acceptedTrip = trips.find(t => normalizeRideStatus(t.status) === 'accepted');
+                if (startedTrip) {
+                    setTrip(startedTrip);
+                } else if (acceptedTrip) {
+                    setTrip(acceptedTrip);
                 }
             } catch (error) {
                 console.error('Failed to fetch active trip:', error);
@@ -146,7 +150,7 @@ export default function PassengerLivePage() {
                         <Card className="p-8 text-center border border-card-border bg-card/70">
                             <h2 className="text-2xl font-black text-foreground mb-3">No Active Trip Right Now</h2>
                             <p className="text-sm text-muted-foreground mb-8">
-                                Active Trips only appears when your trip status is bid accepted, driver assigned, or active.
+                                Active Trips only appears when your trip status is accepted or started.
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                                 <Button onClick={() => router.push('/passenger/ride-sharing')} className="w-full sm:w-auto">
@@ -156,6 +160,37 @@ export default function PassengerLivePage() {
                                     View Trip History
                                 </Button>
                             </div>
+                        </Card>
+                    </div>
+                </DashboardLayout>
+            </RoleGuard>
+        );
+    }
+
+    const currentStatus = normalizeRideStatus(trip.status);
+
+    if (currentStatus === 'accepted') {
+        return (
+            <RoleGuard allowedRoles={['passenger']}>
+                <DashboardLayout userType="passenger" title="Trip Details">
+                    <div className="max-w-2xl mx-auto py-16 px-4">
+                        <Card className="p-8 text-center border-none shadow-xl bg-[#111827] space-y-5">
+                            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-400">
+                                <Car size={30} />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-[#F9FAFB] mb-2">Driver is arriving</h2>
+                                <p className="text-sm text-[#9CA3AF]">Your ride has been accepted. Stay ready at the pickup point.</p>
+                            </div>
+                            <div className="rounded-2xl border border-[#1E293B] bg-[#0B1020] p-4 text-left space-y-2">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF]">Pickup</p>
+                                <p className="text-sm font-semibold text-[#F9FAFB]">{trip.origin_address}</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] pt-2">Destination</p>
+                                <p className="text-sm font-semibold text-[#F9FAFB]">{trip.dest_address}</p>
+                            </div>
+                            <Button onClick={() => router.push(`/passenger/trip/${trip.id}`)} className="w-full">
+                                View Ride Details
+                            </Button>
                         </Card>
                     </div>
                 </DashboardLayout>
@@ -240,13 +275,12 @@ export default function PassengerLivePage() {
                                     <div className="flex items-center justify-between mb-6 lg:mb-8 relative">
                                         <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-[#1E293B] -translate-y-1/2 z-0" />
                                         {[
-                                            { label: 'Confirmed', status: 'bid_accepted', icon: <Shield size={14} /> },
-                                            { label: 'Assigned', status: 'driver_assigned', icon: <Car size={14} /> },
-                                            { label: 'Active', status: 'active', icon: <Navigation size={14} /> },
+                                            { label: 'Confirmed', status: 'accepted', icon: <Shield size={14} /> },
+                                            { label: 'Active', status: 'started', icon: <Navigation size={14} /> },
                                             { label: 'Completed', status: 'completed', icon: <Clock size={14} /> }
                                         ].map((step, i) => {
-                                            const statuses = ['bid_accepted', 'driver_assigned', 'active', 'completed'];
-                                            const currentIndex = statuses.indexOf(trip.status || 'pending');
+                                            const statuses = ['accepted', 'started', 'completed'];
+                                            const currentIndex = statuses.indexOf(currentStatus || 'requested');
                                             const stepIndex = i;
                                             const isDone = stepIndex < currentIndex;
                                             const isActive = stepIndex === currentIndex;
@@ -275,10 +309,10 @@ export default function PassengerLivePage() {
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest leading-none mb-1">
-                                                    {trip.status === 'active' ? 'On Route To' : 'Meeting Point'}
+                                                    {currentStatus === 'started' ? 'On Route To' : 'Meeting Point'}
                                                 </p>
                                                 <p className="text-sm font-bold text-[#F9FAFB] truncate max-w-[150px]">
-                                                    {trip.status === 'active' ? trip.dest_address : trip.origin_address}
+                                                    {currentStatus === 'started' ? trip.dest_address : trip.origin_address}
                                                 </p>
                                                 {routeName && (
                                                     <p className="text-[10px] text-[#6B7280] font-medium mt-1 truncate max-w-[150px]">

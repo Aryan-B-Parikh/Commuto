@@ -1,9 +1,13 @@
 import sys
-import os
+from pathlib import Path
 import uuid
 import requests
 from decimal import Decimal
 from datetime import datetime, timedelta, date
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 BASE_URL = "http://localhost:8000"
 
@@ -28,7 +32,7 @@ if not wallet:
 wallet.balance += Decimal('{amount}')
 db.commit()
 """
-    subprocess.run(["venv\\Scripts\\python.exe", "-c", py_code], cwd="backend", check=True)
+    subprocess.run(["venv\\Scripts\\python.exe", "-c", py_code], cwd=str(BACKEND_DIR), check=True)
 
 def test_hardened_features():
     print("--- Starting Post-Payment and Age Validation Verification ---")

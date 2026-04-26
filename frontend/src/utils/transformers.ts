@@ -22,6 +22,7 @@ export function transformBackendUser(backendUser: BackendUser | UserResponse): U
         rating: userResp.rating || 0,
         totalTrips: userResp.total_trips || 0,
         verified: backendUser.is_verified,
+        isPhoneVerified: backendUser.is_phone_verified ?? false,
         profileCompleted: backendUser.profile_completed ?? false,
         joinedDate: backendUser.created_at,
         todayEarnings: userResp.today_earnings || 0,

@@ -45,7 +45,7 @@ class TestOTP:
         
         # Driver tries wrong OTP
         response = client.post(f"/rides/{trip_id}/verify-otp", json={
-            "otp": "0000"
+            "otp": "000000"
         }, headers=auth_headers_driver)
         
         assert response.status_code == 400
@@ -148,7 +148,7 @@ class TestOTP:
         # Driver tries to complete without verifying OTP
         response = client.post(
             f"/rides/{trip_id}/complete",
-            json={"otp": "1234"},
+            json={"otp": "123456"},
             headers=auth_headers_driver,
         )
         
@@ -205,7 +205,7 @@ class TestOTPRateLimiting:
         # Make 6 OTP verification attempts (limit is 5/minute)
         for i in range(6):
             response = client.post(f"/rides/{trip_id}/verify-otp", json={
-                "otp": otp if i == 0 else "0000"  # First is correct, rest are wrong
+                "otp": otp if i == 0 else "000000"  # First is correct, rest are wrong
             }, headers=auth_headers_driver)
         
         # The 6th request should be rate limited

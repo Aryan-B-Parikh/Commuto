@@ -11,9 +11,13 @@ import logging
 import uuid
 from typing import Optional
 from services.wallet_service import payout_driver_from_prepaid_bookings, collect_ride_payments
+from ride_states import RIDE_STATUS_ACCEPTED, RIDE_STATUS_CANCELLED, RIDE_STATUS_COMPLETED, RIDE_STATUS_STARTED, normalize_ride_status
 
 router = APIRouter(prefix="/rides", tags=["OTP & Trip Completion"])
 logger = logging.getLogger(__name__)
+
+
+CASH_PAYMENT_STATUS = "cash"
 
 
 @router.post("/{trip_id}/verify-otp", response_model=trip_schemas.OTPVerifyResponse, status_code=status.HTTP_200_OK)
@@ -51,14 +55,14 @@ def verify_otp_and_start_ride(
             )
         
         # Check trip status
-        if trip.status == "completed":
+        if normalize_ride_status(trip.status) == RIDE_STATUS_COMPLETED:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Trip is already completed"
             )
         
-        if trip.status == "cancelled":
+        if normalize_ride_status(trip.status) == RIDE_STATUS_CANCELLED:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -86,7 +90,7 @@ def verify_otp_and_start_ride(
         
         # Mark OTP as verified and start ride
         trip.otp_verified = True
-        trip.status = "active"
+        trip.status = RIDE_STATUS_STARTED
         trip.version += 1
 
         # Generate a fresh 6-digit completion OTP for drop-off verification.
@@ -161,14 +165,14 @@ def complete_ride(
             )
         
         # Check if already completed
-        if trip.status == "completed":
+        if normalize_ride_status(trip.status) == RIDE_STATUS_COMPLETED:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Trip is already completed"
             )
         
-        if trip.status == "cancelled":
+        if normalize_ride_status(trip.status) == RIDE_STATUS_CANCELLED:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -199,7 +203,7 @@ def complete_ride(
         
         # Complete ride
         completed_at = datetime.utcnow()
-        trip.status = "completed"
+        trip.status = RIDE_STATUS_COMPLETED
         trip.start_otp = None
         trip.completion_otp = None
         trip.version += 1
@@ -224,7 +228,7 @@ def complete_ride(
         
         # Post-ride payment collection
         collect_ride_payments(db, trip, bookings)
-        trip.payment_status = "completed"
+        trip.payment_status = CASH_PAYMENT_STATUS if (trip.payment_status or "").lower() == CASH_PAYMENT_STATUS else "completed"
 
         db.commit()
         

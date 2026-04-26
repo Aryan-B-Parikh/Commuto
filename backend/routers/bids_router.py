@@ -15,6 +15,7 @@ from typing import List, Optional
 from uuid import UUID
 from routers.websocket_router import notify_new_bid, notify_bid_status_update
 from services.wallet_service import reconcile_booking_hold
+from ride_states import RIDE_STATUS_ACCEPTED, RIDE_STATUS_REQUESTED, normalize_ride_status
 
 router = APIRouter(prefix="/bids", tags=["Bidding"])
 logger = logging.getLogger(__name__)
@@ -304,7 +305,7 @@ def accept_bid(
             )
         
         # Check if trip is still available
-        if trip.status not in ["pending", "active"]:
+        if normalize_ride_status(trip.status) != RIDE_STATUS_REQUESTED:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -329,7 +330,7 @@ def accept_bid(
         # Update trip with driver and price
         trip.driver_id = bid.driver_id
         trip.total_price = bid.bid_amount # Target is now the bid amount
-        trip.status = "bid_accepted"
+        trip.status = RIDE_STATUS_ACCEPTED
         trip.version = current_version + 1  # Increment version for optimistic locking
         
         # Generate OTP for ride start (6 digits for better security)

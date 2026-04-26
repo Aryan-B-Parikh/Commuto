@@ -1,19 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/utils/formatters';
 import { useToast } from '@/hooks/useToast';
-import { bidsAPI } from '@/services/api';
-import { calculateDistance } from '@/utils/geoUtils';
+import { bidsAPI, otpAPI } from '@/services/api';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import type { DriverBidWithTrip } from '@/types/api';
 import {
     Clock,
-    Navigation,
     Users,
     CheckCircle2,
     XCircle,
@@ -21,16 +19,48 @@ import {
     RefreshCw,
     Inbox,
     TrendingUp,
-    ChevronRight,
     MessageSquare,
-    Navigation2
+    Navigation2,
+    PlayCircle
 } from 'lucide-react';
 import { useRouteInfo } from '@/hooks/useRouteInfo';
+import { VerifyOTPModal } from '@/components/ride/VerifyOTPModal';
+import { normalizeRideStatus } from '@/utils/rideState';
+import { useRouter } from 'next/navigation';
 
-function MobileBidCard({ bid, statusConfig, tripStatusConfig }: {
+type BidStatusConfig = {
+    bg: string;
+    text: string;
+    icon: React.ReactNode;
+    accent: string;
+};
+
+type TripStatusConfig = {
+    bg: string;
+    text: string;
+};
+
+function getErrorStatus(error: unknown): number | undefined {
+    if (typeof error !== 'object' || error === null || !('response' in error)) return undefined;
+    const response = error.response;
+    if (typeof response !== 'object' || response === null || !('status' in response)) return undefined;
+    return typeof response.status === 'number' ? response.status : undefined;
+}
+
+function getErrorDetail(error: unknown): string | undefined {
+    if (typeof error !== 'object' || error === null || !('response' in error)) return undefined;
+    const response = error.response;
+    if (typeof response !== 'object' || response === null || !('data' in response)) return undefined;
+    const data = response.data;
+    if (typeof data !== 'object' || data === null || !('detail' in data)) return undefined;
+    return typeof data.detail === 'string' ? data.detail : undefined;
+}
+
+function MobileBidCard({ bid, statusConfig, tripStatusConfig, onStartRide }: {
     bid: DriverBidWithTrip,
-    statusConfig: any,
-    tripStatusConfig: any
+    statusConfig: Record<string, BidStatusConfig>,
+    tripStatusConfig: Record<string, TripStatusConfig>,
+    onStartRide: (bid: DriverBidWithTrip) => void
 }) {
     const origin = React.useMemo(() => [Number(bid.origin_lat), Number(bid.origin_lng)] as [number, number], [bid.origin_lat, bid.origin_lng]);
     const destination = React.useMemo(() => [Number(bid.dest_lat), Number(bid.dest_lng)] as [number, number], [bid.dest_lat, bid.dest_lng]);
@@ -116,15 +146,28 @@ function MobileBidCard({ bid, statusConfig, tripStatusConfig }: {
                         ))}
                     </div>
                 )}
+
+                {bid.status === 'accepted' && normalizeRideStatus(bid.trip_status) === 'accepted' && (
+                    <div className="px-4 pb-4">
+                        <button
+                            onClick={() => onStartRide(bid)}
+                            className="w-full h-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                        >
+                            <PlayCircle size={16} />
+                            Start Ride
+                        </button>
+                    </div>
+                )}
             </div>
         </motion.div>
     );
 }
 
-function DesktopBidCard({ bid, statusConfig, tripStatusConfig }: {
+function DesktopBidCard({ bid, statusConfig, tripStatusConfig, onStartRide }: {
     bid: DriverBidWithTrip,
-    statusConfig: any,
-    tripStatusConfig: any
+    statusConfig: Record<string, BidStatusConfig>,
+    tripStatusConfig: Record<string, TripStatusConfig>,
+    onStartRide: (bid: DriverBidWithTrip) => void
 }) {
     const origin = React.useMemo(() => [Number(bid.origin_lat), Number(bid.origin_lng)] as [number, number], [bid.origin_lat, bid.origin_lng]);
     const destination = React.useMemo(() => [Number(bid.dest_lat), Number(bid.dest_lng)] as [number, number], [bid.dest_lat, bid.dest_lng]);
@@ -206,6 +249,15 @@ function DesktopBidCard({ bid, statusConfig, tripStatusConfig }: {
                             {formatCurrency(bid.bid_amount)}
                         </p>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Per Seat</p>
+                        {bid.status === 'accepted' && normalizeRideStatus(bid.trip_status) === 'accepted' && (
+                            <button
+                                onClick={() => onStartRide(bid)}
+                                className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600"
+                            >
+                                <PlayCircle size={14} />
+                                Start Ride
+                            </button>
+                        )}
                     </div>
                 </div>
             </Card>
@@ -224,40 +276,44 @@ const itemVariants = {
 };
 
 export default function MyBidsPage() {
-    const { showToast } = useToast() as any;
+    const router = useRouter();
+    const { showToast } = useToast();
     const [bids, setBids] = useState<DriverBidWithTrip[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
+    const [selectedAcceptedBid, setSelectedAcceptedBid] = useState<DriverBidWithTrip | null>(null);
+    const [isStartRideModalOpen, setIsStartRideModalOpen] = useState(false);
+    const [isStartingRide, setIsStartingRide] = useState(false);
 
     // === BUSINESS LOGIC (UNCHANGED) ===
-    useEffect(() => {
-        fetchBids();
-    }, []);
-
-    const fetchBids = async () => {
+    const fetchBids = useCallback(async () => {
         try {
             setIsLoading(true);
             const data = await bidsAPI.getMyBids();
             setBids(data);
-        } catch (error: any) {
-            if (error?.response?.status !== 401) {
+        } catch (error: unknown) {
+            if (getErrorStatus(error) !== 401) {
                 console.error('Failed to fetch bids:', error);
                 showToast('error', 'Failed to load your bids.');
             }
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [showToast]);
+
+    useEffect(() => {
+        fetchBids();
+    }, [fetchBids]);
 
     const filtered = filter === 'all' ? bids : bids.filter(b => b.status === filter);
 
-    const statusConfig: Record<string, { bg: string, text: string, icon: React.ReactNode, accent: string }> = {
+    const statusConfig: Record<string, BidStatusConfig> = {
         pending: { bg: 'bg-amber-500/10', text: 'text-amber-400', icon: <Clock size={14} />, accent: 'border-l-amber-500' },
         accepted: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', icon: <CheckCircle2 size={14} />, accent: 'border-l-emerald-500' },
         rejected: { bg: 'bg-red-500/10', text: 'text-red-400', icon: <XCircle size={14} />, accent: 'border-l-red-400' },
     };
 
-    const tripStatusConfig: Record<string, { bg: string, text: string }> = {
+    const tripStatusConfig: Record<string, TripStatusConfig> = {
         pending: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
         active: { bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
         completed: { bg: 'bg-muted', text: 'text-muted-foreground' },
@@ -276,6 +332,27 @@ export default function MyBidsPage() {
         { key: 'accepted' as const, label: 'Accepted', count: acceptedCount },
         { key: 'rejected' as const, label: 'Rejected', count: rejectedCount },
     ];
+
+    const handleOpenStartRide = (bid: DriverBidWithTrip) => {
+        setSelectedAcceptedBid(bid);
+        setIsStartRideModalOpen(true);
+    };
+
+    const handleStartRide = async (otp: string) => {
+        if (!selectedAcceptedBid) return;
+
+        setIsStartingRide(true);
+        try {
+            await otpAPI.verifyOTP(selectedAcceptedBid.trip_id, otp);
+            showToast('success', 'Ride started successfully. Opening live trip...');
+            setIsStartRideModalOpen(false);
+            router.push('/driver/live');
+        } catch (error: unknown) {
+            showToast('error', getErrorDetail(error) || 'Failed to start ride. Please try again.');
+        } finally {
+            setIsStartingRide(false);
+        }
+    };
 
     // ========================= RENDER =========================
     return (
@@ -399,12 +476,19 @@ export default function MyBidsPage() {
                                             bid={bid}
                                             statusConfig={statusConfig}
                                             tripStatusConfig={tripStatusConfig}
+                                            onStartRide={handleOpenStartRide}
                                         />
                                     ))}
                                 </AnimatePresence>
                             </motion.div>
                         )}
                     </motion.div>
+                    <VerifyOTPModal
+                        isOpen={isStartRideModalOpen}
+                        onClose={() => setIsStartRideModalOpen(false)}
+                        isVerifying={isStartingRide}
+                        onVerify={handleStartRide}
+                    />
                 </DashboardLayout>
             </div>
 
@@ -439,16 +523,16 @@ export default function MyBidsPage() {
                         {/* Filter Tabs + Refresh */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                {['all', 'pending', 'accepted', 'rejected'].map(f => (
+                                {filterTabs.map(tab => (
                                     <button
-                                        key={f}
-                                        onClick={() => setFilter(f as any)}
-                                        className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${filter === f
+                                        key={tab.key}
+                                        onClick={() => setFilter(tab.key)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${filter === tab.key
                                             ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
                                             : 'bg-card text-muted-foreground hover:bg-muted border border-border'
                                             }`}
                                     >
-                                        {f} {f === 'all' ? `(${bids.length})` : `(${bids.filter(b => b.status === f).length})`}
+                                        {tab.label} ({tab.count})
                                     </button>
                                 ))}
                             </div>
@@ -497,12 +581,19 @@ export default function MyBidsPage() {
                                             bid={bid}
                                             statusConfig={statusConfig}
                                             tripStatusConfig={tripStatusConfig}
+                                            onStartRide={handleOpenStartRide}
                                         />
                                     ))}
                                 </AnimatePresence>
                             </motion.div>
                         )}
                     </motion.div>
+                    <VerifyOTPModal
+                        isOpen={isStartRideModalOpen}
+                        onClose={() => setIsStartRideModalOpen(false)}
+                        isVerifying={isStartingRide}
+                        onVerify={handleStartRide}
+                    />
                 </DashboardLayout>
             </div>
 

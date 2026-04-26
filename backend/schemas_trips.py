@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
+from ride_states import normalize_ride_status
 
 # Location Schemas
 class LocationCreate(BaseModel):
@@ -22,8 +23,7 @@ class LocationResponse(BaseModel):
     longitude: float
     timestamp: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Trip Schemas
@@ -34,6 +34,7 @@ class SharedTripCreate(BaseModel):
     time: str
     total_seats: int = Field(ge=1, le=4)
     total_price: float = Field(gt=0)
+    payment_method: str = Field(default="online", pattern="^(online|cash)$")
     notes: Optional[str] = Field(default=None, max_length=500)
 
 
@@ -76,12 +77,17 @@ class TripResponse(BaseModel):
     booking_id: Optional[str] = None
     booking_total_price: Optional[float] = None
     booking_payment_status: Optional[str] = None
+    payment_method: Optional[str] = None
     
     # All passenger notes for this trip
     passenger_notes: List[PassengerNote] = []
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value):
+        return normalize_ride_status(value)
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TripCancellationRequest(BaseModel):
@@ -112,8 +118,7 @@ class BidResponse(BaseModel):
     is_counter_bid: Optional[bool] = False
     parent_bid_id: Optional[UUID] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DriverBidWithTrip(BaseModel):
@@ -137,6 +142,11 @@ class DriverBidWithTrip(BaseModel):
     price_per_seat: Optional[float] = None
     notes: Optional[str] = None
     passenger_notes: List[PassengerNote] = []
+
+    @field_validator("trip_status", mode="before")
+    @classmethod
+    def normalize_trip_status(cls, value):
+        return normalize_ride_status(value)
 
 
 class BidWithDriver(BaseModel):
@@ -183,15 +193,13 @@ class PassengerShortInfo(BaseModel):
     avatar_url: Optional[str] = None
     notes: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class BookingShortInfo(BaseModel):
     id: UUID
     payment_status: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TripWithPassengers(TripResponse):
     passengers: List[PassengerShortInfo] = []

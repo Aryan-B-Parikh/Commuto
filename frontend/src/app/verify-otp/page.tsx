@@ -9,6 +9,7 @@ import { OTPInput } from '@/components/ui/OTPInput';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useCountdown } from '@/hooks/useCountdown';
+import { authAPI } from '@/services/api';
 
 export default function VerifyOTPPage() {
     const router = useRouter();
@@ -49,13 +50,20 @@ export default function VerifyOTPPage() {
         }
     };
 
-    const handleResend = () => {
-        if (!isActive || seconds === 0) {
-            // Simulate resending OTP
+    const handleResend = async () => {
+        if (isActive && seconds > 0) {
+            return;
+        }
+
+        try {
+            await authAPI.sendVerification();
             start(300);
             setOtp('');
             setError('');
             showToast('info', 'New OTP sent to your email');
+        } catch (err: any) {
+            setError(err?.response?.data?.detail ?? 'Could not resend verification code.');
+            showToast('error', err?.response?.data?.detail ?? 'Could not resend verification code.');
         }
     };
 
@@ -158,10 +166,9 @@ export default function VerifyOTPPage() {
                                     </p>
                                 </div>
 
-                                {/* Demo hint */}
                                 <div className="mt-8 p-4 bg-[#1E293B]/50 rounded-xl border border-[#374151]/30">
                                     <p className="text-xs text-[#6B7280]">
-                                        <span className="font-medium">Demo:</span> Use code <span className="font-mono font-bold text-indigo-400">123456</span> to verify
+                                        Enter the real 6-digit verification code from your email.
                                     </p>
                                 </div>
                             </motion.div>
