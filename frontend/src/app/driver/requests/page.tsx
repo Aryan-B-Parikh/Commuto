@@ -51,14 +51,14 @@ function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
             transition={{ duration: 0.3, delay: index * 0.05 }}
             className="group"
         >
-            <div className="bg-[#111827] rounded-[24px] border border-[#1E293B] overflow-hidden hover:border-indigo-500/30 transition-all shadow-sm hover:shadow-xl hover:shadow-indigo-500/5">
+            <div className="bg-card rounded-3xl border border-card-border overflow-hidden hover:border-indigo-500/30 transition-all shadow-sm hover:shadow-xl hover:shadow-indigo-500/5">
                 {/* Header: Relative Time + Seats */}
-                <div className="px-5 py-4 flex items-center justify-between border-b border-[#1E293B]/50 bg-[#0B1020]/30">
+                <div className="px-5 py-4 flex items-center justify-between border-b border-card-border/70 bg-background/40">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
                             <Clock size={14} className="text-indigo-400" />
                         </div>
-                        <p className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-widest">
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                             Shared • {getTimeAgo(request.created_at)}
                         </p>
                     </div>
@@ -75,41 +75,41 @@ function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
                     <div className="flex gap-4 mb-6">
                         <div className="flex flex-col items-center pt-1.5">
                             <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-4 ring-indigo-500/10" />
-                            <div className="w-0.5 flex-1 bg-gradient-to-b from-indigo-500 to-red-500 my-1 min-h-[32px] opacity-20" />
+                            <div className="w-0.5 flex-1 bg-linear-to-b from-indigo-500 to-red-500 my-1 min-h-8 opacity-20" />
                             <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-500/10" />
                         </div>
                         <div className="flex-1 space-y-5">
                             <div>
                                 <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">Pickup Address</p>
-                                <p className="text-sm font-bold text-[#F9FAFB] leading-snug line-clamp-1">{request.origin_address}</p>
+                                <p className="text-sm font-bold text-foreground leading-snug line-clamp-1">{request.origin_address}</p>
                             </div>
                             <div>
                                 <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest mb-1.5">Destination</p>
-                                <p className="text-sm font-bold text-[#F9FAFB] leading-snug line-clamp-1">{request.dest_address}</p>
+                                <p className="text-sm font-bold text-foreground leading-snug line-clamp-1">{request.dest_address}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Stats Strip */}
                     <div className="grid grid-cols-2 gap-3 mb-6">
-                        <div className="bg-[#0B1020]/50 rounded-2xl p-3 border border-[#1E293B]/50 flex items-center gap-3">
+                        <div className="bg-background/60 rounded-2xl p-3 border border-card-border/70 flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-indigo-400">
                                 <Navigation2 size={16} />
                             </div>
                             <div>
-                                <p className="text-[14px] font-black text-[#F9FAFB]">{distanceKm} km</p>
-                                <p className="text-[9px] font-bold text-[#6B7280] uppercase tracking-widest">Road Dist.</p>
+                                <p className="text-[14px] font-black text-foreground">{distanceKm} km</p>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Road Dist.</p>
                             </div>
                         </div>
-                        <div className="bg-[#0B1020]/50 rounded-2xl p-3 border border-[#1E293B]/50 flex items-center gap-3">
+                        <div className="bg-background/60 rounded-2xl p-3 border border-card-border/70 flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-indigo-400">
                                 <Clock size={16} />
                             </div>
                             <div>
-                                <p className="text-[14px] font-black text-[#F9FAFB]">
+                                <p className="text-[14px] font-black text-foreground">
                                     {new Date(request.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                 </p>
-                                <p className="text-[9px] font-bold text-[#6B7280] uppercase tracking-widest">Pickup Time</p>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Pickup Time</p>
                             </div>
                         </div>
                     </div>
@@ -118,7 +118,7 @@ function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
                     <div className="flex gap-3">
                         <button
                             onClick={() => handleAction(request.id, 'reject')}
-                            className="w-12 h-12 rounded-2xl bg-[#1E293B] hover:bg-red-500/10 text-[#6B7280] hover:text-red-400 flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-red-500/20"
+                            className="w-12 h-12 rounded-2xl bg-muted hover:bg-red-500/10 text-muted-foreground hover:text-red-400 flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-red-500/20"
                         >
                             <X size={20} />
                         </button>
@@ -295,14 +295,14 @@ export default function DriverRequestsPage() {
                     <div className="mb-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-2xl font-black text-[#F9FAFB] tracking-tight">Ride Requests</h1>
-                                <p className="text-sm text-[#6B7280] mt-0.5">
+                                <h1 className="text-2xl font-black text-foreground tracking-tight">Ride Requests</h1>
+                                <p className="text-sm text-muted-foreground mt-0.5">
                                     {isLoading ? 'Loading...' : `${requests.length} pending request${requests.length !== 1 ? 's' : ''}`}
                                 </p>
                             </div>
                             <button
                                 onClick={fetchRequests}
-                                className="w-10 h-10 rounded-xl bg-[#1E293B] hover:bg-[#374151] flex items-center justify-center text-[#9CA3AF] hover:text-[#F9FAFB] transition-all active:scale-90"
+                                className="w-10 h-10 rounded-xl bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-90"
                             >
                                 <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
                             </button>
@@ -334,11 +334,11 @@ export default function DriverRequestsPage() {
                             <div className="flex items-start justify-between gap-4">
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Ride accepted</p>
-                                    <h2 className="mt-1 text-lg font-black text-[#F9FAFB]">Driver is on the way to pickup</h2>
-                                    <p className="mt-2 text-sm text-[#9CA3AF]">
+                                    <h2 className="mt-1 text-lg font-black text-foreground">Driver is on the way to pickup</h2>
+                                    <p className="mt-2 text-sm text-muted-foreground">
                                         Pickup: {acceptedTrip.origin_address}
                                     </p>
-                                    <p className="text-sm text-[#9CA3AF]">
+                                    <p className="text-sm text-muted-foreground">
                                         Customer: {acceptedTrip.passenger_notes?.[0]?.passenger_name || 'Rider'}
                                     </p>
                                 </div>
@@ -368,15 +368,15 @@ export default function DriverRequestsPage() {
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         transition={{ delay: i * 0.1 }}
-                                        className="rounded-2xl border border-[#1E293B] overflow-hidden"
+                                        className="rounded-2xl border border-card-border overflow-hidden"
                                     >
-                                        <div className="h-4 bg-[#1E293B]/50 w-1/3 rounded m-5 animate-pulse" />
+                                        <div className="h-4 bg-muted/70 w-1/3 rounded m-5 animate-pulse" />
                                         <div className="px-5 space-y-3 pb-5">
-                                            <div className="h-12 bg-[#1E293B]/30 rounded-xl animate-pulse" />
-                                            <div className="h-12 bg-[#1E293B]/30 rounded-xl animate-pulse" />
+                                            <div className="h-12 bg-muted/50 rounded-xl animate-pulse" />
+                                            <div className="h-12 bg-muted/50 rounded-xl animate-pulse" />
                                             <div className="flex gap-3 pt-2">
-                                                <div className="h-12 flex-1 bg-[#1E293B]/30 rounded-xl animate-pulse" />
-                                                <div className="h-12 flex-1 bg-[#1E293B]/30 rounded-xl animate-pulse" />
+                                                <div className="h-12 flex-1 bg-muted/50 rounded-xl animate-pulse" />
+                                                <div className="h-12 flex-1 bg-muted/50 rounded-xl animate-pulse" />
                                             </div>
                                         </div>
                                     </motion.div>
@@ -404,9 +404,9 @@ export default function DriverRequestsPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.4 }}
                             >
-                                <div className="bg-[#111827] rounded-3xl border border-[#1E293B] overflow-hidden">
+                                <div className="bg-card rounded-3xl border border-card-border overflow-hidden">
                                     {/* Decorative top glow */}
-                                    <div className="h-32 bg-gradient-to-b from-indigo-500/10 via-indigo-500/5 to-transparent flex items-center justify-center">
+                                    <div className="h-32 bg-linear-to-b from-indigo-500/10 via-indigo-500/5 to-transparent flex items-center justify-center">
                                         <motion.div
                                             initial={{ scale: 0 }}
                                             animate={{ scale: 1 }}
@@ -421,38 +421,38 @@ export default function DriverRequestsPage() {
                                     </div>
 
                                     <div className="px-6 pb-8 text-center -mt-2">
-                                        <h3 className="text-xl font-black text-[#F9FAFB] mb-2">You&apos;re all caught up!</h3>
-                                        <p className="text-sm text-[#6B7280] mb-6 max-w-xs mx-auto">
+                                        <h3 className="text-xl font-black text-foreground mb-2">You&apos;re all caught up!</h3>
+                                        <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
                                             No pending ride requests right now. New requests will appear here automatically.
                                         </p>
 
                                         {/* Tips */}
                                         <div className="space-y-3 mb-8">
-                                            <div className="flex items-center gap-3 bg-[#0B1020] rounded-xl px-4 py-3 text-left border border-[#1E293B]/50">
+                                            <div className="flex items-center gap-3 bg-background rounded-xl px-4 py-3 text-left border border-card-border/70">
                                                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
                                                     <Wifi size={14} className="text-emerald-400" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-semibold text-[#F9FAFB]">Stay online</p>
-                                                    <p className="text-xs text-[#6B7280]">Keep your status online to receive new ride requests</p>
+                                                    <p className="text-sm font-semibold text-foreground">Stay online</p>
+                                                    <p className="text-xs text-muted-foreground">Keep your status online to receive new ride requests</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3 bg-[#0B1020] rounded-xl px-4 py-3 text-left border border-[#1E293B]/50">
+                                            <div className="flex items-center gap-3 bg-background rounded-xl px-4 py-3 text-left border border-card-border/70">
                                                 <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
                                                     <MapPinned size={14} className="text-blue-400" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-semibold text-[#F9FAFB]">Keep location active</p>
-                                                    <p className="text-xs text-[#6B7280]">Enable GPS for accurate nearby ride matching</p>
+                                                    <p className="text-sm font-semibold text-foreground">Keep location active</p>
+                                                    <p className="text-xs text-muted-foreground">Enable GPS for accurate nearby ride matching</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3 bg-[#0B1020] rounded-xl px-4 py-3 text-left border border-[#1E293B]/50">
+                                            <div className="flex items-center gap-3 bg-background rounded-xl px-4 py-3 text-left border border-card-border/70">
                                                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
                                                     <Sparkles size={14} className="text-amber-400" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-semibold text-[#F9FAFB]">Peak hours</p>
-                                                    <p className="text-xs text-[#6B7280]">More requests during 8–10 AM and 5–8 PM</p>
+                                                    <p className="text-sm font-semibold text-foreground">Peak hours</p>
+                                                    <p className="text-xs text-muted-foreground">More requests during 8–10 AM and 5–8 PM</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -461,7 +461,7 @@ export default function DriverRequestsPage() {
                                         <div className="flex gap-3">
                                             <button
                                                 onClick={() => router.push('/driver/dashboard')}
-                                                className="flex-1 h-12 rounded-xl bg-[#1E293B] hover:bg-[#374151] text-[#F9FAFB] font-bold text-sm transition-all active:scale-[0.97]"
+                                                className="flex-1 h-12 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-bold text-sm transition-all active:scale-[0.97]"
                                             >
                                                 Dashboard
                                             </button>

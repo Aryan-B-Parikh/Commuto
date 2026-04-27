@@ -4,6 +4,7 @@ import React, { createContext, useState, useCallback, useEffect, ReactNode } fro
 import { User } from '@/types';
 import { authAPI } from '@/services/api';
 import { transformBackendUser } from '@/utils/transformers';
+import { authStorage } from '@/utils/authStorage';
 import type { RegisterRequest } from '@/types/api';
 
 export type UserRole = 'driver' | 'passenger' | null;
@@ -36,16 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
     const getPersistedRole = (): UserRole => {
-        if (typeof window === 'undefined') {
-            return null;
-        }
-
-        const savedRole = localStorage.getItem('commuto_role');
-        if (savedRole === 'driver' || savedRole === 'passenger') {
-            return savedRole;
-        }
-
-        return null;
+        return authStorage.getRole();
     };
 
     const getRoleFromPathname = (): UserRole => {
@@ -67,7 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     useEffect(() => {
         const loadUser = async () => {
             if (typeof window !== 'undefined') {
-                const token = localStorage.getItem('auth_token');
+                const token = authStorage.getToken();
                 const savedRole = getPersistedRole();
                 const routeRole = getRoleFromPathname();
 
@@ -86,7 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     const effectiveRole = backendRole ?? routeRole ?? savedRole;
                     setRoleState(effectiveRole);
                     if (effectiveRole) {
-                        localStorage.setItem('commuto_role', effectiveRole);
+                        authStorage.setRole(effectiveRole);
                     }
                 } catch (error: any) {
                     const status = error?.response?.status;
@@ -101,8 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
                     // Clear persisted auth only on actual unauthorized response.
                     if (status === 401) {
-                        localStorage.removeItem('auth_token');
-                        localStorage.removeItem('commuto_role');
+                        authStorage.clearSession();
                     }
                 }
                 setIsLoading(false);
@@ -140,12 +131,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Set role and persist to localStorage
     const setRole = useCallback((newRole: UserRole) => {
         setRoleState(newRole);
-        if (typeof window !== 'undefined') {
-            if (newRole) {
-                localStorage.setItem('commuto_role', newRole);
-            } else {
-                localStorage.removeItem('commuto_role');
-            }
+        if (newRole) {
+            authStorage.setRole(newRole);
+        } else {
+            authStorage.clearRole();
         }
     }, []);
 
@@ -154,7 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(true);
         try {
             const authResponse = await authAPI.login({ email, password });
-            localStorage.setItem('auth_token', authResponse.access_token);
+            authStorage.setToken(authResponse.access_token);
             setPendingEmail(email);
 
             // Fetch user data
@@ -198,9 +187,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const googleLogin = useCallback(async (credential: string, role?: string): Promise<User | null> => {
         setIsLoading(true);
         try {
-            const requestedRole = role === 'driver' || role === 'passenger' ? role : undefined;
+            const requestedRole = role === 'driver' || role === 'passenger' ? role : 'passenger';
             const authResponse = await authAPI.googleLogin(credential, requestedRole);
-            localStorage.setItem('auth_token', authResponse.access_token);
+            authStorage.setToken(authResponse.access_token);
 
             // Fetch user data
             const userData = await authAPI.getCurrentUser();
@@ -251,10 +240,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Logout
     const logout = useCallback(() => {
         setUser(null);
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('commuto_role');
-        }
+        authStorage.clearSession();
     }, []);
 
     return (

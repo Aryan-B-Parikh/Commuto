@@ -15,7 +15,7 @@ import models
 load_dotenv()
 from rate_limiter import rate_limit
 
-from routers import auth_router, rides_router, bids_router, otp_router, websocket_router, payment_methods_router, wallet_router, websocket_trips
+from routers import auth_router, rides_router, bids_router, otp_router, websocket_router, payment_methods_router, wallet_router, websocket_trips, geofence_router
 
 # Configure logging to console (Render handles log capture)
 logging.basicConfig(
@@ -129,6 +129,7 @@ app.include_router(websocket_router.router)
 app.include_router(payment_methods_router.router)
 app.include_router(wallet_router.router)
 app.include_router(websocket_trips.router)
+app.include_router(geofence_router.router)
 
 @app.get("/")
 def root():

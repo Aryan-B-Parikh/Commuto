@@ -102,6 +102,7 @@ class ProfileUpdate(BaseModel):
     license_photo_url: Optional[str] = None
     
     # Vehicle fields
+    vehicle_make: Optional[str] = None
     vehicle_type: Optional[str] = None
     vehicle_model: Optional[str] = None
     vehicle_plate: Optional[str] = None
@@ -110,7 +111,10 @@ class ProfileUpdate(BaseModel):
 
     @field_validator('vehicle_type')
     def validate_vehicle_type(cls, v):
-        if v and v.lower() not in ["auto-rickshaw", "rickshaw", "rikshaw"]:
+        if v is None:
+            return v
+        normalized = v.strip().lower().replace('_', ' ').replace('-', ' ')
+        if normalized not in ["auto rickshaw", "rickshaw", "rikshaw"]:
             raise ValueError("Commuto is currently only available for Auto-Rickshaws.")
         return "Auto-Rickshaw"
     

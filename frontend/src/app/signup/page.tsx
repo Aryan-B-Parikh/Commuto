@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { authStorage } from '@/utils/authStorage';
 import { isValidEmail, isValidName, getPasswordStrength, isValidPhone } from '@/utils/validators';
 
 const trustPoints = [
@@ -27,11 +28,9 @@ export default function SignupPage() {
         if (role === 'driver' || role === 'passenger') {
             return role;
         }
-        if (typeof window !== 'undefined') {
-            const persistedRole = localStorage.getItem('commuto_role');
-            if (persistedRole === 'driver' || persistedRole === 'passenger') {
-                return persistedRole;
-            }
+        const persistedRole = authStorage.getRole();
+        if (persistedRole) {
+            return persistedRole;
         }
         return null;
     };

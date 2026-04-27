@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { authStorage } from '@/utils/authStorage';
 
 export function useTripWebSocket(tripId: string | null) {
     const [isConnected, setIsConnected] = useState(false);
@@ -15,7 +16,7 @@ export function useTripWebSocket(tripId: string | null) {
         if (!tripId) return;
         if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
-        const token = localStorage.getItem('auth_token');
+        const token = authStorage.getToken();
         if (!token) return;
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';

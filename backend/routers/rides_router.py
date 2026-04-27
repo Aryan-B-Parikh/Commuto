@@ -19,6 +19,7 @@ import schemas
 from services.rating_service import apply_driver_rating
 from services.billing_service import get_trip_receipt as _build_receipt
 from services.wallet_service import hold_wallet_funds_or_raise, release_wallet_funds, reconcile_booking_hold
+from services.geofence import validate_ride_coordinates
 from ride_states import RIDE_STATUS_STARTED, normalize_ride_status
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
@@ -142,6 +143,20 @@ async def create_shared_ride(
     db: Session = Depends(get_db)
 ):
     """Create a public shared ride that others can join"""
+    # ── Geofence check (both pickup and destination must be in service area) ──
+    try:
+        validate_ride_coordinates(
+            origin_lat=trip_data.from_location.lat,
+            origin_lng=trip_data.from_location.lng,
+            dest_lat=trip_data.to_location.lat,
+            dest_lng=trip_data.to_location.lng,
+        )
+    except ValueError as geo_err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(geo_err),
+        )
+
     payment_method = (trip_data.payment_method or ONLINE_PAYMENT_METHOD).lower()
     if payment_method not in {ONLINE_PAYMENT_METHOD, CASH_PAYMENT_METHOD}:
         raise HTTPException(
