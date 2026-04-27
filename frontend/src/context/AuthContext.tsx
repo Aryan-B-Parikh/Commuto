@@ -109,6 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // Pages that should NOT trigger the redirect (auth/onboarding pages)
         const allowedPaths = [
+            '/complete-setup',
             '/complete-profile',
             '/login',
             '/signup',
@@ -123,7 +124,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             (p) => path === p || path.startsWith(p + '/')
         );
 
-        if (user.role === 'driver' && !user.profileCompleted && !isAllowed) {
+        if (isAllowed) return;
+
+        // Force complete setup if core data is missing
+        const isCoreDataMissing = !user.phone_number || !user.gender || !user.date_of_birth;
+        if (isCoreDataMissing) {
+            window.location.href = '/complete-setup';
+            return;
+        }
+
+        // Force complete driver profile if role-specific data is missing
+        if (user.role === 'driver' && !user.profileCompleted) {
             window.location.href = '/complete-profile';
         }
     }, [user, isLoading]);
