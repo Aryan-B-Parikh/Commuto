@@ -278,11 +278,24 @@ def get_available_rides(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all public shared rides that have available seats"""
+    """Get all public shared rides that have available seats and are in the future"""
+    from datetime import datetime
+    
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+    
     rides = db.query(models.Trip).filter(
         models.Trip.creator_passenger_id != None,
         models.Trip.status == "pending",
-        models.Trip.available_seats > 0
+        models.Trip.available_seats > 0,
+        models.Trip.start_time >= datetime.utcnow()
     ).all()
     
     for ride in rides:
@@ -549,7 +562,18 @@ def get_my_trips(
     db: Session = Depends(get_db)
 ):
     """Get all trips for current user (as passenger)"""
+    from datetime import datetime
     
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+        
     # Find all trips where the user is a passenger (via booking)
     trips = db.query(models.Trip).join(
         models.Booking, models.Trip.id == models.Booking.trip_id
@@ -617,7 +641,18 @@ def get_open_rides(
     db: Session = Depends(get_db)
 ):
     """Get all open rides available for bidding"""
+    from datetime import datetime
     
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+        
     # Identify trips where the current user is a passenger
     user_passenger_trips = db.query(models.Booking.trip_id).filter(
         models.Booking.passenger_id == current_user.id
@@ -628,9 +663,11 @@ def get_open_rides(
         models.TripBid.driver_id == current_user.id
     ).subquery()
 
-    # Get all pending rides excluding the ones above
+    # Get all pending rides excluding the ones above and ensuring they are in the future
+    from datetime import datetime
     rides = db.query(models.Trip).filter(
         models.Trip.status.in_(["pending"]),
+        models.Trip.start_time >= datetime.utcnow(),
         ~models.Trip.id.in_(user_passenger_trips),
         ~models.Trip.id.in_(driver_bidded_trips)
     ).all()
