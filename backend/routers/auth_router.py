@@ -766,7 +766,9 @@ def update_current_user(
                 vehicle_data = {}
                 if data.get("vehicle_model"):
                     vehicle_data["model"] = data["vehicle_model"]
-                if data.get("vehicle_type"):
+                if data.get("vehicle_make"):
+                    vehicle_data["make"] = data["vehicle_make"]
+                elif data.get("vehicle_type"):
                     vehicle_data["make"] = data["vehicle_type"]
                 if data.get("vehicle_plate"):
                     vehicle_data["plate_number"] = data["vehicle_plate"]

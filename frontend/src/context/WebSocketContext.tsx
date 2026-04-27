@@ -2,6 +2,7 @@
 
 import React, { createContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { authStorage } from '@/utils/authStorage';
 
 interface WebSocketContextType {
     socket: WebSocket | null;
@@ -28,7 +29,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
         // Prevent multiple connections
         if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
-        const token = localStorage.getItem('auth_token');
+        const token = authStorage.getToken();
         if (!token) return;
 
         const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
@@ -50,9 +51,9 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
                 setLastMessage(message);
 
                 // Dispatch to listeners
-                const type = message.type;
+                const { type, data } = message;
                 if (type && listenersRef.current.has(type)) {
-                    listenersRef.current.get(type)?.forEach(callback => callback(message.data));
+                    listenersRef.current.get(type)?.forEach(callback => callback(data));
                 }
             } catch (error) {
                 console.error('Failed to parse WS message:', error);

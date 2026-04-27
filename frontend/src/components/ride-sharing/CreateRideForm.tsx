@@ -10,6 +10,7 @@ import { LocationInput } from '@/components/ride/LocationInput';
 import { MapSelectionModal } from '@/components/map/MapSelectionModal';
 import { useToast } from '@/hooks/useToast';
 import { tripsAPI } from '@/services/api';
+import { isInsideServiceArea } from '@/utils/geoUtils';
 
 interface CreateRideFormProps {
     isMobile?: boolean;
@@ -37,6 +38,11 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
     }>({ pickup: undefined, destination: undefined });
 
     const [mapConfig, setMapConfig] = useState<{ isOpen: boolean; type: 'pickup' | 'destination' }>({ isOpen: false, type: 'pickup' });
+
+    // Geofence status for each location
+    const pickupOutside = coords.pickup ? !isInsideServiceArea(coords.pickup[0], coords.pickup[1]) : false;
+    const destOutside = coords.destination ? !isInsideServiceArea(coords.destination[0], coords.destination[1]) : false;
+    const anyOutside = pickupOutside || destOutside;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -100,6 +106,7 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                         onChange={(v) => setFormData({ ...formData, pickup: v })}
                         placeholder="Where are you starting from?"
                         onMapClick={() => setMapConfig({ isOpen: true, type: 'pickup' })}
+                        outsideServiceArea={pickupOutside}
                         onLocationSelect={(addr, lat, lng) => {
                             setFormData((prev) => ({ ...prev, pickup: addr }));
                             setCoords((prev) => ({ ...prev, pickup: [lat, lng] }));
@@ -112,12 +119,39 @@ export default function CreateRideForm({ isMobile }: CreateRideFormProps) {
                         onChange={(v) => setFormData({ ...formData, destination: v })}
                         placeholder="Where are you going?"
                         onMapClick={() => setMapConfig({ isOpen: true, type: 'destination' })}
+                        outsideServiceArea={destOutside}
                         onLocationSelect={(addr, lat, lng) => {
                             setFormData((prev) => ({ ...prev, destination: addr }));
                             setCoords((prev) => ({ ...prev, destination: [lat, lng] }));
                         }}
                     />
                 </div>
+
+                {/* Geofence warning pill */}
+                <AnimatePresence>
+                    {anyOutside && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/8 px-4 py-3 mt-1">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
+                                    <MapPinned className="h-4 w-4 text-amber-400" />
+                                </div>
+                                <p className="text-xs font-medium text-amber-300/90">
+                                    {pickupOutside && destOutside
+                                        ? 'Both locations are outside the Commuto service area (Charusat region).'
+                                        : pickupOutside
+                                            ? 'Pickup location is outside the Commuto service area.'
+                                            : 'Destination is outside the Commuto service area.'}
+                                    {' '}Your ride may be rejected.
+                                </p>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

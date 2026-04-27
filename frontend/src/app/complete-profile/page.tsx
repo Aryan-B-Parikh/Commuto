@@ -177,7 +177,8 @@ export default function CompleteProfilePage() {
 
             if (isDriver) {
                 payload.license_number = form.license_number;
-                payload.vehicle_type = form.vehicle_make;
+                payload.vehicle_type = 'Auto-Rickshaw';
+                payload.vehicle_make = form.vehicle_make;
                 payload.vehicle_model = form.vehicle_model;
                 payload.vehicle_plate = form.vehicle_plate;
                 payload.vehicle_capacity = form.vehicle_capacity;
