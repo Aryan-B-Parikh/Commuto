@@ -136,6 +136,8 @@ def register(
             full_name=user_data.full_name,
             phone_number=user_data.phone,
             role=user_data.role,
+            gender=user_data.gender,
+            date_of_birth=user_data.date_of_birth,
             verification_token=verification_token,
             verification_token_expires=datetime.utcnow() + timedelta(minutes=15),
         )

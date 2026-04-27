@@ -10,6 +10,8 @@ class UserRegister(BaseModel):
     full_name: str
     phone: str
     role: str  # "passenger" or "driver"
+    gender: str
+    date_of_birth: date
 
     @field_validator('email')
     def validate_email(cls, v):

@@ -60,7 +60,7 @@ function PassengerSearchContent() {
         <>
             <div className="lg:hidden min-h-screen bg-background pb-24">
                 <div className="relative h-[32vh] overflow-hidden border-b border-card-border">
-                    <MapContainer className="h-full" showRoute />
+                    <MapContainer className="h-full w-full" showRoute />
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,17,31,0.1),rgba(8,17,31,0.72))]" />
                     <button onClick={() => router.push('/passenger/dashboard')} className="absolute left-4 top-4 rounded-2xl border border-white/20 bg-black/25 px-4 py-3 text-sm font-semibold text-white backdrop-blur-md">
                         Back to dashboard
@@ -145,8 +145,8 @@ function PassengerSearchContent() {
                 <DashboardLayout userType="passenger" title="Search Rides">
                     <div className="mx-auto max-w-6xl space-y-8">
                         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                            <div className="relative overflow-hidden rounded-[32px] border border-card-border shadow-[var(--shadow-soft)] min-h-[400px]">
-                                <MapContainer className="absolute inset-0" showRoute />
+                            <div className="relative overflow-hidden rounded-[32px] border border-card-border shadow-[var(--shadow-soft)] min-h-[400px] h-full w-full">
+                                <MapContainer className="absolute inset-0 w-full h-full" showRoute />
                                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,17,31,0.1),rgba(8,17,31,0.72))] pointer-events-none" />
                                 <div className="absolute bottom-8 left-8 right-8 pointer-events-none">
                                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">Interactive Map</p>
