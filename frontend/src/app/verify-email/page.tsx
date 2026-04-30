@@ -24,7 +24,7 @@ function VerifyEmailContent() {
     const resolvePostVerifyRoute = async () => {
         const currentUser = await authAPI.getCurrentUser();
         const normalizedRole = currentUser?.role === 'driver' ? 'driver' : 'passenger';
-        const phoneValue = currentUser?.phone_number || currentUser?.phone;
+        const phoneValue = currentUser?.phone_number;
         const isCoreDataMissing = !phoneValue || !currentUser?.gender || !currentUser?.date_of_birth;
 
         if (isCoreDataMissing) {
