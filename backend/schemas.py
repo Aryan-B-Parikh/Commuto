@@ -296,3 +296,16 @@ class PhoneVerifyRequest(BaseModel):
 class DriverRatingRequest(BaseModel):
     rating: float = Field(ge=1.0, le=5.0, description="Rating between 1 and 5")
     comment: Optional[str] = None
+
+class NotificationResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    title: str
+    message: str
+    type: str
+    link: Optional[str] = None
+    is_read: bool
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+

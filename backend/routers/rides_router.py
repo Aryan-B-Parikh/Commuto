@@ -21,6 +21,7 @@ from services.billing_service import get_trip_receipt as _build_receipt
 from services.wallet_service import hold_wallet_funds_or_raise, release_wallet_funds, reconcile_booking_hold
 from services.geofence import validate_ride_coordinates
 from ride_states import RIDE_STATUS_STARTED, normalize_ride_status
+from utils.notifications import create_notification
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
@@ -245,6 +246,11 @@ async def create_shared_ride(
         new_trip.payment_method = payment_method
         
         # Broadcast to all drivers that a new ride is available
+        dispatch_loop = getattr(request.app.state, "notification_loop", None)
+        # Note: Broadcating to ALL drivers as a persistent notification might be noisy, 
+        # but the real-time websocket is already doing it. 
+        # For the Activity Log, we'll keep it to direct actions for now to avoid spamming drivers.
+        
         await manager.send_to_drivers({
             "type": "new_ride_available",
             "trip": {
@@ -449,6 +455,22 @@ async def join_ride(
                 "avatar_url": current_user.avatar_url
             }
         })
+        
+        # Notify the creator
+        if trip.creator_passenger_id:
+            dispatch_loop = getattr(request.app.state, "notification_loop", None)
+            from routers.bids_router import _dispatch_websocket_notification
+            _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.creator_passenger_id),
+                    "Passenger Joined",
+                    f"{current_user.full_name} joined your ride to {trip.dest_address}.",
+                    "passenger_joined",
+                    f"/passenger/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
         
         return {"message": "Successfully joined ride", "available_seats": trip.available_seats}
     except ValueError as exc:
@@ -791,6 +813,53 @@ def cancel_ride(
             bid.version += 1
         
         db.commit()
+        
+        # Notify all participants about cancellation
+        dispatch_loop = getattr(request.app.state, "notification_loop", None)
+        from routers.bids_router import _dispatch_websocket_notification
+        
+        # 1. Notify creator if they didn't cancel it
+        if trip.creator_passenger_id and str(trip.creator_passenger_id) != str(current_user.id):
+             _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.creator_passenger_id),
+                    "Trip Cancelled",
+                    f"Your trip to {trip.dest_address} has been cancelled by another participant.",
+                    "trip_cancelled",
+                    f"/passenger/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
+            
+        # 2. Notify driver if assigned and didn't cancel it
+        if trip.driver_id and str(trip.driver_id) != str(current_user.id):
+             _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.driver_id),
+                    "Trip Cancelled",
+                    f"The trip to {trip.dest_address} has been cancelled by the passenger.",
+                    "trip_cancelled",
+                    f"/driver/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
+            
+        # 3. Notify other passengers
+        for b in bookings:
+            if str(b.passenger_id) != str(current_user.id) and str(b.passenger_id) != str(trip.creator_passenger_id):
+                 _dispatch_websocket_notification(
+                    create_notification(
+                        db,
+                        str(b.passenger_id),
+                        "Trip Cancelled",
+                        f"The ride to {trip.dest_address} has been cancelled.",
+                        "trip_cancelled",
+                        f"/passenger/trips/{trip_id}"
+                    ),
+                    dispatch_loop
+                )
         
         logger.info(f"Trip {trip_id} cancelled by user {current_user.id}. Penalty: {penalty_amount}")
         

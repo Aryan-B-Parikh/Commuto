@@ -54,10 +54,17 @@ export default function SignupPage() {
 
     const resolvePostAuthRoute = (signedInUser: any) => {
         const normalizedRole = signedInUser?.role === 'driver' ? 'driver' : 'passenger';
-        if (signedInUser?.phone_number && signedInUser?.isPhoneVerified === false) {
+        const phoneValue = signedInUser?.phone_number || signedInUser?.phone;
+        const isCoreDataMissing = !phoneValue || !signedInUser?.gender || !signedInUser?.date_of_birth;
+
+        if (isCoreDataMissing) {
+            return '/complete-setup';
+        }
+
+        if (phoneValue && signedInUser?.isPhoneVerified === false) {
             return '/verify-phone';
         }
-        if (normalizedRole === 'driver' && !signedInUser?.profileCompleted) {
+        if (!signedInUser?.profileCompleted) {
             return '/complete-profile';
         }
         return `/${normalizedRole}/dashboard`;
@@ -173,7 +180,7 @@ export default function SignupPage() {
             const user = await googleLogin(tokenResponse.access_token, selectedRole);
             if (user) {
                 showToast('success', 'Signup successful with Google!');
-                router.push('/verify-email');
+                router.push(resolvePostAuthRoute(user));
             } else {
                 showToast('error', 'Google signup failed. Please try again.');
             }

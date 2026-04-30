@@ -24,8 +24,14 @@ export default function VerifyPhonePage() {
     const resolvePostVerifyRoute = async () => {
         const currentUser = await authAPI.getCurrentUser();
         const normalizedRole = currentUser?.role === 'driver' ? 'driver' : 'passenger';
+        const phoneValue = currentUser?.phone_number || currentUser?.phone;
+        const isCoreDataMissing = !phoneValue || !currentUser?.gender || !currentUser?.date_of_birth;
 
-        if (normalizedRole === 'driver' && !currentUser?.profile_completed) {
+        if (isCoreDataMissing) {
+            return '/complete-setup';
+        }
+
+        if (!currentUser?.profile_completed) {
             return '/complete-profile';
         }
 

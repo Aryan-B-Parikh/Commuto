@@ -16,6 +16,7 @@ from uuid import UUID
 from routers.websocket_router import notify_new_bid, notify_bid_status_update
 from services.wallet_service import reconcile_booking_hold
 from ride_states import RIDE_STATUS_ACCEPTED, RIDE_STATUS_REQUESTED, normalize_ride_status
+from utils.notifications import create_notification
 
 router = APIRouter(prefix="/bids", tags=["Bidding"])
 logger = logging.getLogger(__name__)
@@ -182,17 +183,13 @@ def place_bid(
         if trip.creator_passenger_id:
             dispatch_loop = getattr(request.app.state, "notification_loop", None)
             _dispatch_websocket_notification(
-                notify_new_bid(
+                create_notification(
+                    db,
                     str(trip.creator_passenger_id),
-                    {
-                        "bid_id": str(new_bid.id),
-                        "trip_id": str(ride_id),
-                        "driver_id": str(current_user.id),
-                        "amount": float(new_bid.bid_amount),
-                        "status": new_bid.status,
-                        "message": new_bid.message,
-                        "is_counter_bid": False,
-                    },
+                    "New Bid Received",
+                    f"A driver has bid ₹{new_bid.bid_amount} on your trip to {trip.dest_address}.",
+                    "new_bid",
+                    f"/passenger/trips/{ride_id}"
                 ),
                 dispatch_loop,
             )
@@ -374,6 +371,20 @@ def accept_bid(
         # Commit the transaction
         db.commit()
         
+        # Notify driver about acceptance
+        dispatch_loop = getattr(request.app.state, "notification_loop", None)
+        _dispatch_websocket_notification(
+            create_notification(
+                db,
+                str(bid.driver_id),
+                "Bid Accepted!",
+                f"Your bid of ₹{bid.bid_amount} was accepted for the trip to {trip.dest_address}.",
+                "bid_accepted",
+                f"/driver/trips/{trip.id}"
+            ),
+            dispatch_loop
+        )
+        
         logger.info(f"Bid {bid_id} accepted by passenger {current_user.id} for trip {trip.id}")
         
         return {
@@ -476,17 +487,13 @@ def counter_bid(
 
         dispatch_loop = getattr(request.app.state, "notification_loop", None)
         _dispatch_websocket_notification(
-            notify_bid_status_update(
+            create_notification(
+                db,
                 str(original_bid.driver_id),
-                {
-                    "type": "counter_bid",
-                    "counter_bid_id": str(counter_bid_obj.id),
-                    "parent_bid_id": str(original_bid.id),
-                    "trip_id": str(original_bid.trip_id),
-                    "amount": float(counter_bid_obj.bid_amount),
-                    "status": counter_bid_obj.status,
-                    "is_counter_bid": True,
-                },
+                "Counter Bid Received",
+                f"The passenger countered your bid with ₹{counter_bid_obj.bid_amount}.",
+                "counter_bid",
+                f"/driver/trips/{original_bid.trip_id}"
             ),
             dispatch_loop,
         )

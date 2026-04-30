@@ -76,6 +76,23 @@ class User(Base):
     bookings = relationship("Booking", back_populates="passenger", foreign_keys="Booking.passenger_id")
     payment_methods = relationship("PaymentMethod", back_populates="user", cascade="all, delete-orphan")
     wallet = relationship("Wallet", back_populates="user", uselist=False)
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+
+# Notification Model
+class Notification(Base):
+    __tablename__ = "notifications"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String(50), nullable=False)  # e.g., "new_ride", "new_bid", "ride_status", "trip_started"
+    link = Column(String(255), nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="notifications")
 
 # Driver Model
 class Driver(Base):

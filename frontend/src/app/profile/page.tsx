@@ -47,6 +47,8 @@ export default function ProfilePage() {
     const tripHistory = completedTrips.slice(0, 5);
     const totalSpent = completedTrips.reduce((acc, t) => acc + (t.pricePerSeat || 0), 0);
     const co2Reduced = (completedTrips.length * 2.5).toFixed(1) + 'kg';
+    const userRating = typeof user.rating === 'number' ? user.rating : 0;
+    const hasUserRating = userRating > 0;
 
     const handleLogout = () => {
         logout();
@@ -104,9 +106,13 @@ export default function ProfilePage() {
                                 <h2 className="text-2xl font-black text-foreground leading-none mb-1">{user.name}</h2>
                                 <p className="text-sm font-bold text-muted-foreground mb-4">{user.email}</p>
 
-                                <div className="flex items-center justify-center gap-2 py-2 px-4 bg-muted rounded-full w-fit mx-auto border border-card-border">
-                                    <span className="text-sm font-black text-orange-500">{(user.rating || 5.0).toFixed(1)}</span>
-                                    <RatingStars rating={user.rating || 5.0} size="sm" />
+                                <div className="flex flex-wrap items-center justify-center gap-2 py-2 px-4 bg-muted rounded-full w-fit mx-auto border border-card-border">
+                                    <span className="text-sm font-black text-orange-500">{hasUserRating ? userRating.toFixed(1) : '—'}</span>
+                                    {hasUserRating ? (
+                                        <RatingStars rating={userRating} size="sm" />
+                                    ) : (
+                                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">No ratings yet</span>
+                                    )}
                                     <span className="text-xs text-muted-foreground font-bold ml-1">• {user.totalTrips || 0} rides</span>
                                 </div>
                             </div>
