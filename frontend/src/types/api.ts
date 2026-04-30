@@ -36,6 +36,8 @@ export interface RegisterRequest {
     full_name: string;
     phone: string;  // Frontend sends as 'phone', we'll map to phone_number
     role: 'passenger' | 'driver';
+    gender?: string;
+    date_of_birth?: string;
     // Driver-specific fields
     license_number?: string;
     vehicle_make?: string;
