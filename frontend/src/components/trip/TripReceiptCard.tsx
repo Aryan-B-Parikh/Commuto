@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Star, CheckCircle2, Download } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { tripsAPI } from '@/services/api';
@@ -28,6 +28,24 @@ export function TripReceiptCard({ rawTrip, trip, tripId, distance }: Props) {
     const [isRating, setIsRating] = useState(false);
     const receiptRef = useRef<HTMLDivElement>(null);
 
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        
+        if (rawTrip.driver_rating && rawTrip.driver_rating > 0) {
+            setDriverRating(rawTrip.driver_rating);
+            setHasRated(true);
+            return;
+        }
+        
+        const storedRating = window.localStorage.getItem(`commuto_trip_rating_${tripId}`);
+        if (!storedRating) return;
+        const parsedRating = Number(storedRating);
+        if (Number.isFinite(parsedRating) && parsedRating > 0) {
+            setDriverRating(parsedRating);
+        }
+        setHasRated(true);
+    }, [tripId, rawTrip.driver_rating]);
+
     const handleRateDriver = async () => {
         if (!driverRating || driverRating < 1) {
             showToast('error', 'Please select a star rating');
@@ -37,6 +55,9 @@ export function TripReceiptCard({ rawTrip, trip, tripId, distance }: Props) {
             setIsRating(true);
             await tripsAPI.rateDriver(tripId, driverRating);
             setHasRated(true);
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem(`commuto_trip_rating_${tripId}`, String(driverRating));
+            }
             showToast('success', 'Thank you for rating your driver!');
         } catch {
             showToast('error', 'Failed to submit rating.');

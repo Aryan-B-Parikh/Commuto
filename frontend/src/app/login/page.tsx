@@ -30,7 +30,18 @@ export default function LoginPage() {
 
     const resolvePostAuthRoute = (loggedInUser: any) => {
         const normalizedRole = loggedInUser?.role === 'driver' ? 'driver' : 'passenger';
-        if (normalizedRole === 'driver' && !loggedInUser?.profileCompleted) {
+        const phoneValue = loggedInUser?.phone_number || loggedInUser?.phone;
+        const isCoreDataMissing = !phoneValue || !loggedInUser?.gender || !loggedInUser?.date_of_birth;
+
+        if (isCoreDataMissing) {
+            return '/complete-setup';
+        }
+
+        if (phoneValue && loggedInUser?.isPhoneVerified === false) {
+            return '/verify-phone';
+        }
+
+        if (!loggedInUser?.profileCompleted) {
             return '/complete-profile';
         }
         return `/${normalizedRole}/dashboard`;

@@ -72,11 +72,6 @@ export default function CompleteProfilePage() {
             return;
         }
 
-        if (effectiveRole === 'passenger') {
-            router.push('/passenger/dashboard');
-            return;
-        }
-        
         // Pre-fill fields from user object
         setForm(prev => ({
             ...prev,

@@ -168,6 +168,9 @@ export default function PassengerLivePage() {
     }
 
     const currentStatus = normalizeRideStatus(trip.status);
+    const driverRating = typeof trip.driver_rating === 'number' ? trip.driver_rating : 0;
+    const hasDriverRating = driverRating > 0;
+    const vehicleDetails = trip.vehicle_details?.trim();
 
     if (currentStatus === 'accepted') {
         return (
@@ -236,12 +239,16 @@ export default function PassengerLivePage() {
                                             {trip.driver_name || 'Assigned Driver'}
                                         </h4>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">
-                                                ★ {trip.driver_rating || '5.0'}
-                                            </span>
-                                            <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest hidden sm:inline">
-                                                {trip.vehicle_details || 'White Tesla Model 3'}
-                                            </span>
+                                            {hasDriverRating && (
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">
+                                                    ★ {driverRating.toFixed(1)}
+                                                </span>
+                                            )}
+                                            {vehicleDetails && (
+                                                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest hidden sm:inline">
+                                                    {vehicleDetails}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -297,4 +297,25 @@ export const paymentMethodsAPI = {
     }
 };
 
+// Notifications APIs
+export const notificationsAPI = {
+    getNotifications: async (): Promise<any[]> => {
+        const response = await api.get('/notifications/');
+        return response.data;
+    },
+
+    markAsRead: async (id: string): Promise<void> => {
+        await api.post(`/notifications/${id}/read`);
+    },
+
+    markAllAsRead: async (): Promise<void> => {
+        await api.post('/notifications/read-all');
+    },
+
+    clearAll: async (): Promise<void> => {
+        await api.delete('/notifications/');
+    }
+};
+
 export default api;
+

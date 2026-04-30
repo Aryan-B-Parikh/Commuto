@@ -133,8 +133,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             return;
         }
 
-        // Force complete driver profile if role-specific data is missing
-        if (user.role === 'driver' && !user.profileCompleted) {
+        // Force complete profile if required fields are missing
+        if (!user.profileCompleted) {
             window.location.href = '/complete-profile';
         }
     }, [user, isLoading]);
