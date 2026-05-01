@@ -115,10 +115,7 @@ class ProfileUpdate(BaseModel):
     def validate_vehicle_type(cls, v):
         if v is None:
             return v
-        normalized = v.strip().lower().replace('_', ' ').replace('-', ' ')
-        if normalized not in ["auto rickshaw", "rickshaw", "rikshaw"]:
-            raise ValueError("Commuto is currently only available for Auto-Rickshaws.")
-        return "Auto-Rickshaw"
+        return v.strip()
     
     # Passenger fields
     accessibility_needs: Optional[bool] = None

@@ -156,6 +156,9 @@ export interface BidResponse {
     bid_amount: number;
     status: string;
     created_at: string;
+    is_counter_bid?: boolean;
+    parent_bid_id?: string;
+    created_by_role?: 'driver' | 'passenger';
 }
 
 export interface DriverBidWithTrip {
@@ -179,6 +182,8 @@ export interface DriverBidWithTrip {
     notes?: string;
     passenger_notes?: { passenger_name: string; notes: string }[];
     is_counter_bid?: boolean;
+    parent_bid_id?: string | null;
+    created_by_role?: 'driver' | 'passenger';
 }
 
 export interface ActionResponse {

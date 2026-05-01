@@ -1,7 +1,7 @@
 from typing import Optional
 
 RIDE_STATUS_REQUESTED = "requested"
-RIDE_STATUS_ACCEPTED = "accepted"
+RIDE_STATUS_ACCEPTED = "bid_accepted"
 RIDE_STATUS_STARTED = "started"
 RIDE_STATUS_COMPLETED = "completed"
 RIDE_STATUS_CANCELLED = "cancelled"

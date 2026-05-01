@@ -99,6 +99,10 @@ export function BiddingSection({ bids, isAccepting, onAcceptBid, onRefetch }: Pr
                                     onSubmit={handleCounterBid}
                                     onCancel={() => { setCounterBidId(null); setCounterAmount(''); }}
                                 />
+                            ) : bid.is_counter_bid ? (
+                                <div className="flex items-center justify-center h-9 bg-emerald-500/5 text-emerald-500/70 font-bold text-[10px] rounded-xl uppercase tracking-widest border border-emerald-500/10 border-dashed">
+                                    Waiting for Driver...
+                                </div>
                             ) : (
                                 <div className="flex gap-2">
                                     <button
@@ -112,19 +116,17 @@ export function BiddingSection({ bids, isAccepting, onAcceptBid, onRefetch }: Pr
                                     >
                                         {isAccepting === bidId && bidId ? 'Accepting...' : '✓ Accept'}
                                     </button>
-                                    {!bid.is_counter_bid && (
-                                        <button
-                                            onClick={() => {
-                                                if (!bidId) return;
-                                                setCounterBidId(bidId);
-                                                setCounterAmount(bidAmount === null ? '' : String(bidAmount));
-                                            }}
-                                            disabled={!bidId}
-                                            className="flex-1 h-9 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 font-bold text-xs rounded-xl border border-indigo-500/30 disabled:opacity-50"
-                                        >
-                                            ↔ Counter
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => {
+                                            if (!bidId) return;
+                                            setCounterBidId(bidId);
+                                            setCounterAmount(bidAmount === null ? '' : String(bidAmount));
+                                        }}
+                                        disabled={!bidId}
+                                        className="flex-1 h-9 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 font-bold text-xs rounded-xl border border-indigo-500/30 disabled:opacity-50"
+                                    >
+                                        ↔ Counter
+                                    </button>
                                 </div>
                             )}
                         </div>

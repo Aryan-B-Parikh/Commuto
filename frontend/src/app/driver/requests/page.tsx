@@ -91,7 +91,7 @@ function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
                     </div>
 
                     {/* Stats Strip */}
-                    <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="grid grid-cols-2 gap-3 mb-4">
                         <div className="bg-background/60 rounded-2xl p-3 border border-card-border/70 flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-indigo-400">
                                 <Navigation2 size={16} />
@@ -111,6 +111,16 @@ function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
                                 </p>
                                 <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Pickup Time</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 mb-6 flex items-center justify-between group-hover:bg-emerald-500/10 transition-colors">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1 shadow-sm">PASSENGER OFFER</span>
+                            <span className="text-xs text-muted-foreground font-medium">Their suggested price for the ride</span>
+                        </div>
+                        <div className="text-2xl font-black text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-xl shadow-inner border border-emerald-500/20">
+                            ₹{request.total_price || 0}
                         </div>
                     </div>
 

@@ -15,6 +15,7 @@ function VerifyEmailContent() {
 
     const [token, setToken] = useState('');
     const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle');
+    const [nextRoute, setNextRoute] = useState<string>('/complete-profile');
     const [errorMsg, setErrorMsg] = useState('');
     const [resending, setResending] = useState(false);
     const [devToken, setDevToken] = useState<string | null>(null);
@@ -91,9 +92,10 @@ function VerifyEmailContent() {
         try {
             await authAPI.verifyEmail(tokenToUse.trim());
             setStatus('success');
-            const nextRoute = await resolvePostVerifyRoute();
+            const resolvedRoute = await resolvePostVerifyRoute();
+            setNextRoute(resolvedRoute);
             showToast('success', 'Email verified successfully.');
-            setTimeout(() => router.push(nextRoute), 2000);
+            setTimeout(() => router.push(resolvedRoute), 2000);
         } catch (err: any) {
             setStatus('error');
             setErrorMsg(err?.response?.data?.detail ?? 'Verification failed. The code may have expired.');
@@ -144,7 +146,7 @@ function VerifyEmailContent() {
                     <>
                         <h1 className="text-2xl font-bold text-[#F9FAFB] text-center mb-2">Email Verified!</h1>
                         <p className="text-[#9CA3AF] text-center mb-6">Your email is confirmed. Redirecting you now.</p>
-                        <Button fullWidth size="lg" onClick={() => router.push('/dashboard')}>
+                        <Button fullWidth size="lg" onClick={() => router.push(nextRoute)}>
                             Complete Profile →
                         </Button>
                     </>
@@ -209,7 +211,7 @@ function VerifyEmailContent() {
                 )}
 
                 <div className="mt-6 text-center">
-                    <Link href="/dashboard" className="text-sm text-[#6B7280] hover:text-[#9CA3AF]">
+                    <Link href="/complete-profile" className="text-sm text-[#6B7280] hover:text-[#9CA3AF]">
                         Skip for now →
                     </Link>
                 </div>

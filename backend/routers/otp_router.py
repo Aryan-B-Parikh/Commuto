@@ -80,9 +80,10 @@ def verify_otp_and_start_ride(
         # if we want to be safe. For now, just allow starting.
 
         # Verify OTP (stored in trip while waiting for pickup).
+        logger.info(f"Verifying OTP for trip {trip_id}. DB OTP: '{trip.start_otp}', Received OTP: '{otp_data.otp}'")
         if trip.start_otp != otp_data.otp:
             db.rollback()
-            logger.warning(f"Invalid OTP attempt for trip {trip_id} by driver {current_user.id}")
+            logger.warning(f"Invalid OTP attempt for trip {trip_id} by driver {current_user.id}. Expected {trip.start_otp}, got {otp_data.otp}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid OTP"

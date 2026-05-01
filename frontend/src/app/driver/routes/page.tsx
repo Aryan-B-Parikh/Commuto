@@ -56,11 +56,17 @@ function getErrorDetail(error: unknown): string | undefined {
     return typeof data.detail === 'string' ? data.detail : undefined;
 }
 
-function MobileBidCard({ bid, statusConfig, tripStatusConfig, onStartRide }: {
+function MobileBidCard({ bid, statusConfig, tripStatusConfig, onStartRide, onAccept, onCounter, acceptingId, counteringId, counterAmount, setCounterAmount }: {
     bid: DriverBidWithTrip,
     statusConfig: Record<string, BidStatusConfig>,
     tripStatusConfig: Record<string, TripStatusConfig>,
-    onStartRide: (bid: DriverBidWithTrip) => void
+    onStartRide: (bid: DriverBidWithTrip) => void,
+    onAccept: (bidId: string) => void,
+    onCounter: (bidId: string) => void,
+    acceptingId: string | null,
+    counteringId: string | null,
+    counterAmount: string,
+    setCounterAmount: (val: string) => void
 }) {
     const origin = React.useMemo(() => [Number(bid.origin_lat), Number(bid.origin_lng)] as [number, number], [bid.origin_lat, bid.origin_lng]);
     const destination = React.useMemo(() => [Number(bid.dest_lat), Number(bid.dest_lng)] as [number, number], [bid.dest_lat, bid.dest_lng]);
@@ -141,6 +147,46 @@ function MobileBidCard({ bid, statusConfig, tripStatusConfig, onStartRide }: {
                     </div>
                 </div>
 
+                {isCounterBid && isPending && counteringId !== bid.id && (
+                    <div className="px-4 pb-4 flex gap-2">
+                        <button
+                            onClick={() => onAccept(bid.id)}
+                            disabled={acceptingId === bid.id}
+                            className="flex-1 h-10 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-xl transition-all disabled:opacity-50"
+                        >
+                            {acceptingId === bid.id ? 'Accepting...' : '✓ Accept Offer'}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setCounterAmount('');
+                                onCounter(bid.id);
+                            }}
+                            className="text-sm px-4 font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl"
+                        >
+                            Counter
+                        </button>
+                    </div>
+                )}
+
+                {isCounterBid && isPending && counteringId === bid.id && (
+                    <div className="px-4 pb-4 flex gap-2">
+                        <input
+                            type="number"
+                            value={counterAmount}
+                            onChange={(e) => setCounterAmount(e.target.value)}
+                            placeholder="Your counter"
+                            className="flex-1 w-0 px-3 h-10 bg-muted border border-border rounded-xl text-sm outline-none"
+                        />
+                        <button
+                            onClick={() => onCounter(bid.id)}
+                            disabled={!counterAmount}
+                            className="px-4 h-10 bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm rounded-xl disabled:opacity-50"
+                        >
+                            Send
+                        </button>
+                    </div>
+                )}
+
                 {bid.passenger_notes && bid.passenger_notes.length > 0 && (
                     <div className="px-4 pb-4 space-y-1">
                         {bid.passenger_notes.map((pn, idx) => (
@@ -154,34 +200,29 @@ function MobileBidCard({ bid, statusConfig, tripStatusConfig, onStartRide }: {
                     </div>
                 )}
 
-                {bid.status === 'accepted' && normalizeRideStatus(bid.trip_status) === 'accepted' && (
-                    <div className="px-4 pb-4">
-                        <button
-                            onClick={() => onStartRide(bid)}
-                            className="w-full h-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
-                        >
-                            <PlayCircle size={16} />
-                            Start Ride
-                        </button>
-                    </div>
-                )}
             </div>
         </motion.div>
     );
 }
 
-function DesktopBidCard({ bid, statusConfig, tripStatusConfig, onStartRide }: {
+function DesktopBidCard({ bid, statusConfig, tripStatusConfig, onStartRide, onAccept, onCounter, acceptingId, counteringId, counterAmount, setCounterAmount }: {
     bid: DriverBidWithTrip,
     statusConfig: Record<string, BidStatusConfig>,
     tripStatusConfig: Record<string, TripStatusConfig>,
-    onStartRide: (bid: DriverBidWithTrip) => void
+    onStartRide: (bid: DriverBidWithTrip) => void,
+    onAccept: (bidId: string) => void,
+    onCounter: (bidId: string) => void,
+    acceptingId: string | null,
+    counteringId: string | null,
+    counterAmount: string,
+    setCounterAmount: (val: string) => void
 }) {
     const origin = React.useMemo(() => [Number(bid.origin_lat), Number(bid.origin_lng)] as [number, number], [bid.origin_lat, bid.origin_lng]);
     const destination = React.useMemo(() => [Number(bid.dest_lat), Number(bid.dest_lng)] as [number, number], [bid.dest_lat, bid.dest_lng]);
     const { distanceKm } = useRouteInfo(origin, destination);
     const st = statusConfig[bid.status] || statusConfig.pending;
     const ts = tripStatusConfig[bid.trip_status] || tripStatusConfig.pending;
-    const isCounterBid = (bid as any).is_counter_bid;
+    const isCounterBid = Boolean(bid.is_counter_bid);
     const isPending = bid.status === 'pending';
 
     return (
@@ -254,6 +295,27 @@ function DesktopBidCard({ bid, statusConfig, tripStatusConfig, onStartRide }: {
                             </div>
                         )}
 
+                        {isCounterBid && isPending && counteringId !== bid.id && (
+                            <div className="mt-4 flex gap-3">
+                                <button
+                                    onClick={() => onAccept(bid.id)}
+                                    disabled={acceptingId === bid.id}
+                                    className="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-xl transition-all disabled:opacity-50"
+                                >
+                                    {acceptingId === bid.id ? 'Accepting...' : '✓ Accept Offer'}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setCounterAmount('');
+                                        onCounter(bid.id);
+                                    }}
+                                    className="px-5 py-2 font-bold text-sm text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl"
+                                >
+                                    Counter again
+                                </button>
+                            </div>
+                        )}
+
                         {/* Counter Input for Counter Bids */}
                         {isCounterBid && isPending && counteringId === bid.id && (
                             <div className="mt-4 flex items-center gap-3">
@@ -282,22 +344,15 @@ function DesktopBidCard({ bid, statusConfig, tripStatusConfig, onStartRide }: {
                     </div>
 
                     <div className="text-right shrink-0">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Your Bid</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
+                            {isCounterBid ? 'Passenger Offer' : 'Your Bid'}
+                        </p>
                         <p className={`text-3xl font-black tracking-tight ${bid.status === 'accepted' ? 'text-emerald-400' :
                             bid.status === 'rejected' ? 'text-red-400 line-through' : 'text-indigo-400'
                             }`}>
                             {formatCurrency(bid.bid_amount)}
                         </p>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Per Seat</p>
-                        {bid.status === 'accepted' && normalizeRideStatus(bid.trip_status) === 'accepted' && (
-                            <button
-                                onClick={() => onStartRide(bid)}
-                                className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600"
-                            >
-                                <PlayCircle size={14} />
-                                Start Ride
-                            </button>
-                        )}
                     </div>
                 </div>
             </Card>
@@ -324,6 +379,9 @@ export default function MyBidsPage() {
     const [selectedAcceptedBid, setSelectedAcceptedBid] = useState<DriverBidWithTrip | null>(null);
     const [isStartRideModalOpen, setIsStartRideModalOpen] = useState(false);
     const [isStartingRide, setIsStartingRide] = useState(false);
+    const [acceptingId, setAcceptingId] = useState<string | null>(null);
+    const [counteringId, setCounteringId] = useState<string | null>(null);
+    const [counterAmount, setCounterAmount] = useState('');
 
     // === BUSINESS LOGIC (UNCHANGED) ===
     const fetchBids = useCallback(async () => {
@@ -351,6 +409,7 @@ export default function MyBidsPage() {
             await bidsAPI.acceptBid(bidId);
             showToast('success', 'Bid accepted! Passenger will be notified.');
             fetchBids();
+            router.push('/driver/live');
         } catch (error: any) {
             showToast('error', error.response?.data?.detail || 'Failed to accept bid');
         } finally {
@@ -359,13 +418,17 @@ export default function MyBidsPage() {
     };
 
     const handleCounterBid = async (bidId: string) => {
+        if (counteringId !== bidId) {
+            setCounteringId(bidId);
+            return;
+        }
+
         if (!counterAmount || isNaN(Number(counterAmount))) {
             showToast('error', 'Please enter a valid counter amount');
             return;
         }
         try {
-            setCounteringId(bidId);
-            await bidsAPI.counterBid(bidId, { amount: Number(counterAmount) });
+            await bidsAPI.counterBid(bidId, { amount: Number(counterAmount), message: '' });
             showToast('success', 'Counter bid sent!');
             setCounteringId(null);
             setCounterAmount('');
@@ -549,6 +612,12 @@ export default function MyBidsPage() {
                                             statusConfig={statusConfig}
                                             tripStatusConfig={tripStatusConfig}
                                             onStartRide={handleOpenStartRide}
+                                            onAccept={handleAcceptBid}
+                                            onCounter={handleCounterBid}
+                                            acceptingId={acceptingId}
+                                            counteringId={counteringId}
+                                            counterAmount={counterAmount}
+                                            setCounterAmount={setCounterAmount}
                                         />
                                     ))}
                                 </AnimatePresence>
@@ -654,6 +723,12 @@ export default function MyBidsPage() {
                                             statusConfig={statusConfig}
                                             tripStatusConfig={tripStatusConfig}
                                             onStartRide={handleOpenStartRide}
+                                            onAccept={handleAcceptBid}
+                                            onCounter={handleCounterBid}
+                                            acceptingId={acceptingId}
+                                            counteringId={counteringId}
+                                            counterAmount={counterAmount}
+                                            setCounterAmount={setCounterAmount}
                                         />
                                     ))}
                                 </AnimatePresence>

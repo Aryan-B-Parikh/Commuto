@@ -103,6 +103,8 @@ def get_my_bids(
             "price_per_seat": trip.price_per_seat,
             "notes": trip.notes,
             "passenger_notes": booking_notes.get(str(trip.id), []),
+            "is_counter_bid": bool(getattr(bid, "is_counter_bid", False)) or bid.parent_bid_id is not None,
+            "parent_bid_id": getattr(bid, "parent_bid_id", None)
         })
     
     return result
@@ -416,7 +418,8 @@ def accept_bid(
         raise
     except DBAPIError as e:
         db.rollback()
-        logger.error(f"Database error (possible optimistic locking conflict): {str(e)}")
+        error_msg = str(e.orig) if hasattr(e, "orig") else str(e)
+        logger.error(f"Database error during accept_bid: {error_msg}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Bid was modified by another user. Please refresh and try again."
@@ -436,7 +439,7 @@ def counter_bid(
     request: Request,
     bid_id: UUID,
     bid_data: trip_schemas.BidCreate,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.require_role(["passenger", "driver"])),
     db: Session = Depends(get_db)
 ):
     """Counter a bid with transaction safety"""
@@ -455,18 +458,41 @@ def counter_bid(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Bid not found"
             )
+
+        # GET Trip details to check ownership
+        trip = db.query(models.Trip).filter(models.Trip.id == original_bid.trip_id).first()
+        if not trip:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found"
+            )
         
-        # Check if user is the passenger
+        # Verify if current user is authorized to counter this specific bid
+        # Passenger counters a DRIVER'S bid (is_counter_bid=False)
         is_passenger = db.query(models.Booking).filter(
             models.Booking.trip_id == original_bid.trip_id,
             models.Booking.passenger_id == current_user.id
         ).first() is not None
         
-        if not is_passenger:
+        # Driver counters a PASSENGER'S offer (is_counter_bid=True)
+        is_owner_driver = str(original_bid.driver_id) == str(current_user.id)
+        
+        authorized = False
+        if is_passenger:
+            # Passenger can counter if the original bid was by a driver (not a passenger counter)
+            if not original_bid.is_counter_bid:
+                authorized = True
+        elif is_owner_driver:
+            # Driver can counter if the original bid WAS a passenger's counter
+            if original_bid.is_counter_bid:
+                authorized = True
+
+        if not authorized:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the trip creator can counter bids"
+                detail="You don't have permission to counter this specific bid"
             )
         
         # Check if bid is still pending
@@ -482,13 +508,18 @@ def counter_bid(
         original_bid.version += 1
         
         # Create new counter bid
+        # TOGGLE LOGIC: 
+        # If created by passenger -> is_counter_bid = True
+        # If created by driver -> is_counter_bid = False
+        new_is_counter = True if is_passenger else False
+        
         counter_bid_obj = models.TripBid(
             id=uuid.uuid4(),
             trip_id=original_bid.trip_id,
             driver_id=original_bid.driver_id,
             bid_amount=bid_data.amount,
             status="pending",
-            is_counter_bid=True,
+            is_counter_bid=new_is_counter,
             parent_bid_id=original_bid.id,
             version=0
         )

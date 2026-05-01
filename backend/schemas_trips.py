@@ -142,6 +142,8 @@ class DriverBidWithTrip(BaseModel):
     price_per_seat: Optional[float] = None
     notes: Optional[str] = None
     passenger_notes: List[PassengerNote] = []
+    is_counter_bid: bool = False
+    parent_bid_id: Optional[UUID] = None
 
     @field_validator("trip_status", mode="before")
     @classmethod

@@ -93,18 +93,11 @@ export default function ProfilePage() {
                                         {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                                     </div>
                                 )}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="absolute bottom-0 right-1/2 translate-x-12 translate-y-1 z-20 w-8 h-8 rounded-full p-0 bg-card"
-                                >
-                                    ✏️
-                                </Button>
                             </div>
 
-                            <div className="px-6 relative z-10 mt-4">
-                                <h2 className="text-2xl font-black text-foreground leading-none mb-1">{user.name}</h2>
-                                <p className="text-sm font-bold text-muted-foreground mb-4">{user.email}</p>
+                            <div className="px-6 relative z-10 mt-4 flex flex-col items-center">
+                                <h2 className="text-2xl font-black text-foreground leading-none mb-1 text-center">{user.name}</h2>
+                                <p className="text-sm font-bold text-muted-foreground mb-4 text-center">{user.email}</p>
 
                                 <div className="flex flex-wrap items-center justify-center gap-2 py-2 px-4 bg-muted rounded-full w-fit mx-auto border border-card-border">
                                     <span className="text-sm font-black text-orange-500">{hasUserRating ? userRating.toFixed(1) : '—'}</span>

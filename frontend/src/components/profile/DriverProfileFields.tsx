@@ -104,15 +104,11 @@ export const DriverProfileFields: React.FC<DriverProfileFieldsProps> = ({
                     </svg>
                 }
             >
-                <Select
-                    label="Vehicle Type"
+                <Input
+                    label="Vehicle Make"
                     value={data.vehicle.type}
-                    options={[
-                        { value: 'Auto-Rickshaw', label: 'Auto-Rickshaw' },
-                        { value: 'E-Rickshaw', label: 'E-Rickshaw' },
-                        { value: 'Three-Wheeler', label: 'Three-Wheeler' },
-                    ]}
-                    onChange={(val) => onChange({ vehicle: { ...data.vehicle, type: val } })}
+                    onChange={(e) => onChange({ vehicle: { ...data.vehicle, type: e.target.value } })}
+                    placeholder="e.g. Bajaj, TVS"
                 />
                 <Input
                     label="Model"

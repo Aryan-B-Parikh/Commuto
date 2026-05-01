@@ -41,6 +41,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Commuto API", version="1.0.0", lifespan=lifespan)
 
+@app.get("/api/where-am-i")
+def where_am_i():
+    import os
+    return {"cwd": os.getcwd(), "file": __file__}
+
 # 1. Diagnostic Error & Header Logging Middleware
 @app.middleware("http")
 async def error_handling_middleware(request: Request, call_next):
@@ -153,4 +158,4 @@ def health_check(request: Request, db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
