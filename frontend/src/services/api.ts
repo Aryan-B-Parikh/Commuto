@@ -1,5 +1,6 @@
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
+import { authStorage } from '@/utils/authStorage';
 import type {
     RegisterRequest,
     LoginRequest,
@@ -47,7 +48,7 @@ api.interceptors.response.use(
             if (!isAuthReq) {
                 console.warn('Session expired or unauthorized request to:', error.config?.url);
                 // Clear state and redirect only if necessary, or let the hook handle it
-                localStorage.removeItem('auth_token');
+                authStorage.clearSession();
                 if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
                     window.location.href = '/login?expired=true';
                 }
@@ -69,7 +70,7 @@ api.interceptors.response.use(
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('auth_token');
+    const token = authStorage.getToken();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -296,4 +297,25 @@ export const paymentMethodsAPI = {
     }
 };
 
+// Notifications APIs
+export const notificationsAPI = {
+    getNotifications: async (): Promise<any[]> => {
+        const response = await api.get('/notifications/');
+        return response.data;
+    },
+
+    markAsRead: async (id: string): Promise<void> => {
+        await api.post(`/notifications/${id}/read`);
+    },
+
+    markAllAsRead: async (): Promise<void> => {
+        await api.post('/notifications/read-all');
+    },
+
+    clearAll: async (): Promise<void> => {
+        await api.delete('/notifications/');
+    }
+};
+
 export default api;
+

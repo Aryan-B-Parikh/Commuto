@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 import re
 from typing import Optional, List
 from datetime import datetime, date, timedelta
@@ -10,6 +10,8 @@ class UserRegister(BaseModel):
     full_name: str
     phone: str
     role: str  # "passenger" or "driver"
+    gender: str
+    date_of_birth: date
 
     @field_validator('email')
     def validate_email(cls, v):
@@ -102,6 +104,7 @@ class ProfileUpdate(BaseModel):
     license_photo_url: Optional[str] = None
     
     # Vehicle fields
+    vehicle_make: Optional[str] = None
     vehicle_type: Optional[str] = None
     vehicle_model: Optional[str] = None
     vehicle_plate: Optional[str] = None
@@ -110,7 +113,10 @@ class ProfileUpdate(BaseModel):
 
     @field_validator('vehicle_type')
     def validate_vehicle_type(cls, v):
-        if v and v.lower() not in ["auto-rickshaw", "rickshaw", "rikshaw"]:
+        if v is None:
+            return v
+        normalized = v.strip().lower().replace('_', ' ').replace('-', ' ')
+        if normalized not in ["auto rickshaw", "rickshaw", "rikshaw"]:
             raise ValueError("Commuto is currently only available for Auto-Rickshaws.")
         return "Auto-Rickshaw"
     
@@ -175,8 +181,7 @@ class UserResponse(BaseModel):
     travel_preferences: Optional[list] = None
     accessibility_needs: Optional[bool] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DriverResponse(BaseModel):
     user_id: UUID
@@ -185,8 +190,7 @@ class DriverResponse(BaseModel):
     total_trips: Optional[int]
     is_online: bool
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class VehicleResponse(BaseModel):
     id: UUID
@@ -196,8 +200,7 @@ class VehicleResponse(BaseModel):
     capacity: int
     color: Optional[str]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Payment Method Schemas
 class PaymentMethodCreate(BaseModel):
@@ -214,8 +217,7 @@ class PaymentMethodResponse(BaseModel):
     is_default: bool
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Wallet Schemas
 class WalletResponse(BaseModel):
@@ -224,8 +226,7 @@ class WalletResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AddMoneyRequest(BaseModel):
     amount: float = Field(gt=0, le=50000)
@@ -249,8 +250,7 @@ class TransactionResponse(BaseModel):
     status: str
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TransferRequest(BaseModel):
     recipient_email: EmailStr
@@ -296,3 +296,16 @@ class PhoneVerifyRequest(BaseModel):
 class DriverRatingRequest(BaseModel):
     rating: float = Field(ge=1.0, le=5.0, description="Rating between 1 and 5")
     comment: Optional[str] = None
+
+class NotificationResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    title: str
+    message: str
+    type: str
+    link: Optional[str] = None
+    is_read: bool
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+

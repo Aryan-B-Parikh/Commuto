@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 const safetyFeatures = [
     {
         title: 'Verified Users',
-        description: 'All users undergo ID verification and phone verification before joining.',
+        description: 'Profile checks and phone verification help build trust before trips begin.',
         icon: (
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
@@ -15,7 +15,7 @@ const safetyFeatures = [
     },
     {
         title: 'OTP Verification',
-        description: 'Share a unique code with your driver to confirm you\'re in the right vehicle.',
+        description: 'Use a one-time code to confirm the ride and reduce pickup confusion.',
         icon: (
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -24,7 +24,7 @@ const safetyFeatures = [
     },
     {
         title: 'Live Tracking',
-        description: 'Share your live location with trusted contacts throughout your journey.',
+        description: 'When enabled, trip progress can be shared with trusted contacts.',
         icon: (
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
@@ -33,7 +33,7 @@ const safetyFeatures = [
     },
     {
         title: 'Emergency Button',
-        description: 'One-tap emergency alert that notifies your contacts and local authorities.',
+        description: 'Quick access to in-app SOS tools and emergency contact actions.',
         icon: (
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -43,10 +43,10 @@ const safetyFeatures = [
 ];
 
 const trustBadges = [
-    { label: 'SOC 2 Certified', icon: '🔐' },
-    { label: '256-bit Encryption', icon: '🛡️' },
-    { label: 'GDPR Compliant', icon: '✓' },
-    { label: '24/7 Support', icon: '📞' },
+    { label: 'Encrypted data in transit', icon: '🔐' },
+    { label: 'Privacy controls', icon: '🛡️' },
+    { label: 'Report and block tools', icon: '🚩' },
+    { label: 'In-app support', icon: '💬' },
 ];
 
 export const Safety: React.FC = () => {
@@ -62,10 +62,10 @@ export const Safety: React.FC = () => {
                     >
                         <span className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-wider">Safety First</span>
                         <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-2 mb-4">
-                            Your Safety is Our Top Priority
+                            Safety Features Built for Daily Commutes
                         </h2>
                         <p className="text-lg text-muted-foreground mb-8">
-                            We&apos;ve built multiple layers of security and verification to ensure every ride is safe and trustworthy.
+                            We provide practical safety tools to help riders and drivers coordinate with more confidence.
                         </p>
 
                         {/* Safety Features */}
@@ -132,16 +132,16 @@ export const Safety: React.FC = () => {
                                 {/* Stats */}
                                 <div className="grid grid-cols-3 gap-4 text-center">
                                     <div>
-                                        <p className="text-2xl font-bold text-foreground">100%</p>
-                                        <p className="text-sm text-muted-foreground">Users Verified</p>
+                                        <p className="text-2xl font-bold text-foreground">Profile</p>
+                                        <p className="text-sm text-muted-foreground">Checks</p>
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-foreground">99.9%</p>
-                                        <p className="text-sm text-muted-foreground">Safe Rides</p>
+                                        <p className="text-2xl font-bold text-foreground">Trip</p>
+                                        <p className="text-sm text-muted-foreground">Safety Tools</p>
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-foreground">24/7</p>
-                                        <p className="text-sm text-muted-foreground">Support</p>
+                                        <p className="text-2xl font-bold text-foreground">Help</p>
+                                        <p className="text-sm text-muted-foreground">In-App Support</p>
                                     </div>
                                 </div>
 
@@ -153,8 +153,8 @@ export const Safety: React.FC = () => {
                                         </svg>
                                     </div>
                                     <div className="flex-1 leading-tight">
-                                        <p className="text-sm font-medium text-foreground">All safety checks passed</p>
-                                        <p className="text-[10px] text-muted-foreground">Identity • Phone • Background verified</p>
+                                        <p className="text-sm font-medium text-foreground">Safety tools enabled</p>
+                                        <p className="text-[10px] text-muted-foreground">Profile checks, OTP, and trip reporting available</p>
                                     </div>
                                 </div>
                             </div>

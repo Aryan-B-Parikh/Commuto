@@ -131,7 +131,8 @@ class TestBids:
         # Try to accept again
         response = client.post(f"/bids/{bid_id}/accept", headers=auth_headers_passenger)
         assert response.status_code == 400
-        assert "already accepted" in response.json()["detail"]
+        detail = response.json()["detail"].lower()
+        assert "no longer accepting bids" in detail or "already accepted" in detail
     
     def test_counter_bid(self, client, auth_headers_passenger, auth_headers_driver, test_trip):
         """Test passenger countering a bid"""
@@ -167,11 +168,11 @@ class TestBidsRateLimiting:
         """Test bid placement rate limiting"""
         trip_id = test_trip["id"]
         
-        # Make 6 requests (limit is 5/minute)
-        for i in range(6):
+        # Make 7 requests (limit is 6/minute)
+        for i in range(7):
             response = client.post(f"/bids/{trip_id}", json={
                 "amount": 25.50 + i
             }, headers=auth_headers_driver)
         
-        # The 6th request should be rate limited
+        # The 7th request should be rate limited
         assert response.status_code == 429

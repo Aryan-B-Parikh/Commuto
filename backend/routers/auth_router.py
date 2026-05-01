@@ -136,6 +136,8 @@ def register(
             full_name=user_data.full_name,
             phone_number=user_data.phone,
             role=user_data.role,
+            gender=user_data.gender,
+            date_of_birth=user_data.date_of_birth,
             verification_token=verification_token,
             verification_token_expires=datetime.utcnow() + timedelta(minutes=15),
         )
@@ -631,6 +633,11 @@ def get_current_user_info(
     from sqlalchemy import func
     
     role = auth.get_user_role(current_user, db)
+    profile_completed = _check_profile_complete(current_user, db)
+    if current_user.profile_completed != profile_completed:
+        current_user.profile_completed = profile_completed
+        db.commit()
+        db.refresh(current_user)
     
     # Build base response dict from user columns
     resp = {
@@ -642,7 +649,7 @@ def get_current_user_info(
         "avatar_url": current_user.avatar_url,
         "is_verified": current_user.is_verified,
         "is_phone_verified": current_user.is_phone_verified,
-        "profile_completed": current_user.profile_completed,
+        "profile_completed": profile_completed,
         "created_at": current_user.created_at,
         "gender": current_user.gender,
         "date_of_birth": current_user.date_of_birth,
@@ -766,7 +773,9 @@ def update_current_user(
                 vehicle_data = {}
                 if data.get("vehicle_model"):
                     vehicle_data["model"] = data["vehicle_model"]
-                if data.get("vehicle_type"):
+                if data.get("vehicle_make"):
+                    vehicle_data["make"] = data["vehicle_make"]
+                elif data.get("vehicle_type"):
                     vehicle_data["make"] = data["vehicle_type"]
                 if data.get("vehicle_plate"):
                     vehicle_data["plate_number"] = data["vehicle_plate"]
@@ -810,6 +819,7 @@ def update_current_user(
                     passenger.accessibility_needs = data["accessibility_needs"]
         
         # Auto-detect profile completeness after updates
+        db.flush()
         current_user.profile_completed = _check_profile_complete(current_user, db)
 
         db.commit()

@@ -31,6 +31,20 @@ export function BiddingSection({ bids, isAccepting, onAcceptBid, onRefetch }: Pr
         handleCounterBid,
     } = useCounterBid({ onSuccess: onRefetch });
 
+    const resolveBidId = (bid: any): string | null => {
+        const value = bid?.id ?? bid?.bid_id ?? bid?.bidId;
+        return typeof value === 'string' && value.length > 0 ? value : null;
+    };
+
+    const resolveBidAmount = (bid: any): number | null => {
+        const value = Number(bid?.bid_amount ?? bid?.amount ?? bid?.bidAmount);
+        return Number.isFinite(value) ? value : null;
+    };
+
+    const activeBids = bids.filter((bid: any) =>
+        (!bid?.status || bid.status === 'pending') && !bid?.is_counter_bid
+    );
+
     return (
         <Card className="border-none shadow-sm p-5 lg:p-6">
             <div className="flex items-center justify-between mb-4">
@@ -38,74 +52,88 @@ export function BiddingSection({ bids, isAccepting, onAcceptBid, onRefetch }: Pr
                     <Car size={18} className="text-emerald-400" /> Driver Bids
                 </h3>
                 <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg font-black uppercase">
-                    {bids.length} {bids.length === 1 ? 'Bid' : 'Bids'}
+                    {activeBids.length} {activeBids.length === 1 ? 'Bid' : 'Bids'}
                 </span>
             </div>
 
             <div className="space-y-3">
-                {bids.map((bid: any) => (
-                    <div
-                        key={bid.id}
-                        className="p-4 rounded-2xl bg-emerald-500/5 ring-1 ring-emerald-500/15 space-y-3"
-                    >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
-                                    {bid.driver_name?.[0] || 'D'}
-                                </div>
-                                <div>
-                                    <p className="text-sm font-bold text-[#F9FAFB]">{bid.driver_name || 'Driver'}</p>
-                                    {bid.driver_rating && (
-                                        <span className="flex items-center gap-1 text-[10px] text-amber-400 font-bold">
-                                            <Star size={10} fill="currentColor" />
-                                            {Number(bid.driver_rating).toFixed(1)}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <p className="text-xl font-black text-emerald-400">{formatCurrency(bid.bid_amount)}</p>
-                        </div>
+                {activeBids.map((bid: any, index: number) => {
+                    const bidId = resolveBidId(bid);
+                    const bidAmount = resolveBidAmount(bid);
+                    const bidAmountLabel = bidAmount === null ? '--' : formatCurrency(bidAmount);
+                    const bidKey = bidId ?? `bid-${index}`;
+                    const isCounterActive = Boolean(bidId && counterBidId === bidId);
 
-                        {bid.is_counter_bid && (
-                            <div className="text-[10px] font-bold text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-lg w-fit">
-                                Counter Offer
+                    return (
+                        <div
+                            key={bidKey}
+                            className="p-4 rounded-2xl bg-emerald-500/5 ring-1 ring-emerald-500/15 space-y-3"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                                        {bid.driver_name?.[0] || 'D'}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-[#F9FAFB]">{bid.driver_name || 'Driver'}</p>
+                                        {bid.driver_rating && (
+                                            <span className="flex items-center gap-1 text-[10px] text-amber-400 font-bold">
+                                                <Star size={10} fill="currentColor" />
+                                                {Number(bid.driver_rating).toFixed(1)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="text-xl font-black text-emerald-400">{bidAmountLabel}</p>
                             </div>
-                        )}
 
-                        {counterBidId === bid.id ? (
-                            <CounterBidInput
-                                bidId={bid.id}
-                                isActive
-                                counterAmount={counterAmount}
-                                onAmountChange={setCounterAmount}
-                                isSubmitting={isCountering}
-                                onSubmit={handleCounterBid}
-                                onCancel={() => { setCounterBidId(null); setCounterAmount(''); }}
-                            />
-                        ) : (
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => onAcceptBid(bid.id)}
-                                    disabled={isAccepting === bid.id}
-                                    className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl disabled:opacity-50"
-                                >
-                                    {isAccepting === bid.id ? 'Accepting...' : '✓ Accept'}
-                                </button>
-                                {!bid.is_counter_bid && (
+                            {bid.is_counter_bid && (
+                                <div className="text-[10px] font-bold text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-lg w-fit">
+                                    Counter Offer
+                                </div>
+                            )}
+
+                            {isCounterActive && bidId ? (
+                                <CounterBidInput
+                                    bidId={bidId}
+                                    isActive
+                                    counterAmount={counterAmount}
+                                    onAmountChange={setCounterAmount}
+                                    isSubmitting={isCountering}
+                                    onSubmit={handleCounterBid}
+                                    onCancel={() => { setCounterBidId(null); setCounterAmount(''); }}
+                                />
+                            ) : (
+                                <div className="flex gap-2">
                                     <button
                                         onClick={() => {
-                                            setCounterBidId(bid.id);
-                                            setCounterAmount(String(bid.bid_amount));
+                                            if (bidId) {
+                                                onAcceptBid(bidId);
+                                            }
                                         }}
-                                        className="flex-1 h-9 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 font-bold text-xs rounded-xl border border-indigo-500/30"
+                                        disabled={!bidId || isAccepting === bidId}
+                                        className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl disabled:opacity-50"
                                     >
-                                        ↔ Counter
+                                        {isAccepting === bidId && bidId ? 'Accepting...' : '✓ Accept'}
                                     </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                ))}
+                                    {!bid.is_counter_bid && (
+                                        <button
+                                            onClick={() => {
+                                                if (!bidId) return;
+                                                setCounterBidId(bidId);
+                                                setCounterAmount(bidAmount === null ? '' : String(bidAmount));
+                                            }}
+                                            disabled={!bidId}
+                                            className="flex-1 h-9 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 font-bold text-xs rounded-xl border border-indigo-500/30 disabled:opacity-50"
+                                        >
+                                            ↔ Counter
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
         </Card>
     );

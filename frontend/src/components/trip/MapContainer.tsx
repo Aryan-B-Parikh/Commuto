@@ -21,7 +21,7 @@ interface MapContainerProps {
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
-    className = '',
+    className = 'relative w-full h-full',
     showRoute = false,
     overlay,
     interactive = true,
@@ -30,7 +30,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     onLocationSelect,
 }) => {
     return (
-        <div className={`relative bg-gray-100 overflow-hidden ${className}`}>
+        <div className={`bg-gray-100 overflow-hidden ${className}`}>
             <LeafletMap
                 className="absolute inset-0"
                 showRoute={showRoute}

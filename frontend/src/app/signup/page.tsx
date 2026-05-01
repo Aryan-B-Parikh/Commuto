@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { authStorage } from '@/utils/authStorage';
 import { isValidEmail, isValidName, getPasswordStrength, isValidPhone } from '@/utils/validators';
 
 const trustPoints = [
@@ -27,11 +28,9 @@ export default function SignupPage() {
         if (role === 'driver' || role === 'passenger') {
             return role;
         }
-        if (typeof window !== 'undefined') {
-            const persistedRole = localStorage.getItem('commuto_role');
-            if (persistedRole === 'driver' || persistedRole === 'passenger') {
-                return persistedRole;
-            }
+        const persistedRole = authStorage.getRole();
+        if (persistedRole) {
+            return persistedRole;
         }
         return null;
     };
@@ -47,16 +46,25 @@ export default function SignupPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [phone, setPhone] = useState('');
+    const [gender, setGender] = useState('');
+    const [dateOfBirth, setDateOfBirth] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
-    const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; phone?: string; terms?: string }>({});
+    const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; phone?: string; gender?: string; dob?: string; terms?: string }>({});
 
     const resolvePostAuthRoute = (signedInUser: any) => {
         const normalizedRole = signedInUser?.role === 'driver' ? 'driver' : 'passenger';
-        if (signedInUser?.phone_number && signedInUser?.isPhoneVerified === false) {
+        const phoneValue = signedInUser?.phone_number || signedInUser?.phone;
+        const isCoreDataMissing = !phoneValue || !signedInUser?.gender || !signedInUser?.date_of_birth;
+
+        if (isCoreDataMissing) {
+            return '/complete-setup';
+        }
+
+        if (phoneValue && signedInUser?.isPhoneVerified === false) {
             return '/verify-phone';
         }
-        if (normalizedRole === 'driver' && !signedInUser?.profileCompleted) {
+        if (!signedInUser?.profileCompleted) {
             return '/complete-profile';
         }
         return `/${normalizedRole}/dashboard`;
@@ -88,6 +96,14 @@ export default function SignupPage() {
             newErrors.phone = 'Phone number is required';
         } else if (!isValidPhone(phone)) {
             newErrors.phone = 'Please enter a valid Indian mobile number';
+        }
+
+        if (!gender) {
+            newErrors.gender = 'Gender is required';
+        }
+
+        if (!dateOfBirth) {
+            newErrors.dob = 'Date of birth is required';
         }
 
         if (!password) {
@@ -141,6 +157,8 @@ export default function SignupPage() {
                 full_name: name,
                 phone: phone.replace(/\s+/g, ''),
                 role: role as 'passenger' | 'driver',
+                gender,
+                date_of_birth: dateOfBirth,
             });
 
             showToast('success', 'Account created! Please verify your email.');
@@ -162,7 +180,7 @@ export default function SignupPage() {
             const user = await googleLogin(tokenResponse.access_token, selectedRole);
             if (user) {
                 showToast('success', 'Signup successful with Google!');
-                router.push('/verify-email');
+                router.push(resolvePostAuthRoute(user));
             } else {
                 showToast('error', 'Google signup failed. Please try again.');
             }
@@ -280,6 +298,34 @@ export default function SignupPage() {
                                             <input value={phone} onChange={(e) => setPhone(e.target.value)} className={`${inputClass(errors.phone)} pl-11`} placeholder="9876543210" />
                                         </div>
                                         {errors.phone && <p className="text-xs text-danger">{errors.phone}</p>}
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-5 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-foreground/80">Gender</label>
+                                        <select 
+                                            value={gender} 
+                                            onChange={(e) => setGender(e.target.value)} 
+                                            className={inputClass(errors.gender)}
+                                        >
+                                            <option value="">Select Gender</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                            <option value="other">Other</option>
+                                            <option value="prefer-not-to-say">Prefer not to say</option>
+                                        </select>
+                                        {errors.gender && <p className="text-xs text-danger">{errors.gender}</p>}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-foreground/80">Date of Birth</label>
+                                        <input 
+                                            type="date" 
+                                            value={dateOfBirth} 
+                                            onChange={(e) => setDateOfBirth(e.target.value)} 
+                                            className={inputClass(errors.dob)} 
+                                        />
+                                        {errors.dob && <p className="text-xs text-danger">{errors.dob}</p>}
                                     </div>
                                 </div>
 

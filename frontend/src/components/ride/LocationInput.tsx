@@ -14,6 +14,7 @@ interface LocationInputProps {
     onAutoDetect?: () => void;
     onMapClick?: () => void;
     onLocationSelect?: (address: string, lat: number, lng: number) => void;
+    outsideServiceArea?: boolean;
 }
 
 export const LocationInput: React.FC<LocationInputProps> = ({
@@ -23,7 +24,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
     type,
     onAutoDetect,
     onMapClick,
-    onLocationSelect
+    onLocationSelect,
+    outsideServiceArea = false,
 }) => {
     const isPickup = type === 'pickup';
     const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -133,7 +135,11 @@ export const LocationInput: React.FC<LocationInputProps> = ({
                     if (suggestions.length > 0) setShowSuggestions(true);
                 }}
                 placeholder={placeholder}
-                className="w-full pl-12 pr-24 py-4 bg-[#1E293B]/30 border border-[#1E293B]/50 rounded-2xl text-[#F9FAFB] placeholder:text-[#6B7280]/50 focus:bg-[#111827] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 outline-none font-medium"
+                className={`w-full pl-12 pr-24 py-4 bg-[#1E293B]/30 border rounded-2xl text-[#F9FAFB] placeholder:text-[#6B7280]/50 focus:bg-[#111827] focus:ring-4 transition-all duration-300 outline-none font-medium ${
+                    outsideServiceArea
+                        ? 'border-amber-500/60 focus:ring-amber-500/20 focus:border-amber-500'
+                        : 'border-[#1E293B]/50 focus:ring-indigo-500/10 focus:border-indigo-500'
+                }`}
             />
 
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-20">

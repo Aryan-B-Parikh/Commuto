@@ -19,7 +19,9 @@ import schemas
 from services.rating_service import apply_driver_rating
 from services.billing_service import get_trip_receipt as _build_receipt
 from services.wallet_service import hold_wallet_funds_or_raise, release_wallet_funds, reconcile_booking_hold
+from services.geofence import validate_ride_coordinates
 from ride_states import RIDE_STATUS_STARTED, normalize_ride_status
+from utils.notifications import create_notification
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
@@ -142,6 +144,20 @@ async def create_shared_ride(
     db: Session = Depends(get_db)
 ):
     """Create a public shared ride that others can join"""
+    # ── Geofence check (both pickup and destination must be in service area) ──
+    try:
+        validate_ride_coordinates(
+            origin_lat=trip_data.from_location.lat,
+            origin_lng=trip_data.from_location.lng,
+            dest_lat=trip_data.to_location.lat,
+            dest_lng=trip_data.to_location.lng,
+        )
+    except ValueError as geo_err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(geo_err),
+        )
+
     payment_method = (trip_data.payment_method or ONLINE_PAYMENT_METHOD).lower()
     if payment_method not in {ONLINE_PAYMENT_METHOD, CASH_PAYMENT_METHOD}:
         raise HTTPException(
@@ -230,6 +246,11 @@ async def create_shared_ride(
         new_trip.payment_method = payment_method
         
         # Broadcast to all drivers that a new ride is available
+        dispatch_loop = getattr(request.app.state, "notification_loop", None)
+        # Note: Broadcating to ALL drivers as a persistent notification might be noisy, 
+        # but the real-time websocket is already doing it. 
+        # For the Activity Log, we'll keep it to direct actions for now to avoid spamming drivers.
+        
         await manager.send_to_drivers({
             "type": "new_ride_available",
             "trip": {
@@ -263,11 +284,24 @@ def get_available_rides(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all public shared rides that have available seats"""
+    """Get all public shared rides that have available seats and are in the future"""
+    from datetime import datetime
+    
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+    
     rides = db.query(models.Trip).filter(
         models.Trip.creator_passenger_id != None,
         models.Trip.status == "pending",
-        models.Trip.available_seats > 0
+        models.Trip.available_seats > 0,
+        models.Trip.start_time >= datetime.utcnow()
     ).all()
     
     for ride in rides:
@@ -422,6 +456,22 @@ async def join_ride(
             }
         })
         
+        # Notify the creator
+        if trip.creator_passenger_id:
+            dispatch_loop = getattr(request.app.state, "notification_loop", None)
+            from routers.bids_router import _dispatch_websocket_notification
+            _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.creator_passenger_id),
+                    "Passenger Joined",
+                    f"{current_user.full_name} joined your ride to {trip.dest_address}.",
+                    "passenger_joined",
+                    f"/passenger/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
+        
         return {"message": "Successfully joined ride", "available_seats": trip.available_seats}
     except ValueError as exc:
         db.rollback()
@@ -534,7 +584,18 @@ def get_my_trips(
     db: Session = Depends(get_db)
 ):
     """Get all trips for current user (as passenger)"""
+    from datetime import datetime
     
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+        
     # Find all trips where the user is a passenger (via booking)
     trips = db.query(models.Trip).join(
         models.Booking, models.Trip.id == models.Booking.trip_id
@@ -602,7 +663,18 @@ def get_open_rides(
     db: Session = Depends(get_db)
 ):
     """Get all open rides available for bidding"""
+    from datetime import datetime
     
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+        
     # Identify trips where the current user is a passenger
     user_passenger_trips = db.query(models.Booking.trip_id).filter(
         models.Booking.passenger_id == current_user.id
@@ -613,9 +685,11 @@ def get_open_rides(
         models.TripBid.driver_id == current_user.id
     ).subquery()
 
-    # Get all pending rides excluding the ones above
+    # Get all pending rides excluding the ones above and ensuring they are in the future
+    from datetime import datetime
     rides = db.query(models.Trip).filter(
         models.Trip.status.in_(["pending"]),
+        models.Trip.start_time >= datetime.utcnow(),
         ~models.Trip.id.in_(user_passenger_trips),
         ~models.Trip.id.in_(driver_bidded_trips)
     ).all()
@@ -739,6 +813,53 @@ def cancel_ride(
             bid.version += 1
         
         db.commit()
+        
+        # Notify all participants about cancellation
+        dispatch_loop = getattr(request.app.state, "notification_loop", None)
+        from routers.bids_router import _dispatch_websocket_notification
+        
+        # 1. Notify creator if they didn't cancel it
+        if trip.creator_passenger_id and str(trip.creator_passenger_id) != str(current_user.id):
+             _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.creator_passenger_id),
+                    "Trip Cancelled",
+                    f"Your trip to {trip.dest_address} has been cancelled by another participant.",
+                    "trip_cancelled",
+                    f"/passenger/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
+            
+        # 2. Notify driver if assigned and didn't cancel it
+        if trip.driver_id and str(trip.driver_id) != str(current_user.id):
+             _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.driver_id),
+                    "Trip Cancelled",
+                    f"The trip to {trip.dest_address} has been cancelled by the passenger.",
+                    "trip_cancelled",
+                    f"/driver/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
+            
+        # 3. Notify other passengers
+        for b in bookings:
+            if str(b.passenger_id) != str(current_user.id) and str(b.passenger_id) != str(trip.creator_passenger_id):
+                 _dispatch_websocket_notification(
+                    create_notification(
+                        db,
+                        str(b.passenger_id),
+                        "Trip Cancelled",
+                        f"The ride to {trip.dest_address} has been cancelled.",
+                        "trip_cancelled",
+                        f"/passenger/trips/{trip_id}"
+                    ),
+                    dispatch_loop
+                )
         
         logger.info(f"Trip {trip_id} cancelled by user {current_user.id}. Penalty: {penalty_amount}")
         

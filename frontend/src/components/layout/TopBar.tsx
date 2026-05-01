@@ -4,8 +4,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, ChevronsLeftRight, LogOut, Search, Sidebar as SidebarIcon, UserCircle2 } from 'lucide-react';
+import { Bell, ChevronsLeftRight, LogOut, Search, Sidebar as SidebarIcon, UserCircle2, Check, Trash2, BellOff, Info, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { notificationsAPI } from '@/services/api';
+import { useSocketEvent } from '@/hooks/useWebSocket';
 
 export function TopBar({
     title,
@@ -24,6 +26,84 @@ export function TopBar({
     const [showNotifications, setShowNotifications] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchNotifications = async () => {
+        try {
+            const data = await notificationsAPI.getNotifications();
+            setNotifications(data);
+            setUnreadCount(data.filter((n: any) => !n.is_read).length);
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+        }
+    }, [user]);
+
+    // Handle incoming real-time notifications
+    useSocketEvent('notification', (data) => {
+        setNotifications(prev => [data, ...prev].slice(0, 50));
+        setUnreadCount(prev => prev + 1);
+        
+        // Optional: play a subtle sound or show a browser notification
+        if (Notification.permission === "granted") {
+            new Notification(data.title, { body: data.message });
+        }
+    });
+
+    const handleMarkAsRead = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            await notificationsAPI.markAsRead(id);
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    };
+
+    const handleClearAll = async () => {
+        try {
+            await notificationsAPI.clearAll();
+            setNotifications([]);
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Error clearing notifications:', error);
+        }
+    };
+
+    const getTimeAgo = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+        
+        if (seconds < 60) return 'just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+    };
+
+    const getIconForType = (type: string) => {
+        const baseClass = "flex h-8 w-8 items-center justify-center rounded-xl text-xs transition-colors group-hover:bg-primary group-hover:text-white";
+        switch (type) {
+            case 'new_bid': return <div className={`${baseClass} bg-amber-500/10 text-amber-500`}><Bell className="h-4 w-4" /></div>;
+            case 'bid_accepted': return <div className={`${baseClass} bg-emerald-500/10 text-emerald-500`}><Check className="h-4 w-4" /></div>;
+            case 'trip_arrived': return <div className={`${baseClass} bg-blue-500/10 text-blue-500`}><Info className="h-4 w-4" /></div>;
+            case 'trip_active': return <div className={`${baseClass} bg-primary/10 text-primary`}><ExternalLink className="h-4 w-4" /></div>;
+            case 'trip_completed': return <div className={`${baseClass} bg-emerald-500/10 text-emerald-500`}><Check className="h-4 w-4" /></div>;
+            case 'trip_cancelled': return <div className={`${baseClass} bg-red-500/10 text-red-500`}><BellOff className="h-4 w-4" /></div>;
+            default: return <div className={`${baseClass} bg-primary/10 text-primary`}>N</div>;
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -110,13 +190,23 @@ export function TopBar({
 
                     <div className="relative">
                         <button
-                            onClick={() => setShowNotifications(!showNotifications)}
+                            onClick={() => {
+                                setShowNotifications(!showNotifications);
+                                if (!showNotifications && unreadCount > 0) {
+                                    notificationsAPI.markAllAsRead();
+                                    setUnreadCount(0);
+                                }
+                            }}
                             className={`relative rounded-2xl border p-2.5 transition-all ${showNotifications
                                 ? 'border-primary bg-primary text-white shadow-[0_14px_30px_rgba(47,128,255,0.2)]'
                                 : 'border-card-border text-muted-foreground hover:bg-muted hover:text-primary'
                                 }`}
                         >
-                            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-danger ring-2 ring-card"></span>
+                            {unreadCount > 0 && (
+                                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white ring-2 ring-card animate-in fade-in zoom-in duration-300">
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                            )}
                             <Bell className="h-5 w-5" />
                         </button>
 
@@ -128,23 +218,61 @@ export function TopBar({
                                     exit={{ opacity: 0, y: 15, scale: 0.95 }}
                                     className="absolute right-0 mt-2 w-80 overflow-hidden rounded-[24px] border border-card-border bg-card p-4 shadow-[var(--shadow-soft)]"
                                 >
-                                    <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Activity Log</h4>
-                                    <div className="space-y-3">
-                                        {[1, 2].map((i) => (
-                                            <div key={i} className="group flex cursor-pointer gap-3 rounded-2xl p-3 transition-colors hover:bg-muted">
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-xs text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                                                    R
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-semibold leading-tight text-foreground">New route available from Delhi Central</p>
-                                                    <p className="mt-1 text-[10px] text-muted-foreground">2 minutes ago</p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Activity Log</h4>
+                                        {notifications.length > 0 && (
+                                            <button 
+                                                onClick={handleClearAll}
+                                                className="text-[10px] font-bold text-muted-foreground hover:text-danger transition-colors flex items-center gap-1"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                                Clear
+                                            </button>
+                                        )}
                                     </div>
-                                    <button className="mt-4 w-full rounded-xl p-2 text-[10px] font-bold uppercase tracking-widest text-primary transition-colors hover:bg-primary/10">
-                                        Clear All History
-                                    </button>
+                                    <div className="max-h-[350px] overflow-y-auto pr-1 custom-scrollbar space-y-2">
+                                        {notifications.length > 0 ? (
+                                            notifications.map((notification) => (
+                                                <div 
+                                                    key={notification.id} 
+                                                    onClick={() => {
+                                                        if (notification.link) router.push(notification.link);
+                                                        setShowNotifications(false);
+                                                    }}
+                                                    className={`group flex cursor-pointer gap-3 rounded-2xl p-3 transition-all hover:bg-muted relative ${!notification.is_read ? 'bg-primary/5 border border-primary/10' : ''}`}
+                                                >
+                                                    {getIconForType(notification.type)}
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className={`text-xs font-semibold leading-tight truncate ${!notification.is_read ? 'text-primary' : 'text-foreground'}`}>
+                                                            {notification.title}
+                                                        </p>
+                                                        <p className="mt-1 text-[10px] text-muted-foreground line-clamp-2">
+                                                            {notification.message}
+                                                        </p>
+                                                        <p className="mt-1 text-[9px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+                                                            {getTimeAgo(notification.created_at)}
+                                                        </p>
+                                                    </div>
+                                                    {!notification.is_read && (
+                                                        <div className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-primary" />
+                                                    )}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                                                <div className="mb-3 rounded-full bg-muted p-3">
+                                                    <BellOff className="h-6 w-6 text-muted-foreground/40" />
+                                                </div>
+                                                <p className="text-xs font-medium text-muted-foreground">No recent activity</p>
+                                                <p className="mt-1 text-[10px] text-muted-foreground/60">We'll notify you when something happens</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {notifications.length > 5 && (
+                                        <button className="mt-4 w-full rounded-xl p-2 text-[10px] font-bold uppercase tracking-widest text-primary transition-colors hover:bg-primary/10">
+                                            View All Activity
+                                        </button>
+                                    )}
                                 </motion.div>
                             )}
                         </AnimatePresence>

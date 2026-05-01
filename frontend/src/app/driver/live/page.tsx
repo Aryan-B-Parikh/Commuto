@@ -266,7 +266,7 @@ export default function DriverLivePage() {
         <RoleGuard allowedRoles={['driver']}>
             <DashboardLayout userType="driver" title="Ride Details">
                 <div className="max-w-6xl mx-auto pb-12 space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Driver Live Navigation</div>
                         {isConnected && (
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold ring-1 ring-emerald-500/20">
@@ -289,12 +289,12 @@ export default function DriverLivePage() {
                                     />
 
                                     <div className="absolute top-4 left-4 right-4">
-                                        <div className="bg-[#111827]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl p-4 shadow-2xl flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
+                                        <div className="bg-[#111827]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl p-4 shadow-2xl flex flex-wrap items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3 min-w-0">
                                                 <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
                                                     <User size={24} />
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0">
                                                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5">Pickup Passenger</p>
                                                     <h4 className="font-bold text-[#F9FAFB] text-sm truncate max-w-[170px] md:max-w-none">
                                                         {trip.passenger_notes?.[0]?.passenger_name || 'Rider'}
@@ -315,7 +315,7 @@ export default function DriverLivePage() {
 
                                 <div className="p-5 lg:p-6 bg-[#111827] space-y-4">
                                     <div className="bg-[#0B1020] border border-[#1E293B] rounded-2xl p-5">
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <MapPin size={14} className="text-red-500" />
@@ -329,7 +329,7 @@ export default function DriverLivePage() {
                                                     </p>
                                                 )}
                                             </div>
-                                            <div className="text-right border-l border-[#1E293B] pl-6 ml-6">
+                                            <div className="text-right border-[#1E293B] sm:border-l sm:pl-6 sm:ml-6">
                                                 <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Arrival</p>
                                                 <div className="flex flex-col items-end">
                                                     <div className="flex items-center gap-1.5 mb-1">

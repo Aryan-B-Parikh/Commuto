@@ -119,11 +119,13 @@ export default function PassengerTripDetailsPage() {
 
     useSocketEvent('new_bid', (data: any) => {
         console.log('New bid received:', data);
-        setBids(prev => {
-            if (prev.find(b => b.id === data.id)) return prev;
-            showToast('info', `New bid of ${formatCurrency(data.bid_amount)} received!`);
-            return [data, ...prev];
-        });
+        showToast('info', `New bid of ${formatCurrency(data.bid_amount)} received!`);
+        fetchData();
+    });
+
+    useSocketEvent('counter_bid', () => {
+        showToast('info', 'A counter offer was updated.');
+        fetchData();
     });
 
     const handleAcceptBid = async (bidId: string) => {
@@ -346,7 +348,7 @@ export default function PassengerTripDetailsPage() {
                                 />
                             )}
                             {/* Post-ride Receipt (completed trips) */}
-                            {normalizeRideStatus(rawTrip?.status) === 'completed' && (
+                            {rawTrip && normalizeRideStatus(rawTrip.status) === 'completed' && (
                                 <TripReceiptCard
                                     rawTrip={rawTrip}
                                     trip={trip}

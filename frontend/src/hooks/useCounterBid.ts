@@ -27,7 +27,13 @@ export function useCounterBid({ onSuccess }: UseCounterBidOptions): UseCounterBi
     const [counterAmount, setCounterAmount] = useState('');
     const [isCountering, setIsCountering] = useState(false);
 
+    const isValidBidId = (value: string) => /^(urn:uuid:)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
     const handleCounterBid = async (bidId: string) => {
+        if (!bidId || !isValidBidId(bidId)) {
+            showToast('error', 'Bid reference is invalid. Please refresh and try again.');
+            return;
+        }
         const amount = parseFloat(counterAmount);
         if (!counterAmount || isNaN(amount) || amount <= 0) {
             showToast('error', 'Enter a valid counter amount');

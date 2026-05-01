@@ -24,12 +24,18 @@ function VerifyEmailContent() {
     const resolvePostVerifyRoute = async () => {
         const currentUser = await authAPI.getCurrentUser();
         const normalizedRole = currentUser?.role === 'driver' ? 'driver' : 'passenger';
+        const phoneValue = currentUser?.phone_number;
+        const isCoreDataMissing = !phoneValue || !currentUser?.gender || !currentUser?.date_of_birth;
 
-        if (currentUser?.phone_number && currentUser?.is_phone_verified === false) {
+        if (isCoreDataMissing) {
+            return '/complete-setup';
+        }
+
+        if (phoneValue && currentUser?.is_phone_verified === false) {
             return '/verify-phone';
         }
 
-        if (normalizedRole === 'driver' && !currentUser?.profile_completed) {
+        if (!currentUser?.profile_completed) {
             return '/complete-profile';
         }
 

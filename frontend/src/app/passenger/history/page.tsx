@@ -57,6 +57,8 @@ export default function PassengerHistoryPage() {
     const totalSpent = stats.totalSpent;
     const co2Saved = stats.totalCO2.toFixed(1);
     const coRiders = stats.drivers.size;
+    const userRating = typeof user?.rating === 'number' ? user.rating : 0;
+    const hasUserRating = userRating > 0;
 
     const filteredTrips = trips.filter(trip => {
         if (activeFilter === 'all') return true;
@@ -239,7 +241,9 @@ export default function PassengerHistoryPage() {
 
                                                             <div className="text-right flex-shrink-0 hidden sm:block">
                                                                 <p className="text-lg font-black text-[#F9FAFB]">{formatCurrency(trip.pricePerSeat)}</p>
-                                                                {trip.status === 'completed' && <RatingStars rating={4.5} size="sm" />}
+                                                                {trip.status === 'completed' && trip.driver?.rating > 0 && (
+                                                                    <RatingStars rating={trip.driver.rating} size="sm" />
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </Card>
@@ -295,8 +299,12 @@ export default function PassengerHistoryPage() {
                                 <div className="mt-8 pt-6 border-t border-[#1E293B]">
                                     <p className="text-xs text-[#6B7280] font-bold mb-4 uppercase tracking-tighter text-center">Your Rating</p>
                                     <div className="flex flex-col items-center">
-                                        <span className="text-4xl font-black text-[#F9FAFB] mb-1">{user?.rating || '5.0'}</span>
-                                        <RatingStars rating={user?.rating || 5.0} size="sm" />
+                                        <span className="text-4xl font-black text-[#F9FAFB] mb-1">{hasUserRating ? userRating.toFixed(1) : '—'}</span>
+                                        {hasUserRating ? (
+                                            <RatingStars rating={userRating} size="sm" />
+                                        ) : (
+                                            <p className="text-[10px] text-[#6B7280] font-bold uppercase tracking-widest">No ratings yet</p>
+                                        )}
                                         <p className="text-[10px] text-[#6B7280] mt-2">Based on {user?.totalTrips || 0} reviews</p>
                                     </div>
                                 </div>

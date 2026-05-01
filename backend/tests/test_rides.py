@@ -10,7 +10,7 @@ class TestRides:
     
     def test_create_trip(self, client, auth_headers_passenger):
         """Test creating a ride request"""
-        response = client.post("/rides/request", json={
+        response = client.post("/rides/create-shared", json={
             "from_location": {
                 "address": "123 Start St, City",
                 "lat": 40.7128,
@@ -23,18 +23,19 @@ class TestRides:
             },
             "date": future_date,
             "time": "14:00",
-            "seats_requested": 2
+            "total_seats": 2,
+            "total_price": 200.0
         }, headers=auth_headers_passenger)
         
         assert response.status_code == 201
         data = response.json()
-        assert data["status"] == "pending"
+        assert data["status"] == "requested"
         assert data["total_seats"] == 2
         assert "id" in data
     
     def test_create_trip_past_date(self, client, auth_headers_passenger):
         """Test creating a trip with past date fails"""
-        response = client.post("/rides/request", json={
+        response = client.post("/rides/create-shared", json={
             "from_location": {
                 "address": "123 Start St, City",
                 "lat": 40.7128,
@@ -47,7 +48,8 @@ class TestRides:
             },
             "date": "2020-01-01",  # Past date
             "time": "14:00",
-            "seats_requested": 2
+            "total_seats": 2,
+            "total_price": 200.0
         }, headers=auth_headers_passenger)
         
         assert response.status_code == 400
@@ -55,7 +57,7 @@ class TestRides:
     
     def test_create_trip_invalid_datetime(self, client, auth_headers_passenger):
         """Test creating a trip with invalid datetime format"""
-        response = client.post("/rides/request", json={
+        response = client.post("/rides/create-shared", json={
             "from_location": {
                 "address": "123 Start St, City",
                 "lat": 40.7128,
@@ -68,15 +70,16 @@ class TestRides:
             },
             "date": "invalid-date",
             "time": "14:00",
-            "seats_requested": 2
+            "total_seats": 2,
+            "total_price": 200.0
         }, headers=auth_headers_passenger)
         
         assert response.status_code == 400
         assert "Invalid date/time" in response.json()["detail"]
     
-    def test_create_trip_unauthorized(self, client, auth_headers_driver):
-        """Test that drivers cannot create trips"""
-        response = client.post("/rides/request", json={
+    def test_create_trip_driver_allowed(self, client, auth_headers_driver):
+        """Test that drivers can also create shared rides"""
+        response = client.post("/rides/create-shared", json={
             "from_location": {
                 "address": "123 Start St, City",
                 "lat": 40.7128,
@@ -89,10 +92,12 @@ class TestRides:
             },
             "date": future_date,
             "time": "14:00",
-            "seats_requested": 2
+            "total_seats": 2,
+            "total_price": 200.0,
+            "payment_method": "cash"
         }, headers=auth_headers_driver)
         
-        assert response.status_code == 403
+        assert response.status_code == 201
     
     def test_get_my_trips(self, client, auth_headers_passenger, test_trip):
         """Test getting passenger's trips"""
@@ -195,7 +200,7 @@ class TestRidesRateLimiting:
         """Test trip creation rate limiting"""
         # Make 6 requests (limit is 5/minute)
         for i in range(6):
-            response = client.post("/rides/request", json={
+            response = client.post("/rides/create-shared", json={
                 "from_location": {
                     "address": f"{i} Start St, City",
                     "lat": 40.7128,
@@ -208,7 +213,8 @@ class TestRidesRateLimiting:
                 },
                 "date": future_date,
                 "time": "14:00",
-                "seats_requested": 1
+                "total_seats": 1,
+                "total_price": 100.0
             }, headers=auth_headers_passenger)
         
         # The 6th request should be rate limited
