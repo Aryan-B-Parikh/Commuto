@@ -13,8 +13,8 @@ import requests
 from sqlalchemy import text
 
 
-ROOT = Path(__file__).resolve().parent
-BACKEND_DIR = ROOT / "backend"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 

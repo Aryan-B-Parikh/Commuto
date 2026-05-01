@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { testimonials } from '@/data/testimonials';
-import { RatingStars } from '@/components/ui/RatingStars';
 
 export const Testimonials: React.FC = () => {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -26,12 +25,12 @@ export const Testimonials: React.FC = () => {
                     viewport={{ once: true }}
                     className="text-center mb-16"
                 >
-                    <span className="text-blue-200 font-semibold text-sm uppercase tracking-wider">Testimonials</span>
+                    <span className="text-blue-200 font-semibold text-sm uppercase tracking-wider">Rider Scenarios</span>
                     <h2 className="text-3xl sm:text-4xl font-bold text-white mt-2 mb-4">
-                        Loved by Commuters Everywhere
+                        How People Use Commuto
                     </h2>
                     <p className="text-lg text-blue-100 max-w-2xl mx-auto">
-                        Don&apos;t just take our word for it. Here&apos;s what our community has to say.
+                        Illustrative examples based on common day-to-day commuting patterns.
                     </p>
                 </motion.div>
 
@@ -55,7 +54,7 @@ export const Testimonials: React.FC = () => {
 
                             {/* Content */}
                             <p className="text-xl md:text-2xl text-foreground mb-8 leading-relaxed transition-colors">
-                                &quot;{testimonials[activeIndex].content}&quot;
+                                {testimonials[activeIndex].content}
                             </p>
 
                             {/* Author */}
@@ -71,7 +70,6 @@ export const Testimonials: React.FC = () => {
                                         <p className="text-sm text-muted-foreground transition-colors">{testimonials[activeIndex].role}</p>
                                     </div>
                                 </div>
-                                <RatingStars rating={testimonials[activeIndex].rating} size="md" showValue={false} />
                             </div>
                         </motion.div>
                     </AnimatePresence>

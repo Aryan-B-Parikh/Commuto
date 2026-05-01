@@ -70,7 +70,7 @@ def test_passenger(client, db):
         "email": "passenger@test.com",
         "password": "testpassword123",
         "full_name": "Test Passenger",
-        "phone": "+1234567890",
+        "phone": "+919876543210",
         "role": "passenger"
     })
 
@@ -93,7 +93,7 @@ def test_driver(client, db):
         "email": "driver@test.com",
         "password": "testpassword123",
         "full_name": "Test Driver",
-        "phone": "+1234567891",
+        "phone": "+919876543211",
         "role": "driver",
         "license_number": "DL123456",
         "vehicle_make": "Toyota",
@@ -151,7 +151,7 @@ def test_trip(client, auth_headers_passenger):
     """Create a test trip"""
     # Use a date in the future so tests remain valid regardless of current date
     future_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
-    response = client.post("/rides/request", json={
+    response = client.post("/rides/create-shared", json={
         "from_location": {
             "address": "123 Start St, City",
             "lat": 40.7128,
@@ -164,6 +164,8 @@ def test_trip(client, auth_headers_passenger):
         },
         "date": future_date,
         "time": "14:00",
-        "seats_requested": 2
+        "total_seats": 2,
+        "total_price": 200.0
     }, headers=auth_headers_passenger)
+    assert response.status_code == 201, response.text
     return response.json()

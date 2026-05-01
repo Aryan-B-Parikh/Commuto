@@ -31,6 +31,7 @@ import { TripResponse } from '@/types/api';
 import { useToast } from '@/hooks/useToast';
 import { useRouteInfo } from '@/hooks/useRouteInfo';
 import dynamic from 'next/dynamic';
+import { normalizeRideStatus, isRideStarted } from '@/utils/rideState';
 
 const MapWidget = dynamic(() => import('@/components/map/MapWidget').then(mod => mod.MapWidget), {
     ssr: false,
@@ -43,7 +44,8 @@ export default function DriverLivePage() {
     const router = useRouter();
     const [trip, setTrip] = useState<TripResponse | null>(null);
     const [isFetchingTrip, setIsFetchingTrip] = useState(true);
-    const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
+    const [isStartOTPModalOpen, setIsStartOTPModalOpen] = useState(false);
+    const [isEndOTPModalOpen, setIsEndOTPModalOpen] = useState(false);
     const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
     const [isCompletingTrip, setIsCompletingTrip] = useState(false);
     const [driverPos, setDriverPos] = useState<[number, number] | undefined>(undefined);
@@ -59,7 +61,7 @@ export default function DriverLivePage() {
 
     const targetCoords = useMemo((): [number, number] | undefined => {
         if (!trip) return undefined;
-        const isStarted = trip.status === 'active';
+        const isStarted = isRideStarted(trip.status);
         return isStarted
             ? [Number(trip.dest_lat), Number(trip.dest_lng)]
             : [Number(trip.origin_lat), Number(trip.origin_lng)];
@@ -77,11 +79,11 @@ export default function DriverLivePage() {
             try {
                 const trips = await tripsAPI.getDriverTrips();
                 hasShownRateLimitRef.current = false;
-                const active = trips.find(t => ['active', 'driver_assigned', 'bid_accepted'].includes(t.status));
-                if (active) {
-                    setTrip(active);
+                const currentTrip = trips.find(t => ['accepted', 'started', 'completed'].includes(normalizeRideStatus(t.status)));
+                if (currentTrip) {
+                    setTrip(currentTrip);
                 } else {
-                    router.push('/driver/dashboard');
+                    router.replace('/driver/requests');
                 }
             } catch (error: any) {
                 if (error.response?.status === 429) {
@@ -115,29 +117,17 @@ export default function DriverLivePage() {
     const {
         isConnected,
         sendLocation,
-        updateStatus,
         tripStatus
     } = useTripWebSocket(trip?.id || null);
 
-    const completeRideWithOtp = async () => {
+    const completeRideWithOtp = async (otp: string) => {
         if (!trip) return;
-
-        const enteredOtp = window.prompt('Enter 6-digit drop OTP from passenger to end this trip:');
-        if (!enteredOtp) {
-            showToast('error', 'Trip completion requires passenger drop OTP.');
-            return;
-        }
-
-        const otp = enteredOtp.trim();
-        if (!/^\d{6}$/.test(otp)) {
-            showToast('error', 'Drop OTP must be a valid 6-digit number.');
-            return;
-        }
 
         setIsCompletingTrip(true);
         try {
             await otpAPI.completeRide(trip.id, otp);
             setTrip(prev => (prev ? { ...prev, status: 'completed' } as TripResponse : prev));
+            setIsEndOTPModalOpen(false);
             showToast('success', "Trip completed!");
         } catch (err: any) {
             showToast('error', err.response?.data?.detail || "Failed to complete trip");
@@ -170,6 +160,19 @@ export default function DriverLivePage() {
     }, [trip?.status, router]);
 
     useEffect(() => {
+        if (!trip || !isRideStarted(trip.status)) return;
+
+        const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = 'Ride is in progress. You cannot leave this screen.';
+            return event.returnValue;
+        };
+
+        window.addEventListener('beforeunload', warnBeforeUnload);
+        return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+    }, [trip?.status]);
+
+    useEffect(() => {
         if (!isConnected || !trip || hasCompletedRef.current) return;
 
         if (!("geolocation" in navigator)) {
@@ -194,7 +197,7 @@ export default function DriverLivePage() {
 
                 sendLocation(latitude, longitude);
 
-                if (trip.status === 'active' && !hasCompletedRef.current) {
+                if (isRideStarted(trip.status) && !hasCompletedRef.current) {
                     const distToDest = calculateDistance(
                         { lat: latitude, lng: longitude },
                         { lat: Number(trip.dest_lat), lng: Number(trip.dest_lng) }
@@ -257,13 +260,13 @@ export default function DriverLivePage() {
     if (isFetchingTrip) return <div className="p-8 text-center text-[#9CA3AF]">Locating Trip...</div>;
     if (!trip) return null;
 
-    const currentStatus = trip.status;
+    const currentStatus = normalizeRideStatus(trip.status);
 
     return (
         <RoleGuard allowedRoles={['driver']}>
             <DashboardLayout userType="driver" title="Ride Details">
                 <div className="max-w-6xl mx-auto pb-12 space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Driver Live Navigation</div>
                         {isConnected && (
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold ring-1 ring-emerald-500/20">
@@ -286,12 +289,12 @@ export default function DriverLivePage() {
                                     />
 
                                     <div className="absolute top-4 left-4 right-4">
-                                        <div className="bg-[#111827]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl p-4 shadow-2xl flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
+                                        <div className="bg-[#111827]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl p-4 shadow-2xl flex flex-wrap items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3 min-w-0">
                                                 <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
                                                     <User size={24} />
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0">
                                                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5">Pickup Passenger</p>
                                                     <h4 className="font-bold text-[#F9FAFB] text-sm truncate max-w-[170px] md:max-w-none">
                                                         {trip.passenger_notes?.[0]?.passenger_name || 'Rider'}
@@ -312,12 +315,12 @@ export default function DriverLivePage() {
 
                                 <div className="p-5 lg:p-6 bg-[#111827] space-y-4">
                                     <div className="bg-[#0B1020] border border-[#1E293B] rounded-2xl p-5">
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <MapPin size={14} className="text-red-500" />
                                                     <p className="font-bold text-[#F9FAFB] text-base truncate">
-                                                        {trip.status === 'active' ? trip.dest_address.split(',')[0] : 'To Pickup Point'}
+                                                        {currentStatus === 'started' ? trip.dest_address.split(',')[0] : 'To Pickup Point'}
                                                     </p>
                                                 </div>
                                                 {routeName && (
@@ -326,7 +329,7 @@ export default function DriverLivePage() {
                                                     </p>
                                                 )}
                                             </div>
-                                            <div className="text-right border-l border-[#1E293B] pl-6 ml-6">
+                                            <div className="text-right border-[#1E293B] sm:border-l sm:pl-6 sm:ml-6">
                                                 <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1">Arrival</p>
                                                 <div className="flex flex-col items-end">
                                                     <div className="flex items-center gap-1.5 mb-1">
@@ -345,8 +348,8 @@ export default function DriverLivePage() {
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={() => {
-                                                const targetLat = currentStatus === 'active' ? trip.dest_lat : trip.origin_lat;
-                                                const targetLng = currentStatus === 'active' ? trip.dest_lng : trip.origin_lng;
+                                                const targetLat = currentStatus === 'started' ? trip.dest_lat : trip.origin_lat;
+                                                const targetLng = currentStatus === 'started' ? trip.dest_lng : trip.origin_lng;
                                                 window.open(`https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}&travelmode=driving`, '_blank');
                                             }}
                                             className="w-14 h-14 rounded-2xl bg-[#1E293B] flex items-center justify-center text-[#F9FAFB] shrink-0 border border-[#374151] active:scale-95 transition-transform"
@@ -354,38 +357,18 @@ export default function DriverLivePage() {
                                             <Navigation size={24} className="rotate-45" />
                                         </button>
 
-                                        {currentStatus === 'bid_accepted' && (
+                                        {currentStatus === 'accepted' && (
                                             <button
-                                                onClick={async () => {
-                                                    try {
-                                                        await updateStatus('driver_assigned');
-                                                        setTrip(prev => (prev ? { ...prev, status: 'driver_assigned' } as TripResponse : prev));
-                                                        showToast('success', "Status updated: You've arrived!");
-                                                    } catch (err) {
-                                                        showToast('error', "Failed to update arrival status");
-                                                    }
-                                                }}
+                                                onClick={() => setIsStartOTPModalOpen(true)}
                                                 className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition-all"
                                             >
-                                                I HAVE ARRIVED
+                                                START RIDE
                                             </button>
                                         )}
-                                        {currentStatus === 'driver_assigned' && (
-                                            <button
-                                                onClick={() => setIsOTPModalOpen(true)}
-                                                className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                                            >
-                                                <Car size={20} />
-                                                START TRIP
-                                            </button>
-                                        )}
-                                        {currentStatus === 'active' && (
+                                        {currentStatus === 'started' && (
                                             <button
                                                 disabled={isCompletingTrip}
-                                                onClick={async () => {
-                                                    if (!confirm('Are you sure you want to complete this trip?')) return;
-                                                    await completeRideWithOtp();
-                                                }}
+                                                onClick={() => setIsEndOTPModalOpen(true)}
                                                 className="flex-1 h-14 bg-white text-[#0B1020] rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
                                             >
                                                 {isCompletingTrip ? 'ENDING...' : 'END TRIP'}
@@ -408,23 +391,23 @@ export default function DriverLivePage() {
                                     <div className="space-y-6">
                                         <div className="flex gap-4">
                                             <div className="flex flex-col items-center">
-                                                <div className={`w-3 h-3 rounded-full ${['bid_accepted', 'driver_assigned', 'active'].includes(currentStatus) ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
+                                                <div className={`w-3 h-3 rounded-full ${['accepted', 'started'].includes(currentStatus) ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
                                                 <div className="w-0.5 h-10 bg-[#1E293B]" />
                                             </div>
-                                            <p className={`text-xs font-bold ${currentStatus === 'bid_accepted' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Driver Heading to Pickup</p>
+                                            <p className={`text-xs font-bold ${currentStatus === 'accepted' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Driver Heading to Pickup</p>
                                         </div>
                                         <div className="flex gap-4">
                                             <div className="flex flex-col items-center">
-                                                <div className={`w-3 h-3 rounded-full ${['driver_assigned', 'active'].includes(currentStatus) ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
+                                                <div className={`w-3 h-3 rounded-full ${currentStatus === 'started' ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
                                                 <div className="w-0.5 h-10 bg-[#1E293B]" />
                                             </div>
-                                            <p className={`text-xs font-bold ${currentStatus === 'driver_assigned' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Arrived at Location</p>
+                                            <p className={`text-xs font-bold ${currentStatus === 'started' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Live Trip in Progress</p>
                                         </div>
                                         <div className="flex gap-4">
                                             <div className="flex flex-col items-center">
-                                                <div className={`w-3 h-3 rounded-full ${currentStatus === 'active' ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
+                                                <div className={`w-3 h-3 rounded-full ${currentStatus === 'started' ? 'bg-indigo-500 ring-4 ring-indigo-500/20' : 'bg-[#1E293B]'}`} />
                                             </div>
-                                            <p className={`text-xs font-bold ${currentStatus === 'active' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Live Trip in Progress</p>
+                                            <p className={`text-xs font-bold ${currentStatus === 'started' ? 'text-indigo-400' : 'text-[#6B7280]'}`}>Destination Bound</p>
                                         </div>
                                     </div>
                                 </div>
@@ -442,7 +425,7 @@ export default function DriverLivePage() {
                                 <p className="text-2xl font-black text-indigo-400 uppercase tracking-wide mb-4">{currentStatus.replace('_', ' ')}</p>
                                 <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-center">
                                     <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">
-                                        {currentStatus === 'completed' ? 'Trip Closed' : 'Live Tracking Enabled'}
+                                        {currentStatus === 'completed' ? 'Trip Closed' : currentStatus === 'started' ? 'Live Tracking Enabled' : 'Ready to Start'}
                                     </span>
                                 </div>
                             </Card>
@@ -451,18 +434,20 @@ export default function DriverLivePage() {
                 </div>
 
                 <VerifyOTPModal
-                    isOpen={isOTPModalOpen}
-                    onClose={() => setIsOTPModalOpen(false)}
+                    isOpen={isStartOTPModalOpen}
+                    onClose={() => setIsStartOTPModalOpen(false)}
                     isVerifying={isVerifyingOTP}
+                    title="Verify Start OTP"
+                    subtitle="Ask passenger for the 6-digit pickup OTP"
+                    verifyButtonText="Verify & Start Trip"
+                    verifyingText="Starting trip..."
                     onVerify={async (otp) => {
                         setIsVerifyingOTP(true);
                         try {
-                            const result = await otpAPI.verifyOTP(trip.id, otp);
-                            setTrip(prev => (prev ? { ...prev, status: 'active', otp_verified: true, completion_otp: result.completion_otp } as TripResponse : prev));
+                            await otpAPI.verifyOTP(trip.id, otp);
+                            setTrip(prev => (prev ? { ...prev, status: 'started', otp_verified: true } as TripResponse : prev));
                             showToast('success', "OTP Verified! Trip started. End trip will require drop OTP.");
-                            setIsOTPModalOpen(false);
-                            // Force re-render after OTP verification
-                            setTimeout(() => window.location.reload(), 500);
+                            setIsStartOTPModalOpen(false);
                         } catch (err: any) {
                             if (err.response?.status === 401) {
                                 showToast('error', "Your session has expired. Please refresh the page or login again.");
@@ -472,6 +457,19 @@ export default function DriverLivePage() {
                         } finally {
                             setIsVerifyingOTP(false);
                         }
+                    }}
+                />
+
+                <VerifyOTPModal
+                    isOpen={isEndOTPModalOpen}
+                    onClose={() => setIsEndOTPModalOpen(false)}
+                    isVerifying={isCompletingTrip}
+                    title="Verify Drop OTP"
+                    subtitle="Ask passenger for the 6-digit drop OTP to end this trip"
+                    verifyButtonText="Verify & End Trip"
+                    verifyingText="Ending trip..."
+                    onVerify={async (otp) => {
+                        await completeRideWithOtp(otp);
                     }}
                 />
             </DashboardLayout>

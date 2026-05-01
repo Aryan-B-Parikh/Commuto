@@ -58,7 +58,8 @@ export default function CompleteProfilePage() {
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
     const [submitting, setSubmitting] = useState(false);
 
-    const isDriver = role === 'driver';
+    const effectiveRole = user?.role || role;
+    const isDriver = effectiveRole === 'driver';
     const steps: Step[] = isDriver ? ['personal', 'safety', 'vehicle'] : ['personal', 'safety'];
     const stepIndex = steps.indexOf(currentStep);
     const isLast = stepIndex === steps.length - 1;
@@ -70,7 +71,7 @@ export default function CompleteProfilePage() {
             router.push('/login');
             return;
         }
-        
+
         // Pre-fill fields from user object
         setForm(prev => ({
             ...prev,
@@ -88,10 +89,10 @@ export default function CompleteProfilePage() {
         }));
 
         if (user.profileCompleted) {
-            const dest = role === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
+            const dest = effectiveRole === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
             router.push(dest);
         }
-    }, [user, role, authLoading, router]);
+    }, [user, effectiveRole, authLoading, router]);
 
     const update = (key: keyof FormData, value: string | number) => {
         setForm((prev) => ({ ...prev, [key]: value }));
@@ -171,7 +172,8 @@ export default function CompleteProfilePage() {
 
             if (isDriver) {
                 payload.license_number = form.license_number;
-                payload.vehicle_type = form.vehicle_make;
+                payload.vehicle_type = 'Auto-Rickshaw';
+                payload.vehicle_make = form.vehicle_make;
                 payload.vehicle_model = form.vehicle_model;
                 payload.vehicle_plate = form.vehicle_plate;
                 payload.vehicle_capacity = form.vehicle_capacity;
@@ -182,7 +184,7 @@ export default function CompleteProfilePage() {
             if (refreshUser) await refreshUser();
 
             showToast('success', 'Profile completed! Welcome to Commuto.');
-            const dest = role === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
+            const dest = effectiveRole === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
             router.push(dest);
         } catch (err: any) {
             const detail = err?.response?.data?.detail;

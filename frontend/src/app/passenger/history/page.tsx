@@ -17,6 +17,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PassengerBottomNav } from '@/components/layout/PassengerBottomNav';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { ArrowLeft, MapPin, Navigation, History, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { normalizeRideStatus } from '@/utils/rideState';
 
 export default function PassengerHistoryPage() {
     const [trips, setTrips] = useState<Trip[]>([]);
@@ -56,12 +57,14 @@ export default function PassengerHistoryPage() {
     const totalSpent = stats.totalSpent;
     const co2Saved = stats.totalCO2.toFixed(1);
     const coRiders = stats.drivers.size;
+    const userRating = typeof user?.rating === 'number' ? user.rating : 0;
+    const hasUserRating = userRating > 0;
 
     const filteredTrips = trips.filter(trip => {
         if (activeFilter === 'all') return true;
         if (activeFilter === 'completed') return trip.status === 'completed';
         if (activeFilter === 'cancelled') return trip.status === 'cancelled';
-        if (activeFilter === 'upcoming') return ['pending', 'active'].includes(trip.status);
+        if (activeFilter === 'upcoming') return ['requested', 'accepted', 'started'].includes(normalizeRideStatus(trip.status));
         return true;
     });
 
@@ -69,8 +72,9 @@ export default function PassengerHistoryPage() {
         switch (status) {
             case 'completed': return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', icon: <CheckCircle2 size={12} /> };
             case 'cancelled': return { bg: 'bg-red-500/20', text: 'text-red-400', icon: <XCircle size={12} /> };
-            case 'active':
-            case 'pending': return { bg: 'bg-teal-500/20', text: 'text-teal-400', icon: <Clock size={12} /> };
+            case 'accepted':
+            case 'started':
+            case 'requested': return { bg: 'bg-teal-500/20', text: 'text-teal-400', icon: <Clock size={12} /> };
             default: return { bg: 'bg-[#1E293B]', text: 'text-[#9CA3AF]', icon: null };
         }
     };
@@ -218,10 +222,10 @@ export default function PassengerHistoryPage() {
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center justify-between mb-2">
                                                                     <h3 className="font-bold text-[#F9FAFB] truncate">
-                                                                        {trip.status === 'pending' ? `Request to ${trip.to.name}` : trip.driver.name}
+                                                                        {normalizeRideStatus(trip.status) === 'requested' ? `Request to ${trip.to.name}` : trip.driver.name}
                                                                     </h3>
                                                                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 ml-2 ${trip.status === 'completed' ? 'bg-teal-500/15 text-teal-400' :
-                                                                        trip.status === 'active' ? 'bg-blue-500/15 text-blue-400' :
+                                                                        normalizeRideStatus(trip.status) === 'started' ? 'bg-blue-500/15 text-blue-400' :
                                                                             'bg-[#1E293B] text-[#6B7280]'
                                                                         }`}>
                                                                         {trip.status}
@@ -237,7 +241,9 @@ export default function PassengerHistoryPage() {
 
                                                             <div className="text-right flex-shrink-0 hidden sm:block">
                                                                 <p className="text-lg font-black text-[#F9FAFB]">{formatCurrency(trip.pricePerSeat)}</p>
-                                                                {trip.status === 'completed' && <RatingStars rating={4.5} size="sm" />}
+                                                                {trip.status === 'completed' && trip.driver?.rating > 0 && (
+                                                                    <RatingStars rating={trip.driver.rating} size="sm" />
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </Card>
@@ -293,8 +299,12 @@ export default function PassengerHistoryPage() {
                                 <div className="mt-8 pt-6 border-t border-[#1E293B]">
                                     <p className="text-xs text-[#6B7280] font-bold mb-4 uppercase tracking-tighter text-center">Your Rating</p>
                                     <div className="flex flex-col items-center">
-                                        <span className="text-4xl font-black text-[#F9FAFB] mb-1">{user?.rating || '5.0'}</span>
-                                        <RatingStars rating={user?.rating || 5.0} size="sm" />
+                                        <span className="text-4xl font-black text-[#F9FAFB] mb-1">{hasUserRating ? userRating.toFixed(1) : '—'}</span>
+                                        {hasUserRating ? (
+                                            <RatingStars rating={userRating} size="sm" />
+                                        ) : (
+                                            <p className="text-[10px] text-[#6B7280] font-bold uppercase tracking-widest">No ratings yet</p>
+                                        )}
                                         <p className="text-[10px] text-[#6B7280] mt-2">Based on {user?.totalTrips || 0} reviews</p>
                                     </div>
                                 </div>

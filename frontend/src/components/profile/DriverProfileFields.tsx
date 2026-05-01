@@ -169,7 +169,7 @@ export const DriverProfileFields: React.FC<DriverProfileFieldsProps> = ({
 
                 <div className="md:col-span-2 mt-4">
                     <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium text-slate-700 ml-1 block">Driver's License Photo</label>
+                        <label className="text-sm font-medium text-slate-700 ml-1 block">Driver&apos;s License Photo</label>
                         {verifyStatus === 'success' && (
                             <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100 uppercase tracking-wider">Verified</span>
                         )}
@@ -258,7 +258,7 @@ export const DriverProfileFields: React.FC<DriverProfileFieldsProps> = ({
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                     </svg>
                                 </div>
-                                <p className="text-sm text-slate-500 font-bold">Upload Driver's License</p>
+                                <p className="text-sm text-slate-500 font-bold">Upload Driver&apos;s License</p>
                                 <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-[0.1em]">Horizontal photo only</p>
                             </div>
                         )}

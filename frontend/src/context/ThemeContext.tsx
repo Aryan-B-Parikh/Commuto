@@ -12,24 +12,15 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setTheme] = useState<Theme>('dark');
-    const [mounted, setMounted] = useState(false);
+    const [theme, setTheme] = useState<Theme>(() => {
+        // SSR-safe: default to 'dark', hydration effect will correct if needed
+        if (typeof window === 'undefined') return 'dark';
+        const saved = localStorage.getItem('theme');
+        if (saved === 'light' || saved === 'dark') return saved;
+        return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    });
 
     useEffect(() => {
-        // Load theme from localStorage or system preference
-        const savedTheme = localStorage.getItem('theme') as Theme;
-        if (savedTheme) {
-            setTheme(savedTheme);
-        } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-            // Check if user has light mode as system default, though app defaults to dark
-            // setTheme('light'); 
-        }
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (!mounted) return;
-
         const root = window.document.documentElement;
         if (theme === 'light') {
             root.classList.add('light');
@@ -37,7 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             root.classList.remove('light');
         }
         localStorage.setItem('theme', theme);
-    }, [theme, mounted]);
+    }, [theme]);
 
     const toggleTheme = () => {
         setTheme(prev => (prev === 'light' ? 'dark' : 'light'));

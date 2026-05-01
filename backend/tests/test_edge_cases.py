@@ -23,7 +23,7 @@ def _create_shared_trip(client, headers, *, total_seats=2, notes=None, date=None
         "date": date or _future_date(),
         "time": time,
         "total_seats": total_seats,
-        "price_per_seat": 50.0,
+        "total_price": 200.0,
     }
     if notes is not None:
         payload["notes"] = notes
@@ -50,7 +50,7 @@ class TestInputValidationEdgeCases:
                 "email": "not-an-email",
                 "password": "testpassword123",
                 "full_name": "Bad Email",
-                "phone": "+1234567899",
+                "phone": "+919876543218",
                 "role": "passenger",
             },
         )
@@ -193,14 +193,14 @@ class TestConcurrencyAndRateLimits:
         assert "own trip" in response.json()["detail"].lower()
 
     def test_register_rate_limit(self, client):
-        for i in range(6):
+        for i in range(7):
             response = client.post(
                 "/auth/register",
                 json={
                     "email": f"rate_limit_{i}@test.com",
                     "password": "testpassword123",
                     "full_name": "Rate Limit",
-                    "phone": f"+12345670{i:02d}",
+                    "phone": f"98{i:08d}",
                     "role": "passenger",
                 },
             )

@@ -67,7 +67,7 @@ export function DashboardLayout({ children, userType, title = 'Dashboard', immer
                 )}
 
                 {/* Content area — extra bottom padding on mobile for bottom nav */}
-                <div className="flex-1 animate-fadeIn pt-4 lg:pt-6 px-3 lg:px-6 2xl:px-8">
+                <div className="flex-1 animate-fadeIn px-3 pb-24 pt-4 lg:px-6 lg:pb-10 lg:pt-6 2xl:px-8">
                     {children}
                 </div>
             </main>

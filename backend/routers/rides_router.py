@@ -19,9 +19,27 @@ import schemas
 from services.rating_service import apply_driver_rating
 from services.billing_service import get_trip_receipt as _build_receipt
 from services.wallet_service import hold_wallet_funds_or_raise, release_wallet_funds, reconcile_booking_hold
+from services.geofence import validate_ride_coordinates
+from ride_states import RIDE_STATUS_STARTED, normalize_ride_status
+from utils.notifications import create_notification
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
 logger = logging.getLogger(__name__)
+
+
+ONLINE_PAYMENT_METHOD = "online"
+CASH_PAYMENT_METHOD = "cash"
+
+
+def _get_trip_payment_method(trip: models.Trip) -> str:
+    payment_status = (trip.payment_status or "").lower()
+    if payment_status == CASH_PAYMENT_METHOD:
+        return CASH_PAYMENT_METHOD
+    return ONLINE_PAYMENT_METHOD
+
+
+def _should_require_wallet_check(payment_method: str) -> bool:
+    return payment_method == ONLINE_PAYMENT_METHOD
 
 
 def _get_utcnow() -> datetime:
@@ -126,6 +144,26 @@ async def create_shared_ride(
     db: Session = Depends(get_db)
 ):
     """Create a public shared ride that others can join"""
+    # ── Geofence check (both pickup and destination must be in service area) ──
+    try:
+        validate_ride_coordinates(
+            origin_lat=trip_data.from_location.lat,
+            origin_lng=trip_data.from_location.lng,
+            dest_lat=trip_data.to_location.lat,
+            dest_lng=trip_data.to_location.lng,
+        )
+    except ValueError as geo_err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(geo_err),
+        )
+
+    payment_method = (trip_data.payment_method or ONLINE_PAYMENT_METHOD).lower()
+    if payment_method not in {ONLINE_PAYMENT_METHOD, CASH_PAYMENT_METHOD}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payment method must be either online or cash"
+        )
     
     # Parse date and time
     try:
@@ -166,6 +204,7 @@ async def create_shared_ride(
         price_per_seat=trip_data.total_price, # Initial price is full total
         notes=trip_data.notes.strip()[:500] if trip_data.notes else None,
         status="pending",
+        payment_status=CASH_PAYMENT_METHOD if payment_method == CASH_PAYMENT_METHOD else "pending",
         version=0
     )
     
@@ -177,7 +216,7 @@ async def create_shared_ride(
         seats_booked=1,
         total_price=trip_data.total_price,
         status="confirmed",
-        payment_status="completed",
+        payment_status=CASH_PAYMENT_METHOD if payment_method == CASH_PAYMENT_METHOD else "pending",
         notes=trip_data.notes.strip()[:500] if trip_data.notes else None
     )
     
@@ -196,15 +235,22 @@ async def create_shared_ride(
         db.add(booking)
         db.add(trip_passenger)
 
-        # Check balance but don't deduct yet (post-ride charging model)
-        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
-        if not wallet or wallet.balance < Decimal(str(trip_data.total_price)):
-            raise ValueError("Insufficient wallet balance for this trip total")
+        if _should_require_wallet_check(payment_method):
+            # Check balance but don't deduct yet (post-ride charging model)
+            wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
+            if not wallet or wallet.balance < Decimal(str(trip_data.total_price)):
+                raise ValueError("Insufficient wallet balance for this trip total")
 
         db.commit()
         db.refresh(new_trip)
+        new_trip.payment_method = payment_method
         
         # Broadcast to all drivers that a new ride is available
+        dispatch_loop = getattr(request.app.state, "notification_loop", None)
+        # Note: Broadcating to ALL drivers as a persistent notification might be noisy, 
+        # but the real-time websocket is already doing it. 
+        # For the Activity Log, we'll keep it to direct actions for now to avoid spamming drivers.
+        
         await manager.send_to_drivers({
             "type": "new_ride_available",
             "trip": {
@@ -220,9 +266,10 @@ async def create_shared_ride(
         return new_trip
     except ValueError as exc:
         db.rollback()
+        guidance = "Add money to wallet before creating the ride." if payment_method == ONLINE_PAYMENT_METHOD else "Switch to online payment or try again."
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{exc}. Add money to wallet before creating the ride.",
+            detail=f"{exc}. {guidance}",
         )
     except Exception as e:
         db.rollback()
@@ -237,16 +284,30 @@ def get_available_rides(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all public shared rides that have available seats"""
+    """Get all public shared rides that have available seats and are in the future"""
+    from datetime import datetime
+    
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+    
     rides = db.query(models.Trip).filter(
         models.Trip.creator_passenger_id != None,
         models.Trip.status == "pending",
-        models.Trip.available_seats > 0
+        models.Trip.available_seats > 0,
+        models.Trip.start_time >= datetime.utcnow()
     ).all()
     
     for ride in rides:
         ride.from_address = ride.origin_address
         ride.to_address = ride.dest_address
+        ride.payment_method = _get_trip_payment_method(ride)
     return rides
 
 
@@ -264,6 +325,7 @@ def get_trip_details(
     # Sort out backwards compat fields
     trip.from_address = trip.origin_address
     trip.to_address = trip.dest_address
+    trip.payment_method = _get_trip_payment_method(trip)
     
     # Populate creator manually if needed
     if trip.creator_passenger_id:
@@ -277,6 +339,13 @@ def get_trip_details(
     ).first()
     
     trip.user_booking = user_booking
+    if user_booking:
+        trip.booking_id = str(user_booking.id)
+        trip.booking_total_price = float(user_booking.total_price) if user_booking.total_price is not None else None
+        trip.booking_payment_status = user_booking.payment_status
+        trip.seats_requested = user_booking.seats_booked
+    else:
+        trip.seats_requested = trip.total_seats
 
     # Populate per-passenger notes from bookings
     if hasattr(trip, 'passengers') and trip.passengers:
@@ -301,6 +370,7 @@ async def join_ride(
     db: Session = Depends(get_db)
 ):
     """Join a public shared ride"""
+    trip = None
     try:
         db.begin_nested()
         trip = db.query(models.Trip).filter(models.Trip.id == trip_id).with_for_update().first()
@@ -330,17 +400,18 @@ async def join_ride(
         
         # Update trip seats temporarily to calculate NEW split
         trip.available_seats -= 1
+        payment_method = _get_trip_payment_method(trip)
         
         # DYNAMIC PRICING: Calculate new price per seat
         total_pax = trip.total_seats - trip.available_seats
         new_fare = (Decimal(str(trip.total_price)) / Decimal(str(total_pax))).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
         trip.price_per_seat = new_fare
         
-        # CHARGE the new passenger immediately
-        # Check balance but don't deduct yet (post-ride charging model)
-        wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
-        if not wallet or wallet.balance < new_fare:
-            raise ValueError("Insufficient wallet balance to join this ride")
+        if _should_require_wallet_check(payment_method):
+            # Check balance but don't deduct yet (post-ride charging model)
+            wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).first()
+            if not wallet or wallet.balance < new_fare:
+                raise ValueError("Insufficient wallet balance to join this ride")
 
         # Create booking record with NEW fare
         join_notes = body.notes.strip()[:500] if body and body.notes else None
@@ -351,7 +422,7 @@ async def join_ride(
             seats_booked=1,
             total_price=new_fare,
             status="confirmed",
-            payment_status="completed",
+            payment_status=CASH_PAYMENT_METHOD if payment_method == CASH_PAYMENT_METHOD else "pending",
             notes=join_notes
         )
         
@@ -376,6 +447,8 @@ async def join_ride(
             "type": "seat_update",
             "trip_id": str(trip_id),
             "available_seats": trip.available_seats,
+            "price_per_seat": float(trip.price_per_seat) if trip.price_per_seat is not None else None,
+            "filled_seats": trip.total_seats - trip.available_seats,
             "passenger": {
                 "id": str(current_user.id),
                 "full_name": current_user.full_name,
@@ -383,12 +456,30 @@ async def join_ride(
             }
         })
         
+        # Notify the creator
+        if trip.creator_passenger_id:
+            dispatch_loop = getattr(request.app.state, "notification_loop", None)
+            from routers.bids_router import _dispatch_websocket_notification
+            _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.creator_passenger_id),
+                    "Passenger Joined",
+                    f"{current_user.full_name} joined your ride to {trip.dest_address}.",
+                    "passenger_joined",
+                    f"/passenger/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
+        
         return {"message": "Successfully joined ride", "available_seats": trip.available_seats}
     except ValueError as exc:
         db.rollback()
+        payment_method = _get_trip_payment_method(trip) if trip else ONLINE_PAYMENT_METHOD
+        guidance = "Add money to wallet before joining this ride." if payment_method == ONLINE_PAYMENT_METHOD else "Switch to online payment or try again."
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{exc}. Add money to wallet before joining this ride.",
+            detail=f"{exc}. {guidance}",
         )
     except HTTPException:
         raise
@@ -471,6 +562,8 @@ async def leave_ride(
             "type": "seat_update",
             "trip_id": str(trip_id),
             "available_seats": trip.available_seats,
+            "price_per_seat": float(trip.price_per_seat) if trip.price_per_seat is not None else None,
+            "filled_seats": trip.total_seats - trip.available_seats,
             "left_user_id": str(current_user.id)
         })
         
@@ -491,7 +584,18 @@ def get_my_trips(
     db: Session = Depends(get_db)
 ):
     """Get all trips for current user (as passenger)"""
+    from datetime import datetime
     
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+        
     # Find all trips where the user is a passenger (via booking)
     trips = db.query(models.Trip).join(
         models.Booking, models.Trip.id == models.Booking.trip_id
@@ -559,7 +663,18 @@ def get_open_rides(
     db: Session = Depends(get_db)
 ):
     """Get all open rides available for bidding"""
+    from datetime import datetime
     
+    # Lazy auto-cancel expired pending rides
+    expired_rides = db.query(models.Trip).filter(
+        models.Trip.status == "pending",
+        models.Trip.start_time < datetime.utcnow()
+    ).all()
+    if expired_rides:
+        for er in expired_rides:
+            er.status = "cancelled"
+        db.commit()
+        
     # Identify trips where the current user is a passenger
     user_passenger_trips = db.query(models.Booking.trip_id).filter(
         models.Booking.passenger_id == current_user.id
@@ -570,9 +685,11 @@ def get_open_rides(
         models.TripBid.driver_id == current_user.id
     ).subquery()
 
-    # Get all pending rides excluding the ones above
+    # Get all pending rides excluding the ones above and ensuring they are in the future
+    from datetime import datetime
     rides = db.query(models.Trip).filter(
         models.Trip.status.in_(["pending"]),
+        models.Trip.start_time >= datetime.utcnow(),
         ~models.Trip.id.in_(user_passenger_trips),
         ~models.Trip.id.in_(driver_bidded_trips)
     ).all()
@@ -697,6 +814,53 @@ def cancel_ride(
         
         db.commit()
         
+        # Notify all participants about cancellation
+        dispatch_loop = getattr(request.app.state, "notification_loop", None)
+        from routers.bids_router import _dispatch_websocket_notification
+        
+        # 1. Notify creator if they didn't cancel it
+        if trip.creator_passenger_id and str(trip.creator_passenger_id) != str(current_user.id):
+             _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.creator_passenger_id),
+                    "Trip Cancelled",
+                    f"Your trip to {trip.dest_address} has been cancelled by another participant.",
+                    "trip_cancelled",
+                    f"/passenger/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
+            
+        # 2. Notify driver if assigned and didn't cancel it
+        if trip.driver_id and str(trip.driver_id) != str(current_user.id):
+             _dispatch_websocket_notification(
+                create_notification(
+                    db,
+                    str(trip.driver_id),
+                    "Trip Cancelled",
+                    f"The trip to {trip.dest_address} has been cancelled by the passenger.",
+                    "trip_cancelled",
+                    f"/driver/trips/{trip_id}"
+                ),
+                dispatch_loop
+            )
+            
+        # 3. Notify other passengers
+        for b in bookings:
+            if str(b.passenger_id) != str(current_user.id) and str(b.passenger_id) != str(trip.creator_passenger_id):
+                 _dispatch_websocket_notification(
+                    create_notification(
+                        db,
+                        str(b.passenger_id),
+                        "Trip Cancelled",
+                        f"The ride to {trip.dest_address} has been cancelled.",
+                        "trip_cancelled",
+                        f"/passenger/trips/{trip_id}"
+                    ),
+                    dispatch_loop
+                )
+        
         logger.info(f"Trip {trip_id} cancelled by user {current_user.id}. Penalty: {penalty_amount}")
         
         return {
@@ -747,7 +911,7 @@ def update_location(
         )
     
     # Can only update location for active trips
-    if trip.status not in ["active"]:
+    if normalize_ride_status(trip.status) != RIDE_STATUS_STARTED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Can only update location for active trips"

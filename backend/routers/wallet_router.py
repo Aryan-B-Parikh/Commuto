@@ -9,6 +9,7 @@ import os
 import hmac
 import hashlib
 import logging
+import requests
 
 router = APIRouter(prefix="/wallet", tags=["Wallet"])
 logger = logging.getLogger(__name__)
@@ -61,7 +62,14 @@ def create_add_money_order(
     db: Session = Depends(get_db)
 ):
     """Create a Razorpay order for adding money to wallet"""
-    import razorpay
+    try:
+        import razorpay
+    except ImportError as exc:
+        logger.error("Razorpay SDK is not installed", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Payment service dependency is missing on the server"
+        ) from exc
     
     key_id = os.getenv("RAZORPAY_KEY_ID")
     key_secret = os.getenv("RAZORPAY_KEY_SECRET")
@@ -110,7 +118,13 @@ def create_add_money_order(
             "currency": "INR",
             "key": key_id
         }
-        
+    except requests.exceptions.RequestException as exc:
+        db.rollback()
+        logger.error(f"Network error while creating Razorpay order: {str(exc)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to reach Razorpay from the backend. Check internet or DNS on the server and try again."
+        ) from exc
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating Razorpay order: {str(e)}", exc_info=True)

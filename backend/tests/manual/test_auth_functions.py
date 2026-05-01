@@ -1,10 +1,18 @@
+import os
+import sys
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
 from database import Base, DATABASE_URL
 import models
 import auth
-import os
-from dotenv import load_dotenv
 
 load_dotenv()
 

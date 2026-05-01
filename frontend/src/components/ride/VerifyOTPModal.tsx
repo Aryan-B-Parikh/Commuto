@@ -10,9 +10,24 @@ interface VerifyOTPModalProps {
     onClose: () => void;
     onVerify: (otp: string) => Promise<void>;
     isVerifying: boolean;
+    title?: string;
+    subtitle?: string;
+    verifyButtonText?: string;
+    verifyingText?: string;
+    cancelText?: string;
 }
 
-export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: VerifyOTPModalProps) {
+export function VerifyOTPModal({
+    isOpen,
+    onClose,
+    onVerify,
+    isVerifying,
+    title = 'Verify Start OTP',
+    subtitle = 'Ask passenger for the 6-digit code',
+    verifyButtonText = 'Verify & Start Trip',
+    verifyingText = 'Verifying...',
+    cancelText = 'Later'
+}: VerifyOTPModalProps) {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const inputRefs = [
         useRef<HTMLInputElement>(null),
@@ -28,6 +43,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
             setOtp(['', '', '', '', '', '']);
             setTimeout(() => inputRefs[0].current?.focus(), 100);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     const handleChange = (index: number, value: string) => {
@@ -86,8 +102,8 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                                         <ShieldCheck size={24} />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold text-[#F9FAFB]">Verify Start OTP</h3>
-                                        <p className="text-sm text-[#9CA3AF]">Ask passenger for the 6-digit code</p>
+                                        <h3 className="text-xl font-bold text-[#F9FAFB]">{title}</h3>
+                                        <p className="text-sm text-[#9CA3AF]">{subtitle}</p>
                                     </div>
                                 </div>
                                 <button
@@ -125,11 +141,11 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                                         {isVerifying ? (
                                             <>
                                                 <Loader2 size={24} className="animate-spin" />
-                                                Verifying...
+                                                {verifyingText}
                                             </>
                                         ) : (
                                             <>
-                                                Verify & Start Trip
+                                                {verifyButtonText}
                                                 <ArrowRight size={20} />
                                             </>
                                         )}
@@ -139,7 +155,7 @@ export function VerifyOTPModal({ isOpen, onClose, onVerify, isVerifying }: Verif
                                         onClick={onClose}
                                         className="h-12 text-[#9CA3AF] font-bold text-sm hover:text-[#F9FAFB] transition-colors"
                                     >
-                                        Later
+                                        {cancelText}
                                     </button>
                                 </div>
                             </form>

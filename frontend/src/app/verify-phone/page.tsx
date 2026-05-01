@@ -21,6 +21,23 @@ export default function VerifyPhonePage() {
     const [devOtp, setDevOtp] = useState<string | null>(null);
     const [cooldown, setCooldown] = useState(0);
 
+    const resolvePostVerifyRoute = async () => {
+        const currentUser = await authAPI.getCurrentUser();
+        const normalizedRole = currentUser?.role === 'driver' ? 'driver' : 'passenger';
+        const phoneValue = currentUser?.phone_number;
+        const isCoreDataMissing = !phoneValue || !currentUser?.gender || !currentUser?.date_of_birth;
+
+        if (isCoreDataMissing) {
+            return '/complete-setup';
+        }
+
+        if (!currentUser?.profile_completed) {
+            return '/complete-profile';
+        }
+
+        return `/${normalizedRole}/dashboard`;
+    };
+
     // Countdown for resend cooldown
     useEffect(() => {
         if (cooldown <= 0) return;
@@ -63,9 +80,10 @@ export default function VerifyPhonePage() {
         try {
             await authAPI.verifyPhone(otp.trim());
             setStatus('success');
-            showToast('success', 'Phone verified! Now complete your profile.');
+            const nextRoute = await resolvePostVerifyRoute();
+            showToast('success', 'Phone verified successfully.');
             setTimeout(() => {
-                router.push('/complete-profile');
+                router.push(nextRoute);
             }, 2000);
         } catch (err: any) {
             setStatus('error');
@@ -182,7 +200,7 @@ export default function VerifyPhonePage() {
 
                 <div className="mt-6 text-center">
                     <Link
-                        href="/complete-profile"
+                        href="/dashboard"
                         className="text-sm text-[#6B7280] hover:text-[#9CA3AF]"
                     >
                         Skip for now →

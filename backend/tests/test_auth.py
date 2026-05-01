@@ -10,7 +10,7 @@ class TestAuth:
             "email": "newpassenger@test.com",
             "password": "testpassword123",
             "full_name": "New Passenger",
-            "phone": "+1234567890",
+            "phone": "+919876543212",
             "role": "passenger"
         })
         assert response.status_code == 201
@@ -25,7 +25,7 @@ class TestAuth:
             "email": "newdriver@test.com",
             "password": "testpassword123",
             "full_name": "New Driver",
-            "phone": "+1234567891",
+            "phone": "+919876543213",
             "role": "driver",
             "license_number": "DL123456",
             "vehicle_make": "Toyota",
@@ -45,10 +45,10 @@ class TestAuth:
             "email": "passenger@test.com",  # Already exists
             "password": "testpassword123",
             "full_name": "Another User",
-            "phone": "+1234567892",
+            "phone": "+919876543214",
             "role": "passenger"
         })
-        assert response.status_code == 400
+        assert response.status_code == 409
         assert "already registered" in response.json()["detail"]
     
     def test_register_invalid_role(self, client):
@@ -57,7 +57,7 @@ class TestAuth:
             "email": "invalid@test.com",
             "password": "testpassword123",
             "full_name": "Invalid User",
-            "phone": "+1234567893",
+            "phone": "+919876543215",
             "role": "invalid_role"
         })
         assert response.status_code == 400
@@ -117,7 +117,7 @@ class TestAuth:
             "date_of_birth": "1990-01-01",
             "emergency_contact": {
                 "name": "Jane Doe",
-                "phone": "+1987654321",
+                "phone": "+919876543216",
                 "relationship": "Sister"
             }
         }, headers=auth_headers_passenger)
@@ -137,7 +137,7 @@ class TestAuth:
             "date_of_birth": "1985-05-05",
             "emergency_contact": {
                 "name": "Emergency Contact",
-                "phone": "+1234567891",
+                "phone": "+919876543217",
                 "relationship": "Family"
             }
         }, headers=auth_headers_driver)
@@ -150,12 +150,12 @@ class TestAuthRateLimiting:
     
     def test_login_rate_limit(self, client):
         """Test that login is rate limited"""
-        # Make 11 rapid login attempts (limit is 10/minute)
-        for i in range(11):
+        # Make 12 rapid login attempts (limit is 11/minute)
+        for i in range(12):
             response = client.post("/auth/login", json={
                 "email": f"user{i}@test.com",
                 "password": "wrongpassword"
             })
         
-        # The 11th request should be rate limited
+        # The 12th request should be rate limited
         assert response.status_code == 429

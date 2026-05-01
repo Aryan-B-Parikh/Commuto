@@ -8,6 +8,7 @@ from database import get_db
 from sqlalchemy.orm import Session
 import models
 import json
+from ride_states import normalize_ride_status
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key")
@@ -104,15 +105,46 @@ async def trip_websocket(
             elif message.get("type") == "trip_status_update":
                 # Handle status updates (Arrived, Started, Completed)
                 # This could also be done via REST API, but WebSocket is faster for UI sync
-                new_status = message.get("status")
+                new_status = normalize_ride_status(message.get("status"))
                 if is_driver:
                     trip.status = new_status
                     db.commit()
+                    
+                    # 1. Real-time broadcast
                     await manager.broadcast_to_trip(trip_id, {
                         "type": "trip_status_update",
                         "status": new_status,
                         "trip_id": trip_id
                     })
+                    
+                    # 2. Persistent notifications for all passengers
+                    from utils.notifications import create_notification
+                    status_messages = {
+                        "arrived": "Your driver has arrived at the pickup location.",
+                        "active": "Your trip has started. Have a safe journey!",
+                        "completed": "You have reached your destination. Trip completed.",
+                        "cancelled": "Your trip has been cancelled."
+                    }
+                    
+                    msg = status_messages.get(new_status, f"Trip status updated to {new_status}")
+                    title = f"Trip {new_status.capitalize()}"
+                    
+                    # Get all passengers for this trip
+                    trip_passengers = db.query(models.Booking).filter(
+                        models.Booking.trip_id == trip_id,
+                        models.Booking.status == "confirmed"
+                    ).all()
+                    
+                    for passenger in trip_passengers:
+                        await create_notification(
+                            db,
+                            str(passenger.passenger_id),
+                            title,
+                            msg,
+                            f"trip_{new_status}",
+                            f"/passenger/trips/{trip_id}"
+                        )
+
 
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)

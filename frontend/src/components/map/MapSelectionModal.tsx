@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MapPin, Check, Crosshair, Loader2, Search } from 'lucide-react';
+import { X, MapPin, Check, Crosshair, Loader2, Search, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { isInsideServiceArea, getServiceAreaGeoJSON } from '@/utils/geoUtils';
 
 // OLA Maps API Key
 const OLA_API_KEY = process.env.NEXT_PUBLIC_OLA_MAPS_API_KEY || '';
@@ -33,6 +34,7 @@ export function MapSelectionModal({
     const [selectedPos, setSelectedPos] = useState<[number, number] | null>(initialCoords || null);
     const [address, setAddress] = useState(initialCoords ? 'Loading address...' : 'Select a location on map');
     const [isFetchingAddress, setIsFetchingAddress] = useState(false);
+    const [isOutsideServiceArea, setIsOutsideServiceArea] = useState(false);
 
     // Search state
     const [searchQuery, setSearchQuery] = useState('');
@@ -129,6 +131,7 @@ export function MapSelectionModal({
             if (data.result && data.result.geometry && data.result.geometry.location) {
                 const { lat, lng } = data.result.geometry.location;
                 setSelectedPos([lat, lng]);
+                setIsOutsideServiceArea(!isInsideServiceArea(lat, lng));
                 setAddress(data.result.formatted_address || result.description);
 
                 if (mapRef.current) {
@@ -150,6 +153,7 @@ export function MapSelectionModal({
                                 const mLat = marker.getLngLat().lat;
                                 const mLng = marker.getLngLat().lng;
                                 setSelectedPos([mLat, mLng]);
+                                setIsOutsideServiceArea(!isInsideServiceArea(mLat, mLng));
                                 fetchAddress(mLat, mLng);
                             });
                             markerRef.current = marker;
@@ -215,6 +219,41 @@ export function MapSelectionModal({
                 setIsReady(true);
                 map.resize();
 
+                // ── Render geofence overlay ──
+                try {
+                    const geojson = getServiceAreaGeoJSON();
+                    map.addSource('geofence-area', {
+                        type: 'geojson',
+                        data: geojson as any,
+                    });
+
+                    // Translucent fill inside the polygon
+                    map.addLayer({
+                        id: 'geofence-fill',
+                        type: 'fill',
+                        source: 'geofence-area',
+                        paint: {
+                            'fill-color': '#6366F1',
+                            'fill-opacity': 0.06,
+                        },
+                    });
+
+                    // Dashed border
+                    map.addLayer({
+                        id: 'geofence-border',
+                        type: 'line',
+                        source: 'geofence-area',
+                        paint: {
+                            'line-color': '#6366F1',
+                            'line-width': 2,
+                            'line-dasharray': [4, 3],
+                            'line-opacity': 0.5,
+                        },
+                    });
+                } catch (err) {
+                    console.warn('Failed to render geofence overlay:', err);
+                }
+
                 // Only add marker if we have a position
                 if (selectedPos) {
                     const marker = new maplibregl.Marker({
@@ -227,16 +266,19 @@ export function MapSelectionModal({
                     marker.on('dragend', () => {
                         const lngLat = marker.getLngLat();
                         setSelectedPos([lngLat.lat, lngLat.lng]);
+                        setIsOutsideServiceArea(!isInsideServiceArea(lngLat.lat, lngLat.lng));
                         fetchAddress(lngLat.lat, lngLat.lng);
                     });
 
                     markerRef.current = marker;
+                    setIsOutsideServiceArea(!isInsideServiceArea(selectedPos[0], selectedPos[1]));
                 }
             });
 
             map.on('click', (e: any) => {
                 const { lng, lat } = e.lngLat;
                 setSelectedPos([lat, lng]);
+                setIsOutsideServiceArea(!isInsideServiceArea(lat, lng));
 
                 if (markerRef.current) {
                     markerRef.current.setLngLat([lng, lat]);
@@ -252,6 +294,7 @@ export function MapSelectionModal({
                         const mLat = marker.getLngLat().lat;
                         const mLng = marker.getLngLat().lng;
                         setSelectedPos([mLat, mLng]);
+                        setIsOutsideServiceArea(!isInsideServiceArea(mLat, mLng));
                         fetchAddress(mLat, mLng);
                     });
                     markerRef.current = marker;
@@ -306,6 +349,7 @@ export function MapSelectionModal({
             navigator.geolocation.getCurrentPosition((position) => {
                 const { latitude, longitude } = position.coords;
                 setSelectedPos([latitude, longitude]);
+                setIsOutsideServiceArea(!isInsideServiceArea(latitude, longitude));
 
                 if (mapRef.current) {
                     mapRef.current.flyTo({ center: [longitude, latitude], zoom: 16 });
@@ -417,6 +461,25 @@ export function MapSelectionModal({
                                     <span className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">Loading Ola Maps...</span>
                                 </div>
                             )}
+
+                            {/* Out-of-service-area warning */}
+                            <AnimatePresence>
+                                {isOutsideServiceArea && selectedPos && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 20 }}
+                                        className="absolute bottom-20 left-4 right-4 z-20"
+                                    >
+                                        <div className="flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-xl px-4 py-3">
+                                            <AlertTriangle size={18} className="text-amber-400 shrink-0" />
+                                            <p className="text-xs font-medium text-amber-200">
+                                                This location is outside Commuto&apos;s service area (Charusat region). Your ride may be rejected.
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             {/* Floating Re-center Button */}
                             <button

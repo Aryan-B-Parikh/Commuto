@@ -51,6 +51,7 @@ export default function DriverCreatePage() {
                 time: formData.time,
                 total_seats: formData.seats,
                 total_price: formData.totalPrice,
+                payment_method: 'online' as const,
                 notes: formData.notes
             };
 

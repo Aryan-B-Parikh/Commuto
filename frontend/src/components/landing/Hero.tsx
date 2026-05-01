@@ -44,7 +44,7 @@ export const Hero: React.FC = () => {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-full mb-6 border border-blue-500/20"
                         >
                             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">10,000+ daily rides shared</span>
+                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Now live for daily commuters</span>
                         </motion.div>
 
                         {/* Headline */}
@@ -80,16 +80,16 @@ export const Hero: React.FC = () => {
                         {/* Stats */}
                         <div className="flex gap-8 mt-12">
                             <div>
-                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">50K+</p>
-                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">Active Users</p>
+                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">Verified</p>
+                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">Onboarding</p>
                             </div>
                             <div>
-                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">1M+</p>
-                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">Rides Shared</p>
+                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">Planned</p>
+                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">Shared Trips</p>
                             </div>
                             <div>
-                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">4.9</p>
-                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">App Rating</p>
+                                <p className="text-3xl font-black text-foreground italic tracking-tighter leading-none">Supported</p>
+                                <p className="text-sm text-muted-foreground mt-1 uppercase font-bold tracking-widest opacity-80">Help &amp; Safety</p>
                             </div>
                         </div>
                     </motion.div>
@@ -174,8 +174,8 @@ export const Hero: React.FC = () => {
                                     </svg>
                                 </div>
                                 <div className="leading-tight">
-                                    <p className="text-xs font-semibold text-foreground">Trip Matched!</p>
-                                    <p className="text-[10px] text-muted-foreground">Saved $15 today</p>
+                                    <p className="text-xs font-semibold text-foreground">Trip Matched</p>
+                                    <p className="text-[10px] text-muted-foreground">Route confirmed</p>
                                 </div>
                             </motion.div>
                         </div>

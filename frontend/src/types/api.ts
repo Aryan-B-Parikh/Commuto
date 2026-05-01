@@ -36,6 +36,8 @@ export interface RegisterRequest {
     full_name: string;
     phone: string;  // Frontend sends as 'phone', we'll map to phone_number
     role: 'passenger' | 'driver';
+    gender?: string;
+    date_of_birth?: string;
     // Driver-specific fields
     license_number?: string;
     vehicle_make?: string;
@@ -62,6 +64,7 @@ export interface UserResponse {
     avatar_url?: string;
     role: string;
     is_verified: boolean;
+    is_phone_verified: boolean;
     profile_completed: boolean;
     rating?: number;
     total_trips?: number;
@@ -114,11 +117,31 @@ export interface TripResponse {
     booking_id?: string;
     booking_total_price?: number;
     booking_payment_status?: string;
+    payment_method?: 'online' | 'cash';
     notes?: string;
     start_otp?: string;
     completion_otp?: string;
     otp_verified?: boolean;
     passenger_notes?: { passenger_name: string; notes: string }[];
+}
+
+export interface CreateSharedRideRequest {
+    from_location: {
+        address: string;
+        lat: number;
+        lng: number;
+    };
+    to_location: {
+        address: string;
+        lat: number;
+        lng: number;
+    };
+    date: string;
+    time: string;
+    total_seats: number;
+    total_price: number;
+    payment_method: 'online' | 'cash';
+    notes?: string;
 }
 
 export interface BidRequest {
