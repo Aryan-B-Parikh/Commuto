@@ -28,9 +28,11 @@ export default function CompleteSetupPage() {
             return;
         }
 
-        // If they already have all required info, send them to dashboard
+        // If they already have all required info, route by profile completeness
         if (user.phone_number && user.gender && user.date_of_birth) {
-            const dest = user.role === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
+            const dest = user.profileCompleted
+                ? (user.role === 'driver' ? '/driver/dashboard' : '/passenger/dashboard')
+                : '/complete-profile';
             router.push(dest);
         }
     }, [user, authLoading, router]);
@@ -63,8 +65,11 @@ export default function CompleteSetupPage() {
 
             if (refreshUser) await refreshUser();
             showToast('success', 'Setup complete! Welcome to Commuto.');
-            
-            const dest = user?.role === 'driver' ? '/driver/dashboard' : '/passenger/dashboard';
+
+            const latestUser = await authAPI.getCurrentUser();
+            const normalizedRole = latestUser?.role === 'driver' ? 'driver' : 'passenger';
+            const profileCompleted = latestUser?.profile_completed ?? false;
+            const dest = profileCompleted ? `/${normalizedRole}/dashboard` : '/complete-profile';
             router.push(dest);
         } catch (error: any) {
             showToast('error', error.response?.data?.detail || 'Failed to complete setup');
