@@ -329,21 +329,13 @@ export default function RideDetailsPage() {
                 </div>
 
                 {/* Driver Bids Section (Mobile) */}
-<<<<<<< HEAD
                 {isMember && activeBids.length > 0 && trip.status === 'pending' && (
-=======
-                {isMember && bids.length > 0 && trip.status === 'pending' && (
->>>>>>> origin/main
                     <div className="flex-1 bg-[#111827] px-5 pb-32">
                         <h3 className="text-sm font-bold text-[#F9FAFB] mb-3 flex items-center gap-2">
                             <DollarSign size={16} className="text-emerald-400" /> Driver Bids ({activeBids.length})
                         </h3>
                         <div className="flex flex-col gap-2">
-<<<<<<< HEAD
                             {activeBids.map((bid: any, index: number) => {
-=======
-                            {bids.map((bid: any, index: number) => {
->>>>>>> origin/main
                                 const bidId = resolveBidId(bid);
                                 const bidAmount = resolveBidAmount(bid);
                                 const bidAmountLabel = bidAmount === null ? '--' : formatCurrency(bidAmount);
@@ -775,11 +767,7 @@ export default function RideDetailsPage() {
                                             </div>
                                         </div>
                                         <div className="space-y-3">
-<<<<<<< HEAD
                                             {activeBids.map((bid: any, index: number) => {
-=======
-                                            {bids.map((bid: any, index: number) => {
->>>>>>> origin/main
                                                 const bidId = resolveBidId(bid);
                                                 const bidAmount = resolveBidAmount(bid);
                                                 const bidAmountLabel = bidAmount === null ? '--' : formatCurrency(bidAmount);

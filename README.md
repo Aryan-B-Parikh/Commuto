@@ -18,14 +18,19 @@ This is a monorepo containing:
 - **Auth**: JWT tokens (python-jose) with bcrypt password hashing
 - **Rate Limiting**: SlowAPI with Redis support
 - **Real-time**: WebSocket support for live updates
+- **Email**: SMTP + EmailJS (optional)
+- **SMS**: Twilio OTP (optional)
+- **Payments**: Razorpay wallet top-ups + ledgered transactions
+- **Notifications**: Persistent notifications + WebSocket fanout
 
 ### Frontend
 - **Framework**: Next.js 16 with React 19
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS 4
 - **HTTP Client**: Axios
-- **Maps**: Leaflet + React-Leaflet
+- **Maps**: Leaflet + React-Leaflet (Ola/Google keys supported)
 - **Animations**: Framer Motion
+- **Testing**: Playwright E2E
 
 ## 📁 Project Structure
 
@@ -80,7 +85,7 @@ commuto/
    pip install email-validator  # Optional but recommended
    ```
 
-4. Create a `.env` file in the `backend/` directory (see `.env.example`):
+4. Create a `.env` file in the `backend/` directory (see `backend/.env.example`; `render.env` shows production-style keys):
    ```env
    DATABASE_URL=postgresql://postgres:password@localhost:5432/commuto
    SECRET_KEY=your-secret-key-here
@@ -110,7 +115,7 @@ commuto/
    npm install
    ```
 
-3. Create a `.env.local` file in the `frontend/` directory:
+3. Create a `.env.local` file in the `frontend/` directory (see `vercel.env` for production templates):
    ```env
    NEXT_PUBLIC_API_URL=http://localhost:8000
    NEXT_PUBLIC_WS_URL=ws://localhost:8000
@@ -131,6 +136,9 @@ commuto/
 - Role-based access control
 - Driver profiles with vehicle information
 - Passenger preferences
+- Email verification (SMTP/EmailJS; dev-mode tokens for local testing)
+- Phone OTP verification (Twilio; dev-mode OTP for local testing)
+- Google OAuth sign-in for passenger and driver
 - Rate limiting on authentication endpoints (5 registrations/min, 10 logins/min)
 
 ### Ride Requests (Passenger Flow)
@@ -160,21 +168,34 @@ commuto/
 ### Trip Management
 - OTP-based trip verification (6-digit code)
 - Driver verifies OTP to start trip
+- Completion OTP required to finish rides
 - Real-time trip status updates
 - Trip completion workflow
 - Payment status tracking
+- Trip receipts and driver rating after completion
 - Cancellation penalties for late cancellations
 - Real-time driver location tracking
 
 ### Real-Time Features
 - WebSocket connections with JWT authentication (token in query param)
 - Auto-reconnecting WebSocket client
+- Per-trip WebSocket rooms for live location and status updates
 - Live notifications for:
   - New ride requests (to drivers)
   - New bids (to passengers)
   - Bid status changes
   - Trip status updates
   - Driver location updates
+
+### Wallet & Payments
+- Razorpay wallet top-ups
+- Auto-collection on trip completion
+- Trip receipts with rating flow
+- Wallet transfers between users
+
+### Notifications & Geofence
+- Persistent notification feed with read/unread controls
+- Service-area geofence boundary endpoint for map overlays
 
 ## 🛡️ Security Features
 
@@ -202,34 +223,71 @@ commuto/
 - Row-level locking (`SELECT FOR UPDATE`) on critical operations
 - Proper rollback on errors
 
-## 📡 API Endpoints
+## 📡 API Endpoints (Selected)
 
-### Authentication
-- `POST /auth/register` - Register new user (rate limited: 5/min)
-- `POST /auth/login` - Login and receive JWT token (rate limited: 10/min)
-- `GET /auth/me` - Get current user profile (rate limited: 30/min)
+### Authentication & Profile
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - Login and receive JWT token
+- `POST /auth/send-verification` - Email verification token
+- `POST /auth/verify-email` - Verify email token
+- `POST /auth/send-phone-verification` - Phone OTP request
+- `POST /auth/verify-phone` - Verify phone OTP
+- `POST /auth/google` - Google OAuth sign-in
+- `GET /auth/me` - Get current user profile
+- `PATCH /auth/me` - Update current user profile
 
-### Rides
-- `POST /rides/request` - Create a ride request (rate limited: 5/min)
-- `GET /rides/open` - List available rides (rate limited: 30/min)
-- `GET /rides/my-trips` - Get user's trips (rate limited: 30/min)
-- `GET /rides/driver-trips` - Get driver's trips (rate limited: 30/min)
-- `POST /rides/{id}/cancel` - Cancel a ride (rate limited: 10/min)
-- `POST /rides/{id}/location` - Update driver location (rate limited: 60/min)
-- `GET /rides/{id}/locations` - Get location history (rate limited: 30/min)
+### Rides & Trips
+- `POST /rides/create-shared` - Create a shared ride request
+- `GET /rides/available` - Browse available shared rides
+- `GET /rides/open` - Open rides for drivers to bid on
+- `GET /rides/{trip_id}/details` - Trip details with passengers
+- `POST /rides/{trip_id}/join` - Join a shared ride
+- `POST /rides/{trip_id}/leave` - Leave a shared ride
+- `GET /rides/my-trips` - Passenger trip history
+- `GET /rides/driver-trips` - Driver trip history
+- `GET /rides/driver-earnings` - Driver earnings breakdown
+- `POST /rides/{trip_id}/cancel` - Cancel a trip
+- `POST /rides/{trip_id}/location` - Update driver location
+- `GET /rides/{trip_id}/locations` - Location history
+- `POST /rides/{trip_id}/verify-otp` - Verify start OTP
+- `POST /rides/{trip_id}/complete` - Complete trip (requires completion OTP)
+- `POST /rides/{trip_id}/pay-order` - Create Razorpay trip order
+- `POST /rides/verify-trip-payment` - Verify trip payment
+- `GET /rides/{trip_id}/receipt` - Trip receipt
+- `POST /rides/{trip_id}/rate-driver` - Rate driver
 
 ### Bidding
-- `POST /bids/{ride_id}` - Place a bid (rate limited: 5/min)
-- `GET /bids/{ride_id}/all` - Get all bids for a ride (rate limited: 30/min)
-- `POST /bids/{bid_id}/accept` - Accept a bid (rate limited: 10/min)
-- `POST /bids/{bid_id}/counter` - Counter a bid (rate limited: 10/min)
+- `POST /bids/{ride_id}` - Place a bid
+- `GET /bids/{ride_id}/all` - Get all bids for a ride
+- `GET /bids/my-bids` - Driver bids list
+- `POST /bids/{bid_id}/accept` - Accept a bid
+- `POST /bids/{bid_id}/counter` - Counter a bid
 
-### OTP & Trip Completion
-- `POST /rides/{trip_id}/verify-otp` - Verify OTP and start ride (rate limited: 5/min)
-- `POST /rides/{trip_id}/complete` - Mark trip as completed (rate limited: 5/min)
+### Wallet & Payments
+- `GET /wallet` - Wallet balance
+- `GET /wallet/transactions` - Wallet transactions
+- `POST /wallet/add-money` - Create Razorpay wallet order
+- `POST /wallet/verify-payment` - Verify wallet payment
+- `POST /wallet/pay` - Pay from wallet balance
+- `POST /wallet/transfer` - Transfer wallet funds
+- `GET /auth/payment-methods` - List payment methods
+- `POST /auth/payment-methods` - Add payment method
+- `PATCH /auth/payment-methods/{id}/default` - Set default payment method
+- `DELETE /auth/payment-methods/{id}` - Delete payment method
+
+### Notifications & Geofence
+- `GET /notifications` - List notifications
+- `POST /notifications/{notification_id}/read` - Mark notification as read
+- `POST /notifications/read-all` - Mark all notifications as read
+- `DELETE /notifications` - Clear notifications
+- `GET /geofence/boundary` - Service-area boundary GeoJSON
 
 ### WebSocket
-- `WS /ws?token={jwt}` - Real-time connection (token as query parameter)
+- `WS /ws?token={jwt}` - Real-time connection
+- `WS /ws/trips/{trip_id}?token={jwt}` - Trip room updates
+
+### Health
+- `GET /health` - API health check
 
 ## 🗄️ Database Schema
 
@@ -304,6 +362,21 @@ tests/
 | `ALGORITHM` | JWT algorithm | HS256 |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiration | 30 |
 | `CORS_ALLOW_ORIGINS` | Allowed CORS origins | http://localhost:3000 |
+| `FRONTEND_URL` | Frontend base URL (email links) | http://localhost:3000 |
+| `APP_ENV` | Environment name | development |
+| `SMTP_HOST` | SMTP host for email | Optional |
+| `SMTP_PORT` | SMTP port | Optional |
+| `SMTP_USER` | SMTP username | Optional |
+| `SMTP_PASS` | SMTP password | Optional |
+| `EMAILJS_SERVICE_ID` | EmailJS service ID | Optional |
+| `EMAILJS_TEMPLATE_ID` | EmailJS template ID | Optional |
+| `EMAILJS_PUBLIC_KEY` | EmailJS public key | Optional |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID | Optional |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token | Optional |
+| `TWILIO_PHONE_NUMBER` | Twilio phone number | Optional |
+| `RAZORPAY_KEY_ID` | Razorpay key ID | Optional |
+| `RAZORPAY_KEY_SECRET` | Razorpay key secret | Optional |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | Optional |
 | `REDIS_URL` | Redis for rate limiting | Optional |
 | `ENVIRONMENT` | Environment name | development |
 
@@ -312,8 +385,17 @@ tests/
 |----------|-------------|---------|
 | `NEXT_PUBLIC_API_URL` | Backend API URL | http://localhost:8000 |
 | `NEXT_PUBLIC_WS_URL` | WebSocket URL | ws://localhost:8000 |
+| `NEXT_PUBLIC_OLA_MAPS_API_KEY` | Ola Maps key | Optional |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Maps key | Optional |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client ID | Optional |
+| `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Razorpay public key | Optional |
 
-## 🚀 Production Deployment
+## 🚀 Deployment
+
+- Hosted setup (recommended): Render (backend + PostgreSQL) + Vercel (frontend). See [DEPLOYMENT.md](DEPLOYMENT.md) and use `render.env` / `vercel.env` as templates.
+- Local orchestration: `docker-compose.yml` for backend + frontend + database.
+
+### Production Hardening Checklist
 
 1. Set strong `SECRET_KEY` (at least 32 random characters)
 2. Configure `CORS_ALLOW_ORIGINS` to your actual frontend domain(s)
