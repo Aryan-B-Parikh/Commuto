@@ -55,16 +55,18 @@ export default function SignupPage() {
     const resolvePostAuthRoute = (signedInUser: any) => {
         const normalizedRole = signedInUser?.role === 'driver' ? 'driver' : 'passenger';
         const phoneValue = signedInUser?.phone_number || signedInUser?.phone;
+        const isPhoneVerified = signedInUser?.isPhoneVerified ?? signedInUser?.is_phone_verified ?? false;
+        const profileCompleted = signedInUser?.profileCompleted ?? signedInUser?.profile_completed ?? false;
         const isCoreDataMissing = !phoneValue || !signedInUser?.gender || !signedInUser?.date_of_birth;
 
         if (isCoreDataMissing) {
             return '/complete-setup';
         }
 
-        if (phoneValue && signedInUser?.isPhoneVerified === false) {
+        if (phoneValue && isPhoneVerified === false) {
             return '/verify-phone';
         }
-        if (!signedInUser?.profileCompleted) {
+        if (!profileCompleted) {
             return '/complete-profile';
         }
         return `/${normalizedRole}/dashboard`;
