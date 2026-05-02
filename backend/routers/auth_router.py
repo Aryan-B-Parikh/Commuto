@@ -633,6 +633,11 @@ def get_current_user_info(
     from sqlalchemy import func
     
     role = auth.get_user_role(current_user, db)
+    profile_completed = _check_profile_complete(current_user, db)
+    if current_user.profile_completed != profile_completed:
+        current_user.profile_completed = profile_completed
+        db.commit()
+        db.refresh(current_user)
     
     # Build base response dict from user columns
     resp = {
@@ -644,7 +649,7 @@ def get_current_user_info(
         "avatar_url": current_user.avatar_url,
         "is_verified": current_user.is_verified,
         "is_phone_verified": current_user.is_phone_verified,
-        "profile_completed": current_user.profile_completed,
+        "profile_completed": profile_completed,
         "created_at": current_user.created_at,
         "gender": current_user.gender,
         "date_of_birth": current_user.date_of_birth,
@@ -814,6 +819,7 @@ def update_current_user(
                     passenger.accessibility_needs = data["accessibility_needs"]
         
         # Auto-detect profile completeness after updates
+        db.flush()
         current_user.profile_completed = _check_profile_complete(current_user, db)
 
         db.commit()

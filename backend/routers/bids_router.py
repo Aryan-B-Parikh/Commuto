@@ -91,6 +91,8 @@ def get_my_bids(
             "bid_amount": bid.bid_amount,
             "status": bid.status,
             "created_at": bid.created_at,
+            "is_counter_bid": getattr(bid, "is_counter_bid", False),
+            "parent_bid_id": getattr(bid, "parent_bid_id", None),
             "origin_address": trip.origin_address,
             "dest_address": trip.dest_address,
             "origin_lat": trip.origin_lat,
@@ -235,12 +237,18 @@ def get_ride_bids(
             detail="Only the trip creator can view bids"
         )
     
-    # Get bids with driver info - join through Driver to User
+    # Get only active pending bids with driver info. Older offers are marked
+    # rejected whenever either side counters, so they should not remain
+    # actionable on the passenger screen.
     bids = db.query(models.TripBid, models.User, models.Driver).join(
         models.Driver, models.TripBid.driver_id == models.Driver.user_id
     ).join(
         models.User, models.Driver.user_id == models.User.id
-    ).filter(models.TripBid.trip_id == ride_id).all()
+    ).filter(
+        models.TripBid.trip_id == ride_id,
+        models.TripBid.status == "pending",
+        models.TripBid.is_counter_bid == False
+    ).order_by(models.TripBid.created_at.desc()).all()
     
     result = []
     for bid, user, driver in bids:
@@ -267,10 +275,10 @@ def get_ride_bids(
 def accept_bid(
     request: Request,
     bid_id: UUID,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Accept a bid with database transaction and optimistic locking"""
+    """Accept a bid/counter-offer with database transaction and optimistic locking"""
     
     try:
         # Start transaction with serializable isolation for consistency
@@ -293,12 +301,17 @@ def accept_bid(
             models.Trip.id == bid.trip_id
         ).with_for_update().first()
         
-        # Check if user is the trip creator (only creator can accept bids)
-        if trip.creator_passenger_id != current_user.id:
+        is_passenger_accepting_driver_bid = trip.creator_passenger_id == current_user.id
+        is_driver_accepting_counter_bid = (
+            getattr(bid, "is_counter_bid", False)
+            and bid.driver_id == current_user.id
+        )
+
+        if not is_passenger_accepting_driver_bid and not is_driver_accepting_counter_bid:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the trip creator can accept bids"
+                detail="Only the trip creator or target driver can accept this offer"
             )
         
         # Check if trip is still available
@@ -376,16 +389,16 @@ def accept_bid(
         _dispatch_websocket_notification(
             create_notification(
                 db,
-                str(bid.driver_id),
-                "Bid Accepted!",
+                str(bid.driver_id if is_passenger_accepting_driver_bid else trip.creator_passenger_id),
+                "Offer Accepted!",
                 f"Your bid of ₹{bid.bid_amount} was accepted for the trip to {trip.dest_address}.",
                 "bid_accepted",
-                f"/driver/trips/{trip.id}"
+                f"/{'driver' if is_passenger_accepting_driver_bid else 'passenger'}/trips/{trip.id}"
             ),
             dispatch_loop
         )
         
-        logger.info(f"Bid {bid_id} accepted by passenger {current_user.id} for trip {trip.id}")
+        logger.info(f"Bid {bid_id} accepted by user {current_user.id} for trip {trip.id}")
         
         return {
             "message": "Bid accepted successfully",
@@ -424,7 +437,7 @@ def counter_bid(
     request: Request,
     bid_id: UUID,
     bid_data: trip_schemas.BidCreate,
-    current_user: models.User = Depends(auth.require_role(["passenger"])),
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
     """Counter a bid with transaction safety"""
@@ -444,17 +457,21 @@ def counter_bid(
                 detail="Bid not found"
             )
         
-        # Check if user is the passenger
+        # Check who is allowed to counter this pending offer.
         is_passenger = db.query(models.Booking).filter(
             models.Booking.trip_id == original_bid.trip_id,
             models.Booking.passenger_id == current_user.id
         ).first() is not None
-        
-        if not is_passenger:
+        is_target_driver = (
+            getattr(original_bid, "is_counter_bid", False)
+            and original_bid.driver_id == current_user.id
+        )
+
+        if not is_passenger and not is_target_driver:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the trip creator can counter bids"
+                detail="Only the trip creator or target driver can counter this offer"
             )
         
         # Check if bid is still pending
@@ -469,14 +486,15 @@ def counter_bid(
         original_bid.status = "rejected"
         original_bid.version += 1
         
-        # Create new counter bid
+        # Passenger counters are flagged for the driver UI; driver counters go
+        # back as normal bids for the passenger to accept or counter again.
         counter_bid_obj = models.TripBid(
             id=uuid.uuid4(),
             trip_id=original_bid.trip_id,
             driver_id=original_bid.driver_id,
             bid_amount=bid_data.amount,
             status="pending",
-            is_counter_bid=True,
+            is_counter_bid=is_passenger,
             parent_bid_id=original_bid.id,
             version=0
         )
@@ -486,14 +504,16 @@ def counter_bid(
         db.refresh(counter_bid_obj)
 
         dispatch_loop = getattr(request.app.state, "notification_loop", None)
+        trip = db.query(models.Trip).filter(models.Trip.id == original_bid.trip_id).first()
+        notify_user_id = original_bid.driver_id if is_passenger else (trip.creator_passenger_id if trip else original_bid.driver_id)
         _dispatch_websocket_notification(
             create_notification(
                 db,
-                str(original_bid.driver_id),
+                str(notify_user_id),
                 "Counter Bid Received",
-                f"The passenger countered your bid with ₹{counter_bid_obj.bid_amount}.",
+                f"{'The passenger' if is_passenger else 'The driver'} countered with ₹{counter_bid_obj.bid_amount}.",
                 "counter_bid",
-                f"/driver/trips/{original_bid.trip_id}"
+                f"/{'driver' if is_passenger else 'passenger'}/trips/{original_bid.trip_id}"
             ),
             dispatch_loop,
         )

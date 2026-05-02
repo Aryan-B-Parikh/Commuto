@@ -41,6 +41,10 @@ export function BiddingSection({ bids, isAccepting, onAcceptBid, onRefetch }: Pr
         return Number.isFinite(value) ? value : null;
     };
 
+    const activeBids = bids.filter((bid: any) =>
+        (!bid?.status || bid.status === 'pending') && !bid?.is_counter_bid
+    );
+
     return (
         <Card className="border-none shadow-sm p-5 lg:p-6">
             <div className="flex items-center justify-between mb-4">
@@ -48,12 +52,12 @@ export function BiddingSection({ bids, isAccepting, onAcceptBid, onRefetch }: Pr
                     <Car size={18} className="text-emerald-400" /> Driver Bids
                 </h3>
                 <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg font-black uppercase">
-                    {bids.length} {bids.length === 1 ? 'Bid' : 'Bids'}
+                    {activeBids.length} {activeBids.length === 1 ? 'Bid' : 'Bids'}
                 </span>
             </div>
 
             <div className="space-y-3">
-                {bids.map((bid: any, index: number) => {
+                {activeBids.map((bid: any, index: number) => {
                     const bidId = resolveBidId(bid);
                     const bidAmount = resolveBidAmount(bid);
                     const bidAmountLabel = bidAmount === null ? '--' : formatCurrency(bidAmount);

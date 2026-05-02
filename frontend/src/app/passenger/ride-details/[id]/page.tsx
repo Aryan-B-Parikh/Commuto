@@ -55,9 +55,14 @@ export default function RideDetailsPage() {
         return bidId;
     };
 
+    const getActiveBids = (nextBids: any[]) =>
+        nextBids.filter((bid: any) =>
+            (!bid?.status || bid.status === 'pending') && !bid?.is_counter_bid
+        );
+
     const refreshBids = async () => {
         const updatedBids = await bidsAPI.getRideBids(tripId);
-        setBids(updatedBids);
+        setBids(getActiveBids(updatedBids));
     };
 
     const {
@@ -175,13 +180,15 @@ export default function RideDetailsPage() {
     useEffect(() => {
         if (isMember && currentStatus === 'requested') {
             bidsAPI.getRideBids(tripId)
-                .then(data => setBids(data))
+                .then(data => setBids(getActiveBids(data)))
                 .catch(() => setBids([]));
         }
     }, [isMember, tripId, currentStatus]);
 
     if (isLoading) return <div className="p-20 text-center animate-pulse text-[#9CA3AF]">Loading adventure details...</div>;
     if (!trip) return null;
+
+    const activeBids = getActiveBids(bids);
 
     const handleAcceptBid = async (bidId: string) => {
         setAcceptingBidId(bidId);
@@ -322,13 +329,21 @@ export default function RideDetailsPage() {
                 </div>
 
                 {/* Driver Bids Section (Mobile) */}
+<<<<<<< HEAD
+                {isMember && activeBids.length > 0 && trip.status === 'pending' && (
+=======
                 {isMember && bids.length > 0 && trip.status === 'pending' && (
+>>>>>>> origin/main
                     <div className="flex-1 bg-[#111827] px-5 pb-32">
                         <h3 className="text-sm font-bold text-[#F9FAFB] mb-3 flex items-center gap-2">
-                            <DollarSign size={16} className="text-emerald-400" /> Driver Bids ({bids.length})
+                            <DollarSign size={16} className="text-emerald-400" /> Driver Bids ({activeBids.length})
                         </h3>
                         <div className="flex flex-col gap-2">
+<<<<<<< HEAD
+                            {activeBids.map((bid: any, index: number) => {
+=======
                             {bids.map((bid: any, index: number) => {
+>>>>>>> origin/main
                                 const bidId = resolveBidId(bid);
                                 const bidAmount = resolveBidAmount(bid);
                                 const bidAmountLabel = bidAmount === null ? '--' : formatCurrency(bidAmount);
@@ -749,18 +764,22 @@ export default function RideDetailsPage() {
                                 </Card>
 
                                 {/* Driver Bids (Desktop) */}
-                                {isMember && bids.length > 0 && normalizeRideStatus(trip.status) === 'requested' && (
+                                {isMember && activeBids.length > 0 && normalizeRideStatus(trip.status) === 'requested' && (
                                     <Card className="p-5 lg:p-6">
                                         <div className="flex items-center justify-between mb-6">
                                             <h3 className="font-bold text-[#F9FAFB] flex items-center gap-2">
                                                 <DollarSign className="w-5 h-5 text-emerald-400" /> Driver Bids
                                             </h3>
                                             <div className="px-2 py-1 bg-emerald-500/10 rounded-lg text-[10px] font-black uppercase text-emerald-400">
-                                                {bids.length} {bids.length === 1 ? 'Bid' : 'Bids'}
+                                                {activeBids.length} {activeBids.length === 1 ? 'Bid' : 'Bids'}
                                             </div>
                                         </div>
                                         <div className="space-y-3">
+<<<<<<< HEAD
+                                            {activeBids.map((bid: any, index: number) => {
+=======
                                             {bids.map((bid: any, index: number) => {
+>>>>>>> origin/main
                                                 const bidId = resolveBidId(bid);
                                                 const bidAmount = resolveBidAmount(bid);
                                                 const bidAmountLabel = bidAmount === null ? '--' : formatCurrency(bidAmount);
