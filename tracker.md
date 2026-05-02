@@ -1,6 +1,6 @@
 # Commuto – Project Tracker
 
-> **Last Updated:** March 4, 2026 — KrishDemo Google Auth merged  
+> **Last Updated:** May 2, 2026 — Deployment doc sync + geofence/notifications + completion OTP noted  
 > **Branch:** Aryan  
 > **Stack:** FastAPI + PostgreSQL + Next.js 16 (TypeScript)
 
@@ -18,7 +18,7 @@ Billing / Payments   [███████████████████�
 OTP Verification     [████████████████████] 100%  (backend + passenger OTP display (mobile+desktop) done)
 Bidding              [████████████████████] 100%  (full bid + counter-bid backend + frontend done)
 Testing              [████████████████████] 100%  (backend suite done + Playwright E2E suite added)
-Deployment           [████████████████████] 100%  (Docker + docker-compose + standalone Next.js config)
+Deployment           [████████████████████] 100%  (Render + Vercel + Docker + docker-compose + standalone Next.js config)
 ```
 
 **Total Estimated Completion: 100%**
@@ -98,13 +98,16 @@ Deployment           [███████████████████�
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Create ride/trip request | ✅ | `POST /rides/` — passenger creates trip with origin, dest, seats, time |
-| List available rides (driver view) | ✅ | `GET /rides/available` |
-| Get ride details | ✅ | `GET /rides/{trip_id}` |
+| Create shared ride | ✅ | `POST /rides/create-shared` — passenger or driver creates trip |
+| Browse available rides (passenger) | ✅ | `GET /rides/available` |
+| Open rides for bidding (driver) | ✅ | `GET /rides/open` |
+| Trip details | ✅ | `GET /rides/{trip_id}/details` |
+| Join shared ride | ✅ | `POST /rides/{trip_id}/join` |
+| Leave shared ride | ✅ | `POST /rides/{trip_id}/leave` |
 | Cancel trip | ✅ | `POST /rides/{trip_id}/cancel` with cancellation reason |
 | Driver earnings breakdown | ✅ | `GET /rides/driver-earnings` (today / week / month) |
-| Ride history (passenger) | ✅ | Endpoint for completed/past trips |
-| Ride history (driver) | ✅ | Filtered by driver_id |
+| Ride history (passenger) | ✅ | `GET /rides/my-trips` |
+| Ride history (driver) | ✅ | `GET /rides/driver-trips` |
 
 ### 3.2 Frontend
 
@@ -130,7 +133,7 @@ Deployment           [███████████████████�
 | View all my bids (driver) | ✅ | `GET /bids/my-bids` with trip details + passenger notes |
 | View bids on a trip (passenger) | ✅ | `GET /bids/trip/{trip_id}` |
 | Accept a bid | ✅ | `POST /bids/{bid_id}/accept` — assigns driver to trip, generates OTP |
-| Reject a bid | ✅ | `POST /bids/{bid_id}/reject` |
+| Auto-reject other bids | ✅ | Other pending bids get rejected when a bid is accepted |
 | Counter bid | ✅ | DB model + `POST /bids/{bid_id}/counter` endpoint + frontend Counter button (both mobile & desktop) |
 | Optimistic locking on bids | ✅ | `version` column on `TripBid` |
 
@@ -155,7 +158,8 @@ Deployment           [███████████████████�
 | OTP rate limiting | ✅ | 5 attempts per minute |
 | OTP already-verified guard | ✅ | Returns 400 if already verified |
 | Trip status → ACTIVE after OTP | ✅ | Trip transitions to `active` on success |
-| Trip complete endpoint | ✅ | `POST /rides/{trip_id}/complete` |
+| Completion OTP generated on start | ✅ | 6-digit `Trip.completion_otp` issued after start OTP verifies |
+| Trip complete endpoint | ✅ | `POST /rides/{trip_id}/complete` requires completion OTP |
 
 ### 5.2 Frontend
 
@@ -182,6 +186,7 @@ Deployment           [███████████████████�
 | Location stored in DB | ✅ | Both `live_locations` (latest) and `trip_locations` (history) |
 | Broadcast location to passenger | ✅ | Location saved to DB + WebSocket broadcast via `manager.send_personal_message` |
 | Trip status change notifications | ✅ | Bid acceptance, trip start (OTP verify), and completion broadcast to passengers |
+| Trip room WebSocket | ✅ | `WS /ws/trips/{trip_id}?token=<jwt>` for per-trip updates |
 
 ### 6.2 Frontend
 
@@ -192,6 +197,13 @@ Deployment           [███████████████████�
 | `/driver/live` — Driver live view | ✅ | Driver map view during trip |
 | `components/map/` | ✅ | Map components (Leaflet / Mapbox / Google Maps configured) |
 | Real-time location rendering on map | ✅ | Map components exist + live location WebSocket and DB fully wired |
+
+### 6.3 Notifications & Geofence
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Notifications feed | ✅ | `GET /notifications` + mark read / clear endpoints |
+| Geofence boundary | ✅ | `GET /geofence/boundary` returns GeoJSON polygon |
 
 ---
 
@@ -206,13 +218,16 @@ Deployment           [███████████████████�
 | Transaction history | ✅ | `GET /wallet/transactions` |
 | Add money to wallet (Razorpay) | ✅ | `POST /wallet/add-money` creates Razorpay order |
 | Verify Razorpay payment | ✅ | `POST /wallet/verify-payment` with HMAC signature check |
-| List payment methods | ✅ | `GET /payment-methods` |
-| Add payment method | ✅ | `POST /payment-methods` |
-| Set default payment method | ✅ | `PATCH /payment-methods/{id}/default` |
-| Delete payment method | ✅ | `DELETE /payment-methods/{id}` |
+| List payment methods | ✅ | `GET /auth/payment-methods` |
+| Add payment method | ✅ | `POST /auth/payment-methods` |
+| Set default payment method | ✅ | `PATCH /auth/payment-methods/{id}/default` |
+| Delete payment method | ✅ | `DELETE /auth/payment-methods/{id}` |
+| Trip payment order | ✅ | `POST /rides/{trip_id}/pay-order` |
+| Verify trip payment | ✅ | `POST /rides/verify-trip-payment` |
 | Auto-bill on ride completion | ✅ | Wallet deduction + `Transaction` record created for each passenger on `complete_ride` |
 | Bill/receipt download | ✅ | `GET /rides/{trip_id}/receipt` endpoint returns full receipt JSON; UI shown in passenger/trip/[id] |
 | Driver rating | ✅ | `POST /rides/{trip_id}/rate-driver` + rolling average on Driver model + star rating UI in receipt |
+| Wallet transfer | ✅ | `POST /wallet/transfer` to send funds by email |
 
 ### 7.2 Frontend
 
@@ -283,6 +298,12 @@ Deployment           [███████████████████�
 - **Email verification** — `POST /auth/send-verification` + `POST /auth/verify-email`; SMTP optional; dev mode returns token + URL inline; `/verify-email` page with auto-verify from URL param
 - **SMS / phone verification** — `POST /auth/send-phone-verification` + `POST /auth/verify-phone`; Twilio optional; dev mode returns OTP inline; `/verify-phone` page
 - **Google OAuth sign-in** — `POST /auth/google` backend endpoint; `<GoogleLogin>` button on signup + login pages; `ThemeProvider` + `GoogleOAuthProvider` wired into root layout
+- **Trip completion OTP** — generated after start OTP, required to complete ride
+- **Trip room WebSocket** — `WS /ws/trips/{trip_id}` with per-trip live updates
+- **Notifications API** — persistent feed with mark read and clear endpoints
+- **Geofence boundary endpoint** — `GET /geofence/boundary` for map overlays
+- **Trip payment order endpoints** — `POST /rides/{trip_id}/pay-order` + `/rides/verify-trip-payment`
+- **Wallet transfers** — `POST /wallet/transfer` to send funds by email
 - Rider and driver dashboards, profile, earnings, history
 - Map integration (Leaflet + Mapbox + Google Maps)
 - Rate limiting and optimistic locking for concurrency safety
