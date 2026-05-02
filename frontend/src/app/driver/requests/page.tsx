@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useRouter } from 'next/navigation';
-import { tripsAPI, otpAPI } from '@/services/api';
-import { TripResponse } from '@/types/api';
+import { tripsAPI, otpAPI, bidsAPI } from '@/services/api';
+import { DriverBidWithTrip, TripResponse } from '@/types/api';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { BidModal } from '@/components/ride/BidModal';
+import CounterBidInput from '@/components/ride/CounterBidInput';
 import { calculateDistance } from '@/utils/geoUtils';
 import { useSocketEvent } from '@/hooks/useWebSocket';
 import {
@@ -31,6 +32,7 @@ import { useRouteInfo } from '@/hooks/useRouteInfo';
 import { useAuth } from '@/hooks/useAuth';
 import { VerifyOTPModal } from '@/components/ride/VerifyOTPModal';
 import { normalizeRideStatus } from '@/utils/rideState';
+import { formatCurrency } from '@/utils/formatters';
 
 function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
     request: TripResponse,
@@ -136,17 +138,102 @@ function RideRequestCard({ request, index, getTimeAgo, handleAction }: {
     );
 }
 
+function CounterOfferCard({
+    offer,
+    index,
+    activeCounterBidId,
+    counterAmount,
+    isCountering,
+    isAccepting,
+    setActiveCounterBidId,
+    setCounterAmount,
+    onAccept,
+    onCounter,
+}: {
+    offer: DriverBidWithTrip,
+    index: number,
+    activeCounterBidId: string | null,
+    counterAmount: string,
+    isCountering: boolean,
+    isAccepting: string | null,
+    setActiveCounterBidId: (id: string | null) => void,
+    setCounterAmount: (value: string) => void,
+    onAccept: (bidId: string) => void,
+    onCounter: (bidId: string) => void,
+}) {
+    return (
+        <motion.div
+            key={offer.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3, delay: index * 0.05 }}
+            className="rounded-3xl border border-amber-500/25 bg-amber-500/5 p-5"
+        >
+            <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Passenger counter offer</p>
+                    <h2 className="mt-1 text-lg font-black text-foreground">{formatCurrency(offer.bid_amount)}</h2>
+                    <p className="mt-2 truncate text-sm text-muted-foreground">Pickup: {offer.origin_address}</p>
+                    <p className="truncate text-sm text-muted-foreground">Drop: {offer.dest_address}</p>
+                </div>
+                <span className="rounded-full bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-400">
+                    Pending
+                </span>
+            </div>
+
+            <div className="mt-4">
+                {activeCounterBidId === offer.id ? (
+                    <CounterBidInput
+                        bidId={offer.id}
+                        isActive
+                        counterAmount={counterAmount}
+                        onAmountChange={setCounterAmount}
+                        isSubmitting={isCountering}
+                        onSubmit={onCounter}
+                        onCancel={() => { setActiveCounterBidId(null); setCounterAmount(''); }}
+                    />
+                ) : (
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => onAccept(offer.id)}
+                            disabled={isAccepting === offer.id}
+                            className="flex-1 h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm transition-all disabled:opacity-50"
+                        >
+                            {isAccepting === offer.id ? 'Accepting...' : 'Accept Price'}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setActiveCounterBidId(offer.id);
+                                setCounterAmount(String(offer.bid_amount));
+                            }}
+                            className="flex-1 h-12 rounded-2xl border border-indigo-500/30 bg-indigo-600/20 text-indigo-400 font-black text-sm transition-all hover:bg-indigo-600/30"
+                        >
+                            Counter
+                        </button>
+                    </div>
+                )}
+            </div>
+        </motion.div>
+    );
+}
+
 export default function DriverRequestsPage() {
     const router = useRouter();
     const { role } = useAuth();
     const { showToast } = useToast() as any;
     const [requests, setRequests] = useState<TripResponse[]>([]);
+    const [counterOffers, setCounterOffers] = useState<DriverBidWithTrip[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedTrip, setSelectedTrip] = useState<TripResponse | null>(null);
     const [isBidModalOpen, setIsBidModalOpen] = useState(false);
     const [acceptedTrip, setAcceptedTrip] = useState<TripResponse | null>(null);
     const [isStartRideModalOpen, setIsStartRideModalOpen] = useState(false);
     const [isStartingRide, setIsStartingRide] = useState(false);
+    const [activeCounterBidId, setActiveCounterBidId] = useState<string | null>(null);
+    const [counterAmount, setCounterAmount] = useState('');
+    const [isCountering, setIsCountering] = useState(false);
+    const [isAcceptingCounter, setIsAcceptingCounter] = useState<string | null>(null);
 
     // === BUSINESS LOGIC (UNCHANGED) ===
     const getIgnoredIds = (): string[] => {
@@ -175,12 +262,36 @@ export default function DriverRequestsPage() {
         fetchRequests();
     });
 
+    useSocketEvent('counter_bid', () => {
+        showToast('info', 'Passenger sent a counter offer.');
+        fetchRequests();
+    });
+
     const fetchRequests = async () => {
         try {
             setIsLoading(true);
-            const data = await tripsAPI.getOpenRides();
-            const ignored = getIgnoredIds();
-            setRequests(data.filter(r => !ignored.includes(r.id)));
+            let openRideError: any = null;
+
+            try {
+                const data = await tripsAPI.getOpenRides();
+                const ignored = getIgnoredIds();
+                setRequests(data.filter(r => !ignored.includes(r.id)));
+            } catch (error: any) {
+                openRideError = error;
+                setRequests([]);
+            }
+
+            const myBids = await bidsAPI.getMyBids();
+            const nextCounterOffers = myBids.filter((bid) =>
+                bid.status === 'pending' &&
+                bid.is_counter_bid &&
+                normalizeRideStatus(bid.trip_status) === 'requested'
+            );
+            setCounterOffers(nextCounterOffers);
+
+            if (openRideError && nextCounterOffers.length === 0) {
+                throw openRideError;
+            }
         } catch (error: any) {
             if (error?.response?.status === 403) {
                 showToast('error', 'Access denied for ride requests. Redirecting...');
@@ -221,6 +332,42 @@ export default function DriverRequestsPage() {
             setRequests(prev => prev.filter(r => r.id !== selectedTrip.id));
         }
         showToast('info', 'Bid placed. Waiting for passenger acceptance...');
+    };
+
+    const handleAcceptCounterOffer = async (bidId: string) => {
+        setIsAcceptingCounter(bidId);
+        try {
+            await bidsAPI.acceptBid(bidId);
+            showToast('success', 'Counter offer accepted. Ride is ready to start.');
+            setCounterOffers(prev => prev.filter((offer) => offer.id !== bidId));
+            await fetchRequests();
+        } catch (error: any) {
+            showToast('error', error?.response?.data?.detail || 'Failed to accept counter offer.');
+        } finally {
+            setIsAcceptingCounter(null);
+        }
+    };
+
+    const handleDriverCounterOffer = async (bidId: string) => {
+        const amount = Number(counterAmount);
+        if (!counterAmount || !Number.isFinite(amount) || amount <= 0) {
+            showToast('error', 'Enter a valid counter amount.');
+            return;
+        }
+
+        setIsCountering(true);
+        try {
+            await bidsAPI.counterBid(bidId, { amount, message: 'Driver counter offer' });
+            showToast('success', 'Counter offer sent to passenger.');
+            setActiveCounterBidId(null);
+            setCounterAmount('');
+            setCounterOffers(prev => prev.filter((offer) => offer.id !== bidId));
+            await fetchRequests();
+        } catch (error: any) {
+            showToast('error', error?.response?.data?.detail || 'Failed to send counter offer.');
+        } finally {
+            setIsCountering(false);
+        }
     };
 
     useEffect(() => {
@@ -297,7 +444,7 @@ export default function DriverRequestsPage() {
                             <div>
                                 <h1 className="text-2xl font-black text-foreground tracking-tight">Ride Requests</h1>
                                 <p className="text-sm text-muted-foreground mt-0.5">
-                                    {isLoading ? 'Loading...' : `${requests.length} pending request${requests.length !== 1 ? 's' : ''}`}
+                                    {isLoading ? 'Loading...' : `${requests.length + counterOffers.length} pending request${requests.length + counterOffers.length !== 1 ? 's' : ''}`}
                                 </p>
                             </div>
                             <button
@@ -309,7 +456,7 @@ export default function DriverRequestsPage() {
                         </div>
 
                         {/* Live indicator */}
-                        {!isLoading && requests.length > 0 && (
+                        {!isLoading && (requests.length > 0 || counterOffers.length > 0) && (
                             <motion.div
                                 initial={{ opacity: 0, y: -5 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -384,8 +531,23 @@ export default function DriverRequestsPage() {
                             </div>
 
                             /* ─── Request Cards ─── */
-                        ) : requests.length > 0 ? (
+                        ) : requests.length > 0 || counterOffers.length > 0 ? (
                             <div className="space-y-4">
+                                {counterOffers.map((offer, index) => (
+                                    <CounterOfferCard
+                                        key={offer.id}
+                                        offer={offer}
+                                        index={index}
+                                        activeCounterBidId={activeCounterBidId}
+                                        counterAmount={counterAmount}
+                                        isCountering={isCountering}
+                                        isAccepting={isAcceptingCounter}
+                                        setActiveCounterBidId={setActiveCounterBidId}
+                                        setCounterAmount={setCounterAmount}
+                                        onAccept={handleAcceptCounterOffer}
+                                        onCounter={handleDriverCounterOffer}
+                                    />
+                                ))}
                                 {requests.map((request, index) => (
                                     <RideRequestCard
                                         key={request.id}

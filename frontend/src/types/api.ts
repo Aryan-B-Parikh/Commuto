@@ -165,6 +165,8 @@ export interface DriverBidWithTrip {
     bid_amount: number;
     status: string;
     created_at: string;
+    is_counter_bid?: boolean;
+    parent_bid_id?: string;
     origin_address: string;
     dest_address: string;
     origin_lat: number;

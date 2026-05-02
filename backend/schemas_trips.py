@@ -128,6 +128,8 @@ class DriverBidWithTrip(BaseModel):
     bid_amount: float
     status: str
     created_at: datetime
+    is_counter_bid: Optional[bool] = False
+    parent_bid_id: Optional[UUID] = None
     # Trip details
     origin_address: str
     dest_address: str
